@@ -60,6 +60,7 @@ jobs:
       - name: Build release notes
         if: ${{ steps.version.outputs.publish == 'true' }}
         env:
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
