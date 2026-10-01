@@ -93,7 +93,7 @@ internal class TestNotification(private val session: TestSession) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         return NotificationCompat.Builder(app, CoreForeground.CHANNEL)
-            .setSmallIcon(R.drawable.ic_throne_tile)
+            .setSmallIcon(R.drawable.ic_service_active)
             .setContentTitle(if (scope.isBlank()) kind else app.getString(R.string.test_engine_title, kind, scope))
             .setContentText(text.substringBefore('\n'))
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

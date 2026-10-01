@@ -132,7 +132,7 @@ data class GeneratorSettings(
 
     // ---- tests (SettingsRepo.h:69-71): the auto-selector's probe URLs when its own are empty
     /** test_url (the desktop member test_latency_url). */
-    val testUrl: String = "http://cp.cloudflare.com/",
+    val testUrl: String = "https://www.gstatic.com/generate_204",
     /** direct_test_url: the selector's direct connectivity probe; "" omits it. */
     val directTestUrl: String = "",
 

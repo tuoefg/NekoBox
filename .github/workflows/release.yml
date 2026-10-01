@@ -6,6 +6,9 @@ on:
         description: Publish the release v<VERSION_NAME> at this commit (otherwise the APKs are only uploaded as a workflow artifact)
         type: boolean
         default: true
+  push:
+    tags:
+      - 'v*'
 concurrency:
   group: release
   cancel-in-progress: false
@@ -23,13 +26,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      # The tag is v<VERSION_NAME>; a published release never reuses an existing tag.
-      - name: Version
+      # A tag push (v*) always publishes; with workflow_dispatch the tag is v<VERSION_NAME> and a published
+      # release never reuses an existing tag.
+      - name: Resolve tag
         id: version
         env:
           PUBLISH: ${{ inputs.publish }}
         run: |
           set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           VERSION_NAME=$(sed -n 's/^VERSION_NAME=//p' nb4a.properties | tr -d '\r[:space:]')
           test -n "$VERSION_NAME"
           TAG="v$VERSION_NAME"
@@ -38,6 +47,7 @@ jobs:
             exit 1
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
       - name: Build
         uses: ./.github/actions/android-build
         with:
@@ -47,20 +57,31 @@ jobs:
           sign: 'true'
       - name: Release assets
         run: python3 buildScript/release_assets.py app/build/outputs/apk/oss/release dist stable
+      - name: Build release notes
+        if: ${{ steps.version.outputs.publish == 'true' }}
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p notes
+          python3 buildScript/release_notes.py dist "$TAG" notes/header.md
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" -q .body > notes/changelog.md
+          cat notes/header.md notes/changelog.md > notes/body.md
       - name: Upload artifact
-        if: ${{ !inputs.publish }}
+        if: ${{ steps.version.outputs.publish != 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: Throne-${{ steps.version.outputs.tag }}
+          name: NekoBox-${{ steps.version.outputs.tag }}
           path: dist/
           if-no-files-found: error
           retention-days: 14
       - name: Publish release
-        if: ${{ inputs.publish }}
+        if: ${{ steps.version.outputs.publish == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG" --notes-file notes/body.md

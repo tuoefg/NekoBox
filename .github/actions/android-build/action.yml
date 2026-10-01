@@ -1,8 +1,8 @@
 name: Android build
 description: >-
   Shared build steps of ci.yml, preview.yml and release.yml: JDK 17, ThroneCore AAR + sing-box schema, routeprofiles
-  snapshot, Gradle, then ./gradlew <tasks>. With sign=true, release builds are signed with the SIGNING_* secrets from
-  the job environment; the build fails without them.
+  snapshot, Gradle, then ./gradlew <tasks>. With sign=true, release builds are signed with the SIGNING_* secrets when
+  present, otherwise with the release.keystore committed in the repository.
 inputs:
   tasks:
     description: Gradle tasks to run
@@ -54,8 +54,17 @@ runs:
             rm -f "$KS"
             export UPDATE_SIGNER_SHA256
             echo "Signing with the release key from the repository secrets (certificate SHA-256 $UPDATE_SIGNER_SHA256)"
+          elif [ -f release.keystore ]; then
+            # Self-contained fallback: the keystore committed with the repository (no secrets required).
+            export KEYSTORE_PASS="${KEYSTORE_PASS:-NekoBox123}"
+            export ALIAS_NAME="${ALIAS_NAME:-nekobox}"
+            export ALIAS_PASS="${ALIAS_PASS:-$KEYSTORE_PASS}"
+            UPDATE_SIGNER_SHA256=$(keytool -exportcert -keystore release.keystore -storepass "$KEYSTORE_PASS" \
+              -alias "$ALIAS_NAME" | sha256sum | cut -d' ' -f1)
+            export UPDATE_SIGNER_SHA256
+            echo "Signing with the built-in fallback release key (certificate SHA-256 $UPDATE_SIGNER_SHA256)"
           else
-            echo "::error::No signing key: add the SIGNING_* repository secrets"
+            echo "::error::No signing key: add the SIGNING_* repository secrets or commit a release.keystore"
             exit 1
           fi
         else

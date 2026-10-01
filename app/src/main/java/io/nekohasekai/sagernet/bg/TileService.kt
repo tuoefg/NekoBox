@@ -11,7 +11,11 @@ import android.service.quicksettings.TileService as BaseTileService
 
 @RequiresApi(24)
 class TileService : BaseTileService(), SagerConnection.Callback {
-    private val tileIcon by lazy { Icon.createWithResource(this, R.drawable.ic_throne_tile) }
+    private val iconIdle by lazy { Icon.createWithResource(this, R.drawable.ic_service_idle) }
+    private val iconBusy by lazy { Icon.createWithResource(this, R.drawable.ic_service_busy) }
+    private val iconConnected by lazy {
+        Icon.createWithResource(this, R.drawable.ic_service_active)
+    }
     private var tapPending = false
 
     private val connection = SagerConnection(SagerConnection.CONNECTION_ID_TILE)
@@ -48,17 +52,30 @@ class TileService : BaseTileService(), SagerConnection.Callback {
     private fun updateTile(serviceState: BaseService.State, profileName: String?) {
         qsTile?.apply {
             label = null
-            icon = tileIcon
             when (serviceState) {
-                BaseService.State.Idle -> state = Tile.STATE_INACTIVE
-                BaseService.State.Connecting -> state = Tile.STATE_ACTIVE
+                BaseService.State.Idle -> {
+                    icon = iconIdle
+                    state = Tile.STATE_INACTIVE
+                }
+                BaseService.State.Connecting -> {
+                    icon = iconBusy
+                    state = Tile.STATE_ACTIVE
+                }
+
                 BaseService.State.Connected -> {
+                    icon = iconConnected
                     label = profileName
                     state = Tile.STATE_ACTIVE
                 }
 
-                BaseService.State.Stopping -> state = Tile.STATE_UNAVAILABLE
-                BaseService.State.Stopped -> state = Tile.STATE_INACTIVE
+                BaseService.State.Stopping -> {
+                    icon = iconBusy
+                    state = Tile.STATE_UNAVAILABLE
+                }
+                BaseService.State.Stopped -> {
+                    icon = iconIdle
+                    state = Tile.STATE_INACTIVE
+                }
             }
             label = label ?: getString(R.string.app_name)
             updateTile()

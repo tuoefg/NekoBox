@@ -248,7 +248,7 @@ object SettingsRegistry {
 
     // ------------------------------------------------------------------------------------------------ testing
 
-    @JvmField val TEST_URL = string("test_url", "http://cp.cloudflare.com/") { it.isNotBlank() }
+    @JvmField val TEST_URL = string("test_url", "https://www.gstatic.com/generate_204") { it.isNotBlank() }
     @JvmField val URL_TEST_TIMEOUT_MS = int("url_test_timeout_ms", 3000) { it > 0 }
     @JvmField val TEST_CONCURRENT = int("test_concurrent", 10) { it > 0 }
     @JvmField val DIRECT_TEST_URL = string("direct_test_url", "")

@@ -119,22 +119,42 @@ fun Project.setupAppCommon() {
     setupCommon()
 
     val keystoreB64 = System.getenv("SIGNING_KEYSTORE_B64")?.trim()
-    if (keystoreB64.isNullOrEmpty()) return
-    fun requireEnv(name: String) = System.getenv(name)?.takeIf { it.isNotEmpty() }
-        ?: throw GradleException("SIGNING_KEYSTORE_B64 is set but $name is missing")
-    val storePass = requireEnv("SIGNING_STORE_PASSWORD")
-    val alias = requireEnv("SIGNING_KEY_ALIAS")
-    val keyPass = System.getenv("SIGNING_KEY_PASSWORD")?.takeIf { it.isNotEmpty() } ?: storePass
-    val keystore = layout.buildDirectory.file("signing/release.keystore").get().asFile
-    keystore.parentFile.mkdirs()
-    keystore.writeBytes(Base64.getMimeDecoder().decode(keystoreB64))
+    if (!keystoreB64.isNullOrEmpty()) {
+        fun requireEnv(name: String) = System.getenv(name)?.takeIf { it.isNotEmpty() }
+            ?: throw GradleException("SIGNING_KEYSTORE_B64 is set but $name is missing")
+        val storePass = requireEnv("SIGNING_STORE_PASSWORD")
+        val alias = requireEnv("SIGNING_KEY_ALIAS")
+        val keyPass = System.getenv("SIGNING_KEY_PASSWORD")?.takeIf { it.isNotEmpty() } ?: storePass
+        val keystore = layout.buildDirectory.file("signing/release.keystore").get().asFile
+        keystore.parentFile.mkdirs()
+        keystore.writeBytes(Base64.getMimeDecoder().decode(keystoreB64))
+
+        android.apply {
+            val release = signingConfigs.create("release").apply {
+                storeFile = keystore
+                storePassword = storePass
+                keyAlias = alias
+                keyPassword = keyPass
+            }
+            buildTypes.getByName("release").signingConfig = release
+        }
+        return
+    }
+
+    // Fallback: the release keystore committed with the repository, so CI builds are signed without any
+    // repository secrets (KEYSTORE_PASS / ALIAS_NAME / ALIAS_PASS are set by .github/actions/android-build).
+    val fallbackStorePass = System.getenv("KEYSTORE_PASS")?.takeIf { it.isNotEmpty() }
+    val fallbackAlias = System.getenv("ALIAS_NAME")?.takeIf { it.isNotEmpty() }
+    val fallbackKeyPass = System.getenv("ALIAS_PASS")?.takeIf { it.isNotEmpty() } ?: fallbackStorePass
+    val fallbackKeystore = rootProject.file("release.keystore")
+    if (fallbackStorePass == null || fallbackAlias == null || !fallbackKeystore.exists()) return
 
     android.apply {
         val release = signingConfigs.create("release").apply {
-            storeFile = keystore
-            storePassword = storePass
-            keyAlias = alias
-            keyPassword = keyPass
+            storeFile = fallbackKeystore
+            storePassword = fallbackStorePass
+            keyAlias = fallbackAlias
+            keyPassword = fallbackKeyPass
         }
         buildTypes.getByName("release").signingConfig = release
     }
@@ -192,12 +212,12 @@ fun Project.setupApp() {
             }
         }
 
-        // Throne-<versionName>[-<flavor>]-<abi>[-<buildType>][-unsigned].apk; oss release = Throne-<versionName>-<abi>.apk
+        // NekoBox-<versionName>[-<flavor>]-<abi>[-<buildType>][-unsigned].apk; oss release = NekoBox-<versionName>-<abi>.apk
         applicationVariants.all {
             val variant = this
             outputs.all {
                 this as BaseVariantOutputImpl
-                outputFileName = "Throne-${variant.versionName}" + outputFileName.removePrefix(project.name)
+                outputFileName = "NekoBox-${variant.versionName}" + outputFileName.removePrefix(project.name)
                     .replace("-release", "")
                     .replace("-oss", "")
             }
