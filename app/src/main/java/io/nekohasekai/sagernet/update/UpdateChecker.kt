@@ -19,13 +19,13 @@ import java.io.IOException
 import java.io.InputStream
 
 /**
- * GitHub releases of ThroneForAndroid (the desktop's CheckUpdate: `allow_beta_update` admits pre-releases). A release
+ * GitHub releases of this fork (the desktop's CheckUpdate: `allow_beta_update` admits pre-releases). A release
  * built by CI carries `throne-update.json` (buildScript/release_assets.py) and can be installed in-app; older releases
  * are offered in the browser only.
  */
 object UpdateChecker {
 
-    const val REPOSITORY = "throneproj/ThroneForAndroid"
+    const val REPOSITORY = "tuoefg/NekoBox"
     const val RELEASES_PAGE = "https://github.com/$REPOSITORY/releases"
     private const val RELEASES_API = "https://api.github.com/repos/$REPOSITORY/releases?per_page=20"
     private const val MANIFEST = "throne-update.json"

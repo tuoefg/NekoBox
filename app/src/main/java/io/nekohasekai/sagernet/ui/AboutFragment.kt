@@ -118,7 +118,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                                 .text(R.string.github)
                                 .setOnClickAction {
                                     requireContext().launchCustomTab(
-                                        "https://github.com/throneproj/ThroneForAndroid"
+                                        "https://github.com/tuoefg/NekoBox"
 
                                     )
                                 }
@@ -129,7 +129,7 @@ class AboutFragment : ToolbarFragment(R.layout.layout_about) {
                                 .text(R.string.project_website)
                                 .setOnClickAction {
                                     requireContext().launchCustomTab(
-                                        "https://throneproj.github.io"
+                                        "https://github.com/tuoefg/NekoBox/releases"
                                     )
                                 }
                                 .build())
