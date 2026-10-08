@@ -26,6 +26,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          # Full history so release_notes.py can derive the changelog from
+          # conventional commits between the previous v* tag and this one.
+          fetch-depth: 0
       # A tag push (v*) always publishes; with workflow_dispatch the tag is v<VERSION_NAME> and a published
       # release never reuses an existing tag.
       - name: Resolve tag
@@ -60,15 +64,12 @@ jobs:
       - name: Build release notes
         if: ${{ steps.version.outputs.publish == 'true' }}
         env:
-          GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
           mkdir -p notes
-          python3 buildScript/release_notes.py dist "$TAG" notes/header.md
-          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
-            -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" -q .body > notes/changelog.md
-          cat notes/header.md notes/changelog.md > notes/body.md
+          # FlClash-style body: Features/Bug Fixes changelog, download table, ChangeLog link.
+          python3 buildScript/release_notes.py dist "$TAG" notes/body.md
       - name: Upload artifact
         if: ${{ steps.version.outputs.publish != 'true' }}
         uses: actions/upload-artifact@v7
