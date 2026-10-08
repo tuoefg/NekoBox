@@ -7,15 +7,13 @@ Usage: release_notes.py <dist-dir> <tag> <output-file>
 release belongs to is read from GITHUB_REPOSITORY (owner/repo), so the generated links point at
 https://github.com/<owner>/<repo>/releases/download/<tag>/<apk>.
 
-Body layout, mirroring chen08209/FlClash releases:
-  ### Features / ### Bug Fixes / ### Other   — conventional commits since the previous v* tag
-  **Download based on your OS:**             — one Android row, per-ABI links separated by <br>
+Body layout:
+  **Download based on your OS:**   — one Android row, per-ABI links separated by <br>
   **List of all changes:** [ChangeLog](...)  — link to the commit list
 """
 
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -26,65 +24,10 @@ ABI_LABELS = {
 }
 ABI_ORDER = ["arm64-v8a", "armeabi-v7a", "x86_64"]
 
-CONVENTIONAL = re.compile(
-    r"^(feat|fix|perf|refactor|docs|style|test|build|ci|chore)"
-    r"(?:\(([^)]+)\))?[:：]\s*(.+)$",
-    re.IGNORECASE,
-)
-
-# Non-conventional history: map the leading verb to a section so old commits still classify.
-FEATURE_VERBS = (
-    "add", "new", "update", "improve", "support", "implement", "introduce",
-    "rebrand", "remove", "enable", "restore",
-)
-FIX_VERBS = ("fix", "repair", "correct", "resolve", "address", "fixup", "修复")
-
 
 def fail(message):
     print(f"::error::{message}")
     sys.exit(1)
-
-
-def run(*args):
-    result = subprocess.run(args, capture_output=True, text=True)
-    if result.returncode != 0:
-        fail(f"{' '.join(args)} failed: {result.stderr.strip() or result.stdout.strip()}")
-    return result.stdout
-
-
-def previous_tag(tag):
-    """The most recent v* tag other than the one being released."""
-    for t in run("git", "tag", "--list", "v*", "--sort=-version:refname").splitlines():
-        if t.strip() != tag:
-            return t.strip()
-    return None
-
-
-def commits_since(tag):
-    if tag:
-        return run("git", "log", f"{tag}..HEAD", "--format=%s").splitlines()
-    return run("git", "log", "--format=%s").splitlines()
-
-
-def classify(subject):
-    """Returns (section, scope, text); (None, None, None) means skip the commit."""
-    subject = subject.strip()
-    m = CONVENTIONAL.match(subject)
-    if m:
-        kind, scope, text = m.group(1).lower(), m.group(2), m.group(3).strip()
-        if kind == "feat":
-            return "Features", scope, text
-        if kind == "fix":
-            return "Bug Fixes", scope, text
-        if kind == "chore":
-            return None, None, None  # release/version noise
-        return "Other", scope, text
-    head = subject.split(":", 1)[0].strip().lower()
-    if head.startswith(FIX_VERBS):
-        return "Bug Fixes", None, subject
-    if head.startswith(FEATURE_VERBS):
-        return "Features", None, subject
-    return "Other", None, subject
 
 
 def main():
@@ -101,22 +44,9 @@ def main():
     if not apks:
         fail(f"no APK found in {dist}")
 
-    def abi_of(name):
+    def abi_of(name: str) -> str:
         found = next((a for a in ABI_LABELS if name.endswith(f"-{a}.apk")), None)
         return found or fail(f"cannot derive ABI from asset name: {name}")
-
-    sections = {"Features": [], "Bug Fixes": [], "Other": []}
-    for subject in commits_since(previous_tag(tag)):
-        section, scope, text = classify(subject)
-        if section is None:
-            continue
-        line = f"- **{scope}**  {text}" if scope else f"- {text}"
-        sections[section].append(line)
-
-    parts = []
-    for section in ("Features", "Bug Fixes", "Other"):
-        if sections[section]:
-            parts.append(f"### {section}\n" + "\n".join(sections[section]))
 
     cells = []
     for abi in ABI_ORDER:
@@ -125,16 +55,14 @@ def main():
             fail(f"missing APK for {abi}")
         url = f"https://github.com/{repo}/releases/download/{tag}/{apk.name}"
         cells.append(f"[{ABI_LABELS[abi]}]({url})")
-    parts.append(
+
+    body = (
         "**Download based on your OS:**\n\n"
         "| OS | Download |\n"
         "| --- | --- |\n"
-        f"| Android | {'<br>'.join(cells)} |"
+        f"| Android | {'<br>'.join(cells)} |\n\n"
+        f"**List of all changes:** [ChangeLog](https://github.com/{repo}/commits/{tag})\n"
     )
-
-    parts.append(f"**List of all changes:** [ChangeLog](https://github.com/{repo}/commits/{tag})")
-
-    body = "\n\n".join(parts) + "\n"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(body, newline="\n")
     print(body)

@@ -26,10 +26,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          # Full history so release_notes.py can derive the changelog from
-          # conventional commits between the previous v* tag and this one.
-          fetch-depth: 0
       # A tag push (v*) always publishes; with workflow_dispatch the tag is v<VERSION_NAME> and a published
       # release never reuses an existing tag.
       - name: Resolve tag
