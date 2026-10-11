@@ -5,6 +5,7 @@ import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SpeedTestSettings
 import io.nekohasekai.sagernet.aidl.ITestSessionCallback
 import io.nekohasekai.sagernet.bg.CoreRuntime
+import io.nekohasekai.sagernet.bg.XrayGeoAssets
 import io.nekohasekai.sagernet.bg.proto.SpeedTestSnapshot
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
@@ -19,6 +20,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -73,6 +75,16 @@ internal class TestSession(
 
     private val notification = TestNotification(this)
 
+    /** Geo asset downloads that failed in this session, by file: each is tried once per session. */
+    private val assetFailures = ConcurrentHashMap<String, String>()
+
+    /** Why profiles were left untested for a geo asset, shown as a warning once the session ends. */
+    private val assetProblems: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /** The profiles under test by id, for the names in the log. */
+    @Volatile
+    private var tested: Map<Long, ProxyEntity> = emptyMap()
+
     /** stop(): the core cancels the tests in flight, the sweep starts nothing new. */
     fun stop() {
         cancelled = true
@@ -96,13 +108,52 @@ internal class TestSession(
         } catch (e: Exception) {
             Logs.w(e)
         } finally {
-            notification.finish()
+            notification.finish(assetProblems)
             notifyClient { it.onDone(id, cancelled) }
         }
     }
 
+    /**
+     * Downloads what of [files] is missing, the progress in the notification; returns the files still missing with the
+     * reason (a file that already failed in this session is not tried again).
+     */
+    suspend fun ensureAssets(files: Collection<String>): Map<String, String> {
+        val failures = LinkedHashMap<String, String>()
+        val pending = ArrayList<String>()
+        for (file in files) {
+            val known = assetFailures[file]
+            if (known != null) failures[file] = known else pending.add(file)
+        }
+        if (pending.isEmpty()) return failures
+        val fresh = try {
+            XrayGeoAssets.ensure(pending, abort = { cancelled }) { notification.asset(XrayGeoAssets.progressText(it)) }
+        } finally {
+            notification.asset("")
+        }
+        for ((file, error) in fresh) {
+            if (cancelled) {
+                failures[file] = ERROR_ABORTED
+            } else {
+                assetFailures[file] = error
+                failures[file] = error
+                assetProblems.add(error)
+            }
+        }
+        return failures
+    }
+
+    /** A profile left untested for a geo asset, for the warning at the end. */
+    fun assetProblem(message: String) {
+        assetProblems.add(message)
+    }
+
+    /** The core's error for a probe of [profileName] that could not start, a geo asset problem in words. */
+    fun startFailure(profileName: String, error: String): String =
+        XrayGeoAssets.describeFailure(error, profileName)?.also(::assetProblem) ?: error
+
     private suspend fun runProfiles() {
         val profiles = resolve()
+        tested = profiles.associateBy { it.id }
         if (notification.scope.isBlank()) {
             notification.scope = profiles.firstOrNull()?.let { GroupRepo.get(it.groupId)?.displayName() }.orEmpty()
         }
@@ -121,6 +172,7 @@ internal class TestSession(
     private suspend fun runCurrent() {
         started(1)
         val running = CoreRuntime.running
+        running?.let { ProfileManager.getProfile(it.profileId) }?.let { tested = mapOf(it.id to it) }
         when (kind) {
             TestSpec.KIND_URL -> UrlTestRunner(this).runCurrent(running)
             TestSpec.KIND_SPEED -> SpeedTestRunner(this).runCurrent(running)
@@ -176,12 +228,14 @@ internal class TestSession(
             } else {
                 counted(ProxyEntity.isWorking(latency), ProxyEntity.isUnavailable(latency))
             }
+            if (ProxyEntity.isUnavailable(latency)) Logs.w("[${nameOf(result.profileId)}] test error: ${result.error}")
             notifyClient { it.onUrlResult(result.profileId, latency, if (result.connectOnly) "" else result.error) }
         }
     }
 
-    /** The running connection's URL test is shown, never stored. */
+    /** The running connection's URL test is shown, never stored; its error is logged (mainwindow_view.cpp:446-448). */
     fun reportCurrentUrl(result: ProbeResult) {
+        if (result.error.isNotEmpty()) Logs.w("UrlTest error: ${result.error}")
         val latency = latencyCode(result.latency, result.error, result.connectOnly)
         counted(ProxyEntity.isWorking(latency), ProxyEntity.isUnavailable(latency))
         notifyClient { it.onUrlResult(result.profileId, latency, if (result.connectOnly) "" else result.error) }
@@ -192,7 +246,9 @@ internal class TestSession(
         persist(results) { ProfileManager.saveIpTestResult(it.profileId, it.ip, it.country, it.error) }
         for (result in results) {
             val success = result.measured && result.error.isEmpty()
-            counted(success, result.measured && !success && !ProxyEntity.isTestAborted(result.error))
+            val failure = result.measured && !success && !ProxyEntity.isTestAborted(result.error)
+            counted(success, failure)
+            if (failure) Logs.w("[${nameOf(result.profileId)}] IP test error: ${result.error}")
             val error = if (result.measured) result.error else notMeasured(result.error)
             notifyClient {
                 it.onIpResult(
@@ -211,7 +267,7 @@ internal class TestSession(
         val dl = result.dlSpeed.orEmpty()
         val ul = result.ulSpeed.orEmpty()
         val country = CountryNames.toCode(result.serverCountry)
-        if (error.isNotEmpty()) Logs.w("[$profileId] speed test error: $error")
+        if (error.isNotEmpty()) Logs.w("[${nameOf(profileId)}] speed test error: $error")
         val stored = try {
             if (error.isEmpty()) {
                 ProfileManager.saveSpeedTestResult(profileId, dl, ul, result.latency, country, "")
@@ -266,6 +322,10 @@ internal class TestSession(
             Logs.w(e)
         }
     }
+
+    /** DisplayTypeAndName, as the desktop's result log lines name a profile. */
+    private fun nameOf(profileId: Long): String =
+        tested[profileId]?.outbound?.displayTypeAndName() ?: profileId.toString()
 
     private fun counted(success: Boolean, failure: Boolean) {
         done.incrementAndGet()

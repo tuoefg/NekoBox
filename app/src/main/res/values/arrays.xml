@@ -130,12 +130,6 @@
         <item>2</item>
     </string-array>
 
-    <string-array name="tun_implementation" translatable="false">
-        <item>gVisor</item>
-        <item>System</item>
-        <item>Mixed</item>
-    </string-array>
-
     <string-array name="packet_encoding_entry">
         <item>none</item>
         <item>packet</item>
@@ -444,11 +438,6 @@
         <item>4</item>
         <item>5</item>
     </string-array>
-    <string-array name="vpn_impl_values" translatable="false">
-        <item>gvisor</item>
-        <item>system</item>
-        <item>mixed</item>
-    </string-array>
     <string-array name="domain_strategy_entries">
         <item>@string/setting_default</item>
         <item>ipv4_only</item>
@@ -565,6 +554,13 @@
         <item>tcp</item>
         <item>udp</item>
         <item>icmp</item>
+    </string-array>
+    <!-- Same order as RouteRule.NETWORK_TYPES. -->
+    <string-array name="route_rule_network_type_entries">
+        <item>@string/route_rule_network_type_wifi</item>
+        <item>@string/route_rule_network_type_cellular</item>
+        <item>@string/route_rule_network_type_ethernet</item>
+        <item>@string/route_rule_network_type_other</item>
     </string-array>
     <string-array name="route_rule_protocol_entries">
         <item>@string/route_rule_any</item>

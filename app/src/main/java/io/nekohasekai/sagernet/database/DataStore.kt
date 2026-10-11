@@ -28,6 +28,9 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     // last used, but may not be running
     var currentProfile by configurationStore.long(Key.PROFILE_CURRENT)
 
+    /** The involvedProfileIds of the config [currentProfile] last started with, for ProfileManager.runningUses. */
+    var runningProfiles by configurationStore.stringList(Key.RUNNING_PROFILES)
+
     var selectedProxy by configurationStore.long(Key.PROFILE_ID)
 
     // only in bg process
@@ -54,6 +57,12 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var serviceError by configurationStore.string(Key.SERVICE_ERROR)
     /** [serviceError] asks for a working Direct DNS, so it offers the DNS settings instead of the logs. */
     var serviceErrorDns by configurationStore.boolean(Key.SERVICE_ERROR_DNS)
+    /** [serviceError] is about Xray's geoip.dat / geosite.dat, so it offers the geo asset settings instead. */
+    var serviceErrorGeo by configurationStore.boolean(Key.SERVICE_ERROR_GEO)
+    /** [serviceError] is about remote rule-sets that could not be downloaded, so it offers to start without them. */
+    var serviceErrorRuleSets by configurationStore.boolean(Key.SERVICE_ERROR_RULE_SETS)
+    /** When (epoch ms) the user agreed to start without those rule-sets; the next start spends it, 0 = none. */
+    var startWithoutRuleSets by configurationStore.long(Key.START_WITHOUT_RULE_SETS)
     var groupLayoutMode by configurationStore.stringToInt(Key.GROUP_LAYOUT_MODE) { 0 }
 
     var networkChangeResetConnections by configurationStore.boolean(Key.NETWORK_CHANGE_RESET_CONNECTIONS) { true }
@@ -79,9 +88,9 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     var proxyApps by configurationStore.boolean(Key.PROXY_APPS)
     var bypass by configurationStore.boolean(Key.BYPASS_MODE) { true }
     var individual by configurationStore.string(Key.INDIVIDUAL)
+    /** The VPN hands the mixed inbound to apps as the system HTTP proxy (only without inbound_auth). */
+    var appendHttpProxy by configurationStore.boolean(Key.APPEND_HTTP_PROXY)
     var httpProxyBypass by configurationStore.string(Key.HTTP_PROXY_BYPASS) { "" }
-
-    var yacdURL by configurationStore.string(Key.YACD_URL) { "http://127.0.0.1:9090/ui" }
 
     var webdavServer: String?
         get() = configurationStore.getString(Key.WEBDAV_SERVER)
@@ -142,7 +151,6 @@ object DataStore : OnPreferenceDataStoreChangeListener {
     }
 
     // tun
-    var vpnImpl by SettingsRegistry.VPN_IMPL
     var vpnMtu by SettingsRegistry.VPN_MTU
     var vpnIpv6 by SettingsRegistry.VPN_IPV6
     var vpnTunIpv4Cidr by SettingsRegistry.VPN_TUN_IPV4_CIDR
@@ -261,8 +269,11 @@ object DataStore : OnPreferenceDataStoreChangeListener {
         }
         set(value) = SettingsRegistry.CORE_BOX_API_SECRET.write(configurationStore, value)
 
+    var coreBoxApiPort by SettingsRegistry.CORE_BOX_API_PORT
     var coreDnsInPort by SettingsRegistry.CORE_DNS_IN_PORT
     var xrayVlessPreference by SettingsRegistry.XRAY_VLESS_PREFERENCE
+    var xrayGeoipUrl by SettingsRegistry.XRAY_GEOIP_URL
+    var xrayGeositeUrl by SettingsRegistry.XRAY_GEOSITE_URL
     var skipCert by SettingsRegistry.SKIP_CERT
     var useMozillaCerts by SettingsRegistry.USE_MOZILLA_CERTS
     var enableNtp by SettingsRegistry.ENABLE_NTP
@@ -273,6 +284,9 @@ object DataStore : OnPreferenceDataStoreChangeListener {
 
     /** core_box_clash_api is on: a positive port. */
     val clashApiEnabled: Boolean get() = coreBoxClashApi > 0
+
+    /** core_box_api_port is on: the sing-box API serves the dashboard on that loopback port. */
+    val apiDashboardEnabled: Boolean get() = coreBoxApiPort > 0
 
     // ------------------------------------------------------------------------------------------------ old cache, DO NOT ADD
 

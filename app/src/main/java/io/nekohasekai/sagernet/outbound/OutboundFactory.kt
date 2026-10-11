@@ -113,7 +113,7 @@ object OutboundFactory {
         Protocol("juicity", listOf("juicity://"), listOf("juicity"), emptyList()),
         Protocol("trusttunnel", listOf("tt://"), listOf("trusttunnel"), emptyList()),
         Protocol("shadowtls", listOf("shadowtls://"), listOf("shadowtls"), emptyList()),
-        Protocol("wireguard", listOf("wg://", "wireguard://"), listOf("wireguard"), emptyList()),
+        Protocol("wireguard", listOf("awg://", "wg://", "wireguard://"), listOf("wireguard"), emptyList()),
         Protocol("masque", emptyList(), listOf("masque"), listOf("masque")),
         Protocol("ssh", listOf("ssh://"), listOf("ssh"), listOf("ssh")),
         Protocol("naive", listOf("naive+https://", "naive+quic://"), listOf("naive"), emptyList()),
@@ -158,9 +158,12 @@ object OutboundFactory {
         val encryption = query.value("encryption")
         return preference == XrayVlessPreference.AllVLESS ||
             rawHttpOverTls ||
-            transport == "xhttp" ||
+            // splithttp: XHTTP's former name (Android only, XrayStreamSetting reads it as xhttp)
+            transport == "xhttp" || transport == "splithttp" ||
             query.has("fm") ||
             query.has("finalmask") ||
+            // sing-box has no counterpart to verifyPeerCertByName
+            query.has("vcn") ||
             (security == "reality" && preference == XrayVlessPreference.XhttpAndReality) ||
             (encryption != "none" && encryption.isNotEmpty()) ||
             query.value("extra").isNotEmpty()

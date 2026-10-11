@@ -15,8 +15,10 @@ import io.nekohasekai.sagernet.aidl.ISagerNetService
 import io.nekohasekai.sagernet.aidl.ISagerNetServiceCallback
 import io.nekohasekai.sagernet.appwidget.Widgets
 import io.nekohasekai.sagernet.bg.autoselector.AutoSelectorRuntime
+import io.nekohasekai.sagernet.bg.proto.DeferredRuleSets
 import io.nekohasekai.sagernet.bg.proto.LocalDnsFailedException
 import io.nekohasekai.sagernet.bg.proto.ProxyInstance
+import io.nekohasekai.sagernet.bg.proto.RuleSetDownloadFailedException
 import io.nekohasekai.sagernet.bg.proto.exitsThroughVpn
 import io.nekohasekai.sagernet.bg.proto.urlTestCurrent
 import io.nekohasekai.sagernet.database.DataStore
@@ -451,6 +453,7 @@ class BaseService {
                     "ServiceStopTrace serviceId=$serviceId proxyId=$proxyId " +
                         "stage=stopped restart=$restart hasCleanupError=${cleanupError != null}"
                 )
+                if (!restart) DeferredRuleSets.serviceStopped()
 
                 try {
                     when {
@@ -469,12 +472,15 @@ class BaseService {
 
         /**
          * A start that failed: MainActivity keeps showing [message] until the next start, also on a later visit, and
-         * offers the DNS settings with it when [dnsSettings].
+         * offers the DNS settings with it when [dnsSettings], the Xray geo asset settings when [geoSettings], a start
+         * without the rule-sets when [ruleSets].
          */
-        fun failRunner(message: String, dnsSettings: Boolean = false) {
+        fun failRunner(message: String, dnsSettings: Boolean = false, geoSettings: Boolean = false, ruleSets: Boolean = false) {
             if (data.state != State.Stopping) {
                 DataStore.serviceError = message
                 DataStore.serviceErrorDns = dnsSettings
+                DataStore.serviceErrorGeo = geoSettings
+                DataStore.serviceErrorRuleSets = ruleSets
             }
             stopRunner(false, message)
         }
@@ -549,6 +555,7 @@ class BaseService {
             PlatformNotifications.cancelAlwaysOnNoProfile(this)
 
             val proxy = ProxyInstance(profile, this)
+            proxy.deferRuleSets = DeferredRuleSets.consume()
             data.proxy = proxy
             BootReceiver.enabled = DataStore.rememberEnable
             if (!data.closeReceiverRegistered) {
@@ -586,6 +593,8 @@ class BaseService {
             if (DataStore.serviceError.isNotEmpty()) {
                 DataStore.serviceError = ""
                 DataStore.serviceErrorDns = false
+                DataStore.serviceErrorGeo = false
+                DataStore.serviceErrorRuleSets = false
             }
             data.changeState(State.Connecting)
             // startForeground before anything can stop the service (see the link above).
@@ -601,6 +610,7 @@ class BaseService {
                     preInit()
                     proxy.init()
                     DataStore.currentProfile = profile.id
+                    DataStore.runningProfiles = proxy.config.involvedProfileIds.map { it.toString() }
 
                     startProcesses()
                     data.changeState(State.Connected)
@@ -616,6 +626,17 @@ class BaseService {
                         else getString(R.string.local_dns_failed, exc.servers),
                         dnsSettings = true,
                     )
+                } catch (exc: RuleSetDownloadFailedException) {
+                    failRunner(
+                        getString(R.string.rule_set_deferred_failed, DeferredRuleSets.describe(exc.readableMessage)),
+                        ruleSets = true,
+                    )
+                } catch (exc: XrayGeoAssets.DownloadException) {
+                    failRunner(
+                        if (exc.fetchable) getString(R.string.xray_geo_start_download_failed, exc.readableMessage)
+                        else exc.readableMessage,
+                        geoSettings = true,
+                    )
                 } catch (exc: Throwable) {
                     // gomobile surfaces Go errors as go.Universe$proxyerror: message only, no stack worth logging
                     if (exc.javaClass.name.endsWith("proxyerror")) {
@@ -623,7 +644,12 @@ class BaseService {
                     } else {
                         Logs.w(exc)
                     }
-                    failRunner("${getString(R.string.service_failed)} ${exc.readableMessage}")
+                    val geoFailure = XrayGeoAssets.describeFailure(exc.readableMessage, profile.displayName())
+                    if (geoFailure != null) {
+                        failRunner(geoFailure, geoSettings = true)
+                    } else {
+                        failRunner("${getString(R.string.service_failed)} ${exc.readableMessage}")
+                    }
                 } finally {
                     data.connectingJob = null
                 }
