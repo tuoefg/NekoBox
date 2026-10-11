@@ -26,6 +26,13 @@ ABI_LABELS = {
 }
 ABI_ORDER = ["arm64-v8a", "armeabi-v7a", "x86_64"]
 
+# Shields.io badge colors, matching v2.0.1 release style
+ABI_BADGE_COLOR = {
+    "arm64-v8a": "168039",
+    "armeabi-v7a": "45bf55",
+    "x86_64": "96ed89",
+}
+
 CONVENTIONAL = re.compile(
     r"^(feat|fix|perf|refactor|docs|style|test|build|ci|chore)"
     r"(?:\(([^)]+)\))?[:：]\s*(.+)$",
@@ -122,7 +129,8 @@ def main():
         if apk is None:
             fail(f"missing APK for {abi}")
         url = f"https://github.com/{repo}/releases/download/{tag}/{apk.name}"
-        cells.append(f"[{ABI_LABELS[abi]}]({url})")
+        badge = f"https://img.shields.io/badge/APK-{ABI_LABELS[abi].split()[-1]}-{ABI_BADGE_COLOR[abi]}.svg?logo=android"
+        cells.append(f"[![{ABI_LABELS[abi]}]({badge})]({url})")
     parts.append(
         "**根据你的系统下载：**\n\n"
         "| 系统 | 下载 |\n"
