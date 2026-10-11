@@ -86,4 +86,6 @@ jobs:
           TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG" --notes-file notes/body.md
+          # Overwrite existing release (e.g. re-running after notes fix)
+          gh release delete "$TAG" --yes --cleanup-tag=false || true
+          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG" --notes-file notes/body.md --latest

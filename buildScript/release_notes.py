@@ -113,18 +113,8 @@ def main():
         found = next((a for a in ABI_LABELS if name.endswith(f"-{a}.apk")), None)
         return found or fail(f"cannot derive ABI from asset name: {name}")
 
-    sections = {"新功能": [], "问题修复": [], "其他": []}
-    for subject in commits_since(previous_tag(tag)):
-        section, scope, text = classify(subject)
-        if section is None:
-            continue
-        line = f"- **{scope}**  {text}" if scope else f"- {text}"
-        sections[section].append(line)
-
+    # Simple style: download table only, no changelog list (matches v2.0.1)
     parts = []
-    for section in ("新功能", "问题修复", "其他"):
-        if sections[section]:
-            parts.append(f"### {section}\n" + "\n".join(sections[section]))
 
     cells = []
     for abi in ABI_ORDER:
