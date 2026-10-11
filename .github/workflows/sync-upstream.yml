@@ -1,0 +1,79 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    # 每天北京时间早 8 点自动同步一次
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/throneproj/ThroneForAndroid.git
+          git fetch upstream main
+
+      - name: Check upstream commits
+        id: check
+        run: |
+          AHEAD=$(git rev-list --count HEAD..upstream/main)
+          echo "upstream has $AHEAD new commits"
+          echo "ahead=$AHEAD" >> $GITHUB_OUTPUT
+
+      - name: Merge and push
+        if: steps.check.outputs.ahead != '0'
+        id: merge
+        run: |
+          git merge upstream/main --no-edit --no-ff
+          git push origin main
+          echo "✅ Synced successfully"
+
+      - name: Open issue on conflict
+        if: failure() && steps.check.outputs.ahead != '0' && steps.merge.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `⚠️ 上游同步冲突 ${new Date().toISOString().slice(0,10)}`;
+            const body = `自动同步上游 [ThroneForAndroid](https://github.com/throneproj/ThroneForAndroid) 时发生合并冲突。
+
+            **手动处理步骤：**
+            \`\`\`bash
+            git clone https://github.com/${{ github.repository }}.git
+            cd $(basename ${{ github.repository }})
+            git remote add upstream https://github.com/throneproj/ThroneForAndroid.git
+            git fetch upstream
+            git merge upstream/main
+            # 解决冲突后 push
+            \`\`\`
+
+            详情可查看 [本次 Actions 日志](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})。`;
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'sync-conflict'
+            });
+
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['sync-conflict']
+              });
+            }
