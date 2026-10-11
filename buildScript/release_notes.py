@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds a FlClash-style GitHub release body for this Android-only app.
+"""Builds a FlClash-style Chinese GitHub release body for this Android-only app.
 
 Usage: release_notes.py <dist-dir> <tag> <output-file>
 
@@ -7,10 +7,10 @@ Usage: release_notes.py <dist-dir> <tag> <output-file>
 release belongs to is read from GITHUB_REPOSITORY (owner/repo), so the generated links point at
 https://github.com/<owner>/<repo>/releases/download/<tag>/<apk>.
 
-Body layout, mirroring chen08209/FlClash releases:
-  ### Features / ### Bug Fixes / ### Other   — conventional commits since the previous v* tag
-  **Download based on your OS:**             — one Android row, per-ABI links separated by <br>
-  **List of all changes:** [ChangeLog](...)  — link to the commit list
+Body layout, FlClash-style, Chinese labels:
+  ### 新功能 / ### 问题修复 / ### 其他   — conventional commits since the previous v* tag
+  **根据你的系统下载：**                  — one Android row, per-ABI links separated by <br>
+  **完整变更列表：** [更新日志](...)      — link to the commit list
 """
 
 import os
@@ -81,18 +81,18 @@ def classify(subject):
     if m:
         kind, scope, text = m.group(1).lower(), m.group(2), m.group(3).strip()
         if kind == "feat":
-            return "Features", scope, text
+            return "新功能", scope, text
         if kind == "fix":
-            return "Bug Fixes", scope, text
+            return "问题修复", scope, text
         if kind == "chore":
             return None, None, None  # release/version noise
-        return "Other", scope, text
+        return "其他", scope, text
     head = subject.split(":", 1)[0].strip().lower()
     if head.startswith(FIX_VERBS):
-        return "Bug Fixes", None, subject
+        return "问题修复", None, subject
     if head.startswith(FEATURE_VERBS):
-        return "Features", None, subject
-    return "Other", None, subject
+        return "新功能", None, subject
+    return "其他", None, subject
 
 
 def main():
@@ -113,7 +113,7 @@ def main():
         found = next((a for a in ABI_LABELS if name.endswith(f"-{a}.apk")), None)
         return found or fail(f"cannot derive ABI from asset name: {name}")
 
-    sections = {"Features": [], "Bug Fixes": [], "Other": []}
+    sections = {"新功能": [], "问题修复": [], "其他": []}
     for subject in commits_since(previous_tag(tag)):
         section, scope, text = classify(subject)
         if section is None:
@@ -122,7 +122,7 @@ def main():
         sections[section].append(line)
 
     parts = []
-    for section in ("Features", "Bug Fixes", "Other"):
+    for section in ("新功能", "问题修复", "其他"):
         if sections[section]:
             parts.append(f"### {section}\n" + "\n".join(sections[section]))
 
@@ -134,13 +134,13 @@ def main():
         url = f"https://github.com/{repo}/releases/download/{tag}/{apk.name}"
         cells.append(f"[{ABI_LABELS[abi]}]({url})")
     parts.append(
-        "**Download based on your OS:**\n\n"
-        "| OS | Download |\n"
+        "**根据你的系统下载：**\n\n"
+        "| 系统 | 下载 |\n"
         "| --- | --- |\n"
         f"| Android | {'<br>'.join(cells)} |"
     )
 
-    parts.append(f"**List of all changes:** [ChangeLog](https://github.com/{repo}/commits/{tag})")
+    parts.append(f"**完整变更列表：** [更新日志](https://github.com/{repo}/commits/{tag})")
 
     body = "\n\n".join(parts) + "\n"
     output.parent.mkdir(parents=True, exist_ok=True)
