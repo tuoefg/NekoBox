@@ -28,7 +28,7 @@ import java.net.Proxy
  */
 object ExitIp {
 
-    class Info(val ip: String, val countryCode: String, val country: String, val city: String)
+    class Info(val countryCode: String, val country: String)
 
     private const val LOOKUP_URL = "http://ip-api.com/json/"
     private const val TIMEOUT_SECONDS = 10L
@@ -37,11 +37,14 @@ object ExitIp {
     var info: Info? = null
         private set
 
-    /** The stats bar on screen; told about every change of [info]. */
+    /** The stats bar on screen; told about every change of [info] or [refreshing]. */
     var listener: (() -> Unit)? = null
 
     private var generation = 0
     private var job: Job? = null
+
+    /** A lookup runs; [info] keeps the previous result until it ends. */
+    val refreshing: Boolean get() = job != null
 
     /** Once per connection: nothing while a result is held or a lookup runs. */
     fun ensure() {
@@ -65,6 +68,7 @@ object ExitIp {
             job = null
             update(result)
         }
+        listener?.invoke()
     }
 
     fun clear() {
@@ -75,7 +79,6 @@ object ExitIp {
     }
 
     private fun update(value: Info?) {
-        if (info === value) return
         info = value
         listener?.invoke()
     }
@@ -89,8 +92,8 @@ object ExitIp {
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) error("HTTP ${response.code}")
             val json = JsonInput.parseObjectOrNull(response.peekBody(MAX_BYTES).string()) ?: return null
-            val ip = json.string("query").ifEmpty { return null }
-            return Info(ip, json.string("countryCode"), json.string("country"), json.string("city"))
+            val info = Info(json.string("countryCode"), json.string("country"))
+            return info.takeIf { it.countryCode.isNotEmpty() || it.country.isNotEmpty() }
         }
     }
 
