@@ -41,6 +41,24 @@ jobs:
           git push origin main
           echo "✅ Synced successfully"
 
+      - name: Auto tag for release
+        id: tag
+        run: |
+          set -euo pipefail
+          VERSION_NAME=$(sed -n 's/^VERSION_NAME=//p' nb4a.properties | tr -d '\r[:space:]')
+          test -n "$VERSION_NAME"
+          TAG="v${VERSION_NAME}"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null 2>&1; then
+            echo "Tag $TAG already exists, skip auto release"
+            echo "tagged=false" >> "$GITHUB_OUTPUT"
+          else
+            git tag -a "$TAG" -m "Auto release $TAG (synced from upstream)"
+            git push origin "$TAG"
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "✅ Auto release $TAG triggered"
+          fi
+
       - name: Open issue on conflict
         if: failure() && steps.check.outputs.ahead != '0' && steps.merge.outcome == 'failure'
         uses: actions/github-script@v7
