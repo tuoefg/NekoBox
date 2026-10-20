@@ -194,6 +194,9 @@ object SettingsRegistry {
     @JvmField val REMOTE_DNS_DISABLE_IPV6 = bool("remote_dns_disable_ipv6", false)
     @JvmField val DIRECT_DNS = string("direct_dns", "localhost")
     @JvmField val DIRECT_DNS_DISABLE_IPV6 = bool("direct_dns_disable_ipv6", false)
+    /** Servers typed into the remote / direct DNS fields, newest first (DnsServerHistory). */
+    @JvmField val REMOTE_DNS_HISTORY = stringList("remote_dns_history", emptyList())
+    @JvmField val DIRECT_DNS_HISTORY = stringList("direct_dns_history", emptyList())
     @JvmField val CORE_BOX_UNDERLYING_DNS = string("core_box_underlying_dns", "")
     @JvmField val DNS_FINAL_OUT = oneOf("dns_final_out", "remote", DNS_FINAL_OUTS)
     @JvmField val ENABLE_DNS_ROUTING = bool("enable_dns_routing", true)
@@ -351,7 +354,7 @@ object SettingsRegistry {
         Key.USE_SYSTEM_THEME, Key.APP_THEME, Key.NIGHT_THEME, Key.AMOLED_THEME, Key.APP_LANGUAGE,
         Key.ALWAYS_SHOW_ADDRESS, Key.GROUP_LAYOUT_MODE,
         Key.HIDE_FROM_RECENT_APPS, Key.LOG_BUF_SIZE, Key.LOG_FONT_SIZE, Key.APP_TLS_VERSION,
-        Key.WEBDAV_SERVER, Key.WEBDAV_USERNAME, Key.WEBDAV_PASSWORD, Key.WEBDAV_PATH,
+        Key.WEBDAV_SERVER, Key.WEBDAV_USERNAME, Key.WEBDAV_PASSWORD, Key.WEBDAV_PATH, Key.DEVICE_ID, Key.DEVICE_NAME,
         Key.PROFILE_CURRENT, Key.RUNNING_PROFILES, Key.PROFILE_ID, Key.PREVIEW_HINT_DISMISSED_VERSION,
         Key.UPDATE_CHECK_AUTO, Key.UPDATE_SKIPPED_VERSION_CODE, Key.RESUME_AFTER_UPDATE, Key.BATTERY_PROMPT_SHOWN,
         Key.LOG_EXPORT_REDACT, Key.HWID_FALLBACK, Key.WIFI_PERMISSION_ASKED, Key.SERVICE_ERROR,
@@ -364,7 +367,7 @@ object SettingsRegistry {
      */
     @JvmField
     val DEVICE_LOCAL_KEYS: Set<String> = setOf(
-        Key.WEBDAV_SERVER, Key.WEBDAV_USERNAME, Key.WEBDAV_PASSWORD, Key.WEBDAV_PATH,
+        Key.WEBDAV_SERVER, Key.WEBDAV_USERNAME, Key.WEBDAV_PASSWORD, Key.WEBDAV_PATH, Key.DEVICE_ID, Key.DEVICE_NAME,
         Key.BATTERY_PROMPT_SHOWN, Key.HWID_FALLBACK, Key.RESUME_AFTER_UPDATE, Key.UPDATE_SKIPPED_VERSION_CODE,
         Key.WIFI_PERMISSION_ASKED, Key.SERVICE_ERROR, Key.SERVICE_ERROR_DNS, Key.SERVICE_ERROR_GEO,
         Key.SERVICE_ERROR_RULE_SETS, Key.START_WITHOUT_RULE_SETS, Key.RUNNING_PROFILES, CORE_BOX_API_PORT.key,
