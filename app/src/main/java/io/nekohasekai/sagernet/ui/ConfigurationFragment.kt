@@ -93,7 +93,7 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
         /** Below this height (a phone in landscape) the header hides while the list scrolls down. */
         private const val COMPACT_HEIGHT_DP = 480
 
-        /** SubscriptionInfoCard.cpp:171-175: the time left is redrawn every minute. */
+        /** SubscriptionInfoCard.cpp:174-178: the time left is redrawn every minute. */
         private const val INFO_CARD_TICK_MS = 60_000L
 
         /** From this width in landscape the test panel stands beside the list: 40 % of the width, 320 to 420 dp. */
@@ -255,18 +255,21 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backCallback)
 
         val scope = viewLifecycleOwner.lifecycleScope
-        ProfilesDbWatcher(
-            onProfiles = { lists.forEach { it.adapter.reload() } },
-            onGroups = { reloadGroups() },
-        ).start(scope)
         scope.launch {
             for (request in stateRequests) {
                 val (selected, current, started) = withContext(Dispatchers.IO) { profileStateSnapshot() }
                 applyProfileState(selected, current, started)
             }
         }
+        var restarted = false
         scope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                // a new observer each time: the stopped run removes its own one late, off the main thread
+                ProfilesDbWatcher(
+                    onProfiles = { onProfilesChanged() },
+                    onGroups = { reloadGroups() },
+                ).start(this, catchUp = restarted)
+                restarted = true
                 launch { TestSessionClient.state.collect { onTestState(it) } }
                 launch { AutoSelectorStatusLine.follow(this@ConfigurationFragment) }
                 launch {
@@ -467,6 +470,13 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
     /** Every group in tab order. */
     fun groups(): List<ProxyGroup> = if (::pagerAdapter.isInitialized) pagerAdapter.groups else emptyList()
 
+    /** Shows group [id], reloading the tabs first when it is not one yet (a group :bg has just created). */
+    fun showGroup(id: Long) {
+        if (view == null || select || !::pagerAdapter.isInitialized) return
+        val index = pagerAdapter.indexOf(id)
+        if (index >= 0) pager.setCurrentItem(index, false) else reloadGroups(switchTo = id)
+    }
+
     private fun reloadGroups(switchTo: Long = 0L) {
         val owner = viewLifecycleOwnerLiveData.value ?: return
         owner.lifecycleScope.launch {
@@ -502,6 +512,7 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
         shownGroupId = group.id
         if (!select) GroupRepo.setCurrent(group.id)
         selection.finish()
+        currentList()?.adapter?.onShown()
         applyQuery()
         updateGroupProgress()
         header?.show()
@@ -514,6 +525,12 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
 
     fun detachList(list: ProfileListFragment) {
         lists.remove(list)
+    }
+
+    /** Either process wrote the profiles table: the shown list reloads (and is waited for), the others go stale. */
+    private suspend fun onProfilesChanged() {
+        val current = currentGroupId
+        lists.mapNotNull { it.adapter.onTableChanged(it.groupId == current) }.forEach { it.join() }
     }
 
     fun listFor(groupId: Long): ProfileListFragment? = lists.firstOrNull { it.groupId == groupId }

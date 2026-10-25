@@ -11,8 +11,10 @@ import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.ProxyGroup
+import io.nekohasekai.sagernet.group.SubscriptionClient
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.confirmAction
+import io.nekohasekai.sagernet.ktx.isIpAddress
 import io.nekohasekai.sagernet.ktx.needReload
 import io.nekohasekai.sagernet.ktx.readableMessage
 import io.nekohasekai.sagernet.ktx.showAllowingStateLoss
@@ -71,6 +73,9 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
             isEnabled = index in 0 until adapter.memberIds.size - 1
         }
         menu.findItem(R.id.action_delete).isEnabled = !host.isStartedProfile(profile.id)
+        val address = profile.outbound.getAddress()
+        menu.findItem(R.id.action_resolve_domain).isVisible =
+            !profile.outbound.invalid && address.isNotEmpty() && !address.isIpAddress()
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_edit -> edit(profile, adapter.group)
@@ -78,6 +83,7 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
                 R.id.action_test_url -> test(profile, TestSpec.KIND_URL)
                 R.id.action_test_ip -> test(profile, TestSpec.KIND_IP)
                 R.id.action_test_speed -> test(profile, TestSpec.KIND_SPEED)
+                R.id.action_resolve_domain -> resolve(profile)
                 R.id.action_move_up -> move(profile, -1)
                 R.id.action_move_down -> move(profile, 1)
                 R.id.action_delete -> delete(profile, adapter)
@@ -90,6 +96,14 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
 
     private fun test(profile: ProxyEntity, kind: Int) {
         ProfileTests.startProfiles(host, kind, listOf(profile.id), profile.groupId)
+    }
+
+    /** on_menu_resolve_selected_triggered for one profile: no confirmation, like the desktop. */
+    private fun resolve(profile: ProxyEntity) {
+        host.launchIo {
+            val report = SubscriptionClient.resolveProfiles(profile.groupId, listOf(profile.id))
+            if (report.isNotBlank()) host.onUi { snackbar(report).show() }
+        }
     }
 
     /** One step in the stored order through Group::EmplaceProfile (the D-pad alternative to dragging). */
@@ -137,13 +151,8 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
                     R.id.action_standard_clipboard -> copy(profile.exportLink())
                     R.id.action_universal_qr -> showCode(profile.exportJsonLink(), profile.displayName())
                     R.id.action_universal_clipboard -> copy(profile.exportJsonLink())
-                    R.id.action_config_export_clipboard -> copy(ProfileConfigExport.export(profile).first)
-                    R.id.action_config_export_file -> {
-                        val (config, fileName) = ProfileConfigExport.export(profile)
-                        DataStore.serverConfig = config
-                        host.startFilesForResult(exportConfig, fileName)
-                    }
-
+                    R.id.action_config_export_clipboard -> exportConfiguration(profile, toFile = false)
+                    R.id.action_config_export_file -> exportConfiguration(profile, toFile = true)
                     else -> return@setOnMenuItemClickListener false
                 }
             } catch (e: Exception) {
@@ -153,6 +162,39 @@ class ProfileItemMenu(private val host: ConfigurationFragment) {
             true
         }
         popup.show()
+    }
+
+    /**
+     * Export configuration: the config is built off the main thread, then copied or, through the DataStore, written
+     * to the file the user picks. A text too large for the clipboard offers the file instead.
+     */
+    private fun exportConfiguration(profile: ProxyEntity, toFile: Boolean) {
+        // A copy parses its own outbound, so the row's cached one is only ever touched on the main thread.
+        val entity = profile.copy()
+        host.launchIo {
+            val (config, fileName) = try {
+                ProfileConfigExport.export(entity)
+            } catch (e: Exception) {
+                Logs.w(e)
+                host.onUi { snackbar(e.readableMessage).show() }
+                return@launchIo
+            }
+            if (toFile) return@launchIo saveToFile(config, fileName)
+            host.onUi {
+                if (SagerNet.trySetPrimaryClip(config)) {
+                    snackbar(R.string.action_export_msg).show()
+                } else {
+                    snackbar(R.string.action_export_err)
+                        .setAction(R.string.action_export_file) { launchIo { saveToFile(config, fileName) } }
+                        .show()
+                }
+            }
+        }
+    }
+
+    private suspend fun saveToFile(config: String, fileName: String) {
+        DataStore.serverConfig = config
+        host.onUi { startFilesForResult(exportConfig, fileName) }
     }
 
     private fun showCode(link: String, name: String) {
