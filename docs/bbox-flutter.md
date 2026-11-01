@@ -131,8 +131,10 @@ Throne has no counterpart for; `Capabilities.kt` is the single source of truth a
 navigation accordingly:
 
 `terminal`, `capture.*` (request debugging), `remote.*`, `reports`, the `stun` / `quality` tools,
-`endpoints` (tailscale / openvpn / openconnect / usbip), `taildrop`, `apps.permission` (the list
-comes from PackageManager and needs no Shizuku grant), and the `dnsObject` editor.
+`endpoints` (tailscale / openvpn / openconnect / usbip), `taildrop`, `perAppManaged` (no
+Shizuku-managed package list), `rootQuery` (packages come from PackageManager only), the `dnsObject`
+editor, and `warp` as a dedicated page (WARP is configured through the core). `apps.permission`
+refuses with an explanation rather than being absent: the list needs no Shizuku grant.
 
 Everything else answers: `webdav.*`, `backup.*`, `apps.list` / `apps.icon`, `connections.*`,
 `logs.*`, `updates.check`, `dashboard.probe.*` and the rest are all wired.

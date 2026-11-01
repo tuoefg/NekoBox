@@ -55,7 +55,7 @@ translation, not a set of adapters bolted onto each screen.
 | node `delay` / `testedAt` | `ProxyEntity.latency` / `latencyAt` | Seconds in the row, milliseconds in the model. |
 | `dashboard.profiles[]` | subscription groups (`ProxyGroup.isSubscription`) | `traffic` / `expiry` come from `SubUserInfo` (`groups.sub_metadata_json`). |
 | `dashboard.egress` | `BboxEgress` | IP, country, organisation, ASN and address family. |
-| `dashboard.memory` | core's `/memory` (`BboxApi.memory`) | `inuse`, or `rss` for a build naming it that; the process heap is the last resort when the API is off. |
+| `dashboard.memory` | `Runtime` + core's `/memory` (`BboxApi.memory`) | `core`/`rss` come from the core's `/memory` (`inuse`, falling back to `rss`); `app`/`heapInuse` is the host process's used heap. The roles can swap across sing-box builds, which is why both are on the wire. |
 | `dashboard.intranet` | `lanWire` / `lanSet` | The mixed inbound's "Allow LAN" and its port; the panel shows the active bindings. |
 
 ## Actions
@@ -99,7 +99,10 @@ honours the mode as well.
 These fall through the dispatch to the `unsupported` error. They are the B-box features Throne has
 no counterpart for (the manifest in `Capabilities.kt` is the single source of truth): `terminal`,
 `capture.*`, `remote.*`, `reports`, the `stun` / `quality` tools, `endpoints` (tailscale / openvpn /
-openconnect / usbip), `taildrop`, `apps.permission`, and the `dnsObject` editor.
+openconnect / usbip), `taildrop`, `perAppManaged` (no Shizuku-managed package list), `rootQuery`
+(packages come from PackageManager only), `dnsObject`, and `warp` as a dedicated page (WARP is
+configured through the core). `apps.permission` answers with a refusal rather than an absence: the
+list needs no Shizuku grant.
 
 Wired since the earlier drafts of this file: the connections and logs screens (`BboxApi.connections`
 over the clash API, `BboxLogs` over `CoreLog`), profile import (`addProfile` and the scanner/file

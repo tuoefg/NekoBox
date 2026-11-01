@@ -2,7 +2,7 @@
   "repository": "https://github.com/chen08209/FlClash",
   "version": "v0.9.2",
   "commit": "7fd417fb9a9a277c6a9339a8ac87f907df7c25f7",
-  "changes": "Dart package imports renamed from fl_clash to b_box_ui. No Clash core included.",
+  "changes": "Dart package imports renamed from fl_clash to b_box_ui. No Clash core included. ownFiles covers lib/ only — the port's own tests live under test/ and are not vendored material.",
   "files": {
     "shaders/liquid_glass.frag": "b6aabbfbc332491cabff85ab1ae7437995d11e13c8adf9b321d0c11115f237ae",
     "assets/fonts/JetBrainsMono-Regular.ttf": "a0bf60ef0f83c5ed4d7a75d45838548b1f6873372dfac88f71804491898d138f",

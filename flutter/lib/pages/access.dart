@@ -115,17 +115,27 @@ class _AccessPageState extends State<AccessPage> {
     if (_managed) return;
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
     if (text == null || !mounted) return;
-    final names = text.split(RegExp(r'\s+')).where((value) => value.isNotEmpty).toSet().toList()..sort();
-    // The native clipboard import refuses names that are no package (a URL, a sentence) instead of
-    // quietly keeping them as fake apps; match it (PackageNameInput.rejectInvalid).
-    final invalid = names.where((name) => !_packageName.hasMatch(name)).take(3).toList();
+    // The native clipboard contract (AppManagerActivity's import): whole lines, an optional
+    // leading true/false bypass flag, the "unknown" sentinel dropped, and every remaining line
+    // validated as one package name (PackageNameInput.rejectInvalid). A sentence's words are
+    // refused as a whole line rather than kept as fake apps.
+    final lines = text.split('\n').map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
+    final first = lines.firstOrNull;
+    final bool? bypass = first == 'true' ? true : first == 'false' ? false : null;
+    final packages = (bypass == null ? lines : lines.skip(1)).where((name) => name != 'unknown').toList();
+    if (bypass == null && packages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Failed to import.'))));
+      return;
+    }
+    final invalid = packages.where((name) => !_packageName.hasMatch(name)).take(3).toList();
     if (invalid.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(context.tr('Not a valid package name: {names}').replaceAll('{names}', invalid.join(', '))),
       ));
       return;
     }
-    _set('perAppList', names);
+    if (bypass != null) _set('perAppMode', bypass ? 1 : 2);
+    _set('perAppList', packages.toSet().toList()..sort());
   }
 
   Future<void> _querySettings({bool retry = false}) async {
@@ -190,7 +200,10 @@ class _AccessPageState extends State<AccessPage> {
                 _option('Selected apps', '', () => _filter(() => _selectedOnly = !_selectedOnly), checked: _selectedOnly),
               ]),
             CommonPopupMenuItem(glyph: AppGlyphs.moreCircle, label: context.tr('Action'), subItems: [
-              CommonPopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Clipboard export'), onPressed: () => Clipboard.setData(ClipboardData(text: selected.join('\n')))),
+              CommonPopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Clipboard export'),
+                onPressed: () => Clipboard.setData(ClipboardData(
+                  // The native export leads with the bypass flag (AppManagerActivity's clipboard).
+                  text: '${mode == 1 ? 'true' : 'false'}\n${selected.join('\n')}'))),
               if (!_managed) CommonPopupMenuItem(glyph: AppGlyphs.paste, label: context.tr('Clipboard import'), onPressed: _import),
               CommonPopupMenuItem(glyph: AppGlyphs.refresh, label: context.tr('Refresh'), onPressed: _reload),
             ]),

@@ -23,21 +23,24 @@
 - [ ] 3.1 按 settings_audit.py 差集补 `SettingsSchema` 缺失键（registry 15 / Key 15 逐项甄别：真设置补入，运行时状态键移入 NON_SETTING 册并注明）与 `throne.dart` 对应控件（schema 无 UI 13 项），每键 Apply 语义（None/Reload/AppRestart）对齐旧 UI
 - [ ] 3.2 页内分组对齐旧 `SettingsFragment` 树；`uv run tools/diagnostics/settings_audit.py` 退出码 0（全差集闭合）
 - [ ] 3.3 本地静态校验：flutter analyze 0 error、flutter test 全绿；kotlin 编译通过
-- [ ] 3.4 CI/真机验证：推送触发 `ci.yml` 全绿；真机抽查 设置页 每屏与旧 UI 逐项等价（重点 NTP/MTU/ACL 长尾与恢复默认三态），回传证据为 workflow 链接 + 设置页对照截图
+- [ ] 3.4 规范同步：`settings-storage` 相关 delta 合入主规范（三列差集闭合的契约表述）
+- [ ] 3.5 CI/真机验证：推送触发 `ci.yml` 全绿；真机抽查 设置页 每屏与旧 UI 逐项等价（重点 NTP/MTU/ACL 长尾与恢复默认三态），回传证据为 workflow 链接 + 设置页对照截图
 
 ## 4. 批次 C：订阅组管理
 
 - [ ] 4.1 桥新增 `groupSettings.get/set`，覆盖 ProxyGroup 长尾字段（subOptions、autoClearUnavailable、testSortBy/trafficSortBy/testItemsToShow、frontProxyId/landingProxyId、routeId/importSubRoute、sortMethod/sortDescending/displayOrder、skipAutoUpdate）
 - [ ] 4.2 Dart `GroupSettingsPage` 表单校验等价旧 `FormIssue(Severity.Error)` 流；订阅变更报告弹层等价 `SubscriptionReportDialog`/`SubscribeFlows`
 - [ ] 4.3 本地静态校验 + 提交（kotlin/analyze/test）
-- [ ] 4.4 CI/真机验证：`ci.yml` 全绿；真机场景为订阅更新后查看变更报告、组设置逐字段读写与校验拦截，回传 workflow 链接 + 截图
+- [ ] 4.4 规范同步：`profile-management` 的组设置与订阅报告 delta 合入主规范
+- [ ] 4.5 CI/真机验证：`ci.yml` 全绿；真机场景为订阅更新后查看变更报告、组设置逐字段读写与校验拦截，回传 workflow 链接 + 截图
 
 ## 5. 批次 D：协议 typed 表单（两小批）
 
 - [ ] 5.1 首批 7 协议 typed 表单（Shadowsocks/VMess/VLESS/Trojan/TUIC/Hysteria2/WireGuard），字段来源各 `*SettingsActivity.kt` + `SettingsMapper`，保存走 `profiles.*`，校验等价 `ValidationForm`
 - [ ] 5.2 CI/真机验证：`ci.yml` 全绿；真机逐协议 新建→保存→重开 回读一致，回传 workflow 链接 + 截图
 - [ ] 5.3 二批长尾 22 协议 typed 表单（AnyTLS/Binding/Chain/Custom/Direct/Http/Juicity/Masque/Mieru/Naive/OpenConnect/OpenVpn/Snell/ShadowTLS/Socks/SSH/TrustTunnel 等，清单见规划 §7.2）；E1 落地后长尾可先用其校验兜底
-- [ ] 5.4 CI/真机验证：同上，抽查长尾协议各 2 个
+- [ ] 5.4 规范同步：`outbound-protocols` 的 typed 表单覆盖要求 delta 合入主规范
+- [ ] 5.5 CI/真机验证：同上，抽查长尾协议各 2 个
 
 ## 6. 批次 E1：JSON 引擎移植
 
@@ -55,7 +58,8 @@
 
 - [ ] 8.1 桥包装 Kotlin `TestSessionModel`（勿重写）：`groups.testSession.start/stop/poll` + 事件流（rows/ranked/removed、LatencyHistogram bins、Live 速度样本）
 - [ ] 8.2 Dart 面板（复用 `ui/line_chart.dart`）：实时进度/最快服务器/排序/移除不可用/一键连最快
-- [ ] 8.3 CI/真机验证：`ci.yml` 全绿；真机跑一次 20+ 节点批量测速与旧面板逐项对照，回传录屏/截图
+- [ ] 8.3 规范同步：`connectivity-testing` 的批量测速等价要求 delta 合入主规范
+- [ ] 8.4 CI/真机验证：`ci.yml` 全绿；真机跑一次 20+ 节点批量测速与旧面板逐项对照，回传录屏/截图
 
 ## 9. 批次 G：WARP 管理
 

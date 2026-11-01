@@ -115,7 +115,7 @@
 
 ### 批次 H — 路由收口（剩余小头）
 - **前置**：A。
-- **任务**：routes.dart 支持 SSID/BSSID、网络类型、计费网络三类规则条件（旧 `RouteFragment` 条件集）。
+- **任务**：routes.dart 支持 SSID/BSSID、网络类型、计费网络三类规则条件（旧 `RouteFragment` 条件集）；规则列表拖拽排序。
   （「DnsServerSuggestions 补入 DNS 字段」已于 `478c2ab6` 完成，见 v1.1 修订记录。）
 - **验收**：旧 RouteFragment 条件全支持。
 
@@ -131,7 +131,7 @@
 
 ### 批次 K — i18n（zh + en）
 - **前置**：B–I 文案冻结。
-- **任务**：以 Flutter 全部 UI 字符串为 key 清单（en=原文）；补齐 `flutter/lib/l10n.dart` `_zh` map 覆盖率；术语与旧 `values-zh/strings.xml` 对齐（同一概念不出现两套译名）；CI 加缺键校验（可入 android-build 或独立 step）。
+- **任务**：以 Flutter 全部 UI 字符串为 key 清单（en=原文）；补齐 `flutter/lib/l10n.dart` `_zh` map 覆盖率；术语与旧 `values-zh-rCN/strings.xml` 对齐（同一概念不出现两套译名）；CI 加缺键校验（可入 android-build 或独立 step）。
 - **验收**：zh map 覆盖全部 UI 字符串 + CI 校验绿。
 
 ### 批次 L — 旧 UI 彻底退役（D4 决策）

@@ -24,14 +24,14 @@ Flutter UI 的全部用户可见字符串 MUST 以英文原文作为 key（`cont
 ### Requirement: 中文映射全量覆盖
 `flutter/lib/l10n.dart` 的 `_zh` 映射 MUST 覆盖全部 UI 字符串 key：每个 `context.tr` 的 key
 MUST 在 `_zh` 中存在对应译文或被显式认定为「英文即终文」并登记豁免；术语 MUST 与旧
-`values-zh/strings.xml` 同一概念保持同一译名（同一概念不得出现两套译名）。
+`values-zh-rCN/strings.xml` 同一概念保持同一译名（同一概念不得出现两套译名）。
 
 #### Scenario: 中文环境无英文回退
 - **WHEN** 系统语言为中文并逐屏走查全部 Flutter 页面
 - **THEN** 所有用户可见文案为中文（显式豁免项除外），无英文回退
 
 #### Scenario: 术语与旧 UI 一致
-- **WHEN** 比对 `_zh` 中某概念（如「路由档」「恢复默认」）与旧 `values-zh/strings.xml` 对应条目
+- **WHEN** 比对 `_zh` 中某概念（如「路由档」「恢复默认」）与旧 `values-zh-rCN/strings.xml` 对应条目
 - **THEN** 同一概念使用同一译名
 
 ### Requirement: CI 缺键校验
