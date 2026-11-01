@@ -1,6 +1,8 @@
 import 'package:flutter/services.dart';
 import '../widgets.dart';
 import '../components/code_editor.dart';
+import '../ui/json/engine/json_tree.dart';
+import '../ui/json/engine/schema_validator.dart';
 
 class ProfileEditor extends StatefulWidget {
   const ProfileEditor({super.key, required this.profile});
@@ -9,7 +11,7 @@ class ProfileEditor extends StatefulWidget {
 }
 
 class _ProfileEditorState extends State<ProfileEditor> {
-  final _text = JsonEditorController();
+  final _text = JsonCodeController();
   final _undo = UndoHistoryController();
   final _find = TextEditingController();
   String? _original, _error, _revision;
@@ -21,7 +23,15 @@ class _ProfileEditorState extends State<ProfileEditor> {
     _text.addListener(_changed);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
-  void _changed() { if (mounted) setState(() {}); }
+  void _changed() {
+    if (!mounted) return;
+    // The manifest is not a sing-box document: the only annotations are the parser's own.
+    final parsed = JsonTree.parse(_text.text);
+    _text.issues = parsed.ok
+        ? const []
+        : [JsonIssue(Severity.error, parsed.error, '', parsed.errorSpan)];
+    setState(() {});
+  }
   @override void dispose() { _text.dispose(); _undo.dispose(); _find.dispose(); super.dispose(); }
 
   Future<void> _load({bool confirmDiscard = false}) async {
@@ -53,15 +63,38 @@ class _ProfileEditorState extends State<ProfileEditor> {
     if (mounted) setState(() => _saving = false);
   }
 
+  void _applyTemplate() {
+    if (_text.text.trim().isNotEmpty && _text.text.trim() != '{}') return;
+    _text.text = '''
+{
+  "name": "",
+  "url": "",
+  "nodes": []
+}''';
+  }
+
   Future<void> _check({bool format = false}) async {
     if (_checking || _saving || _loading) return;
     final box = context.box;
     setState(() { _checking = true; _error = null; });
     try {
-      final result = await box.call(format ? 'config.format' : 'config.check', {'content': _text.text});
-      if (!mounted) return;
-      if (format) _text.text = result as String;
-      else ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Configuration is valid'))));
+      if (format) {
+        // The engine pretty-prints locally; the whitelist check still needs the bridge.
+        final formatted = formatJson(_text.text);
+        if (!mounted) return;
+        if (formatted == null) {
+          setState(() => _error = context.tr('Not valid JSON'));
+          return;
+        }
+        _text.text = formatted;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Done'))));
+      } else {
+        final result = await box.call('config.check', {'content': _text.text});
+        if (!mounted) return;
+        if (result != null) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Configuration is valid'))));
+        }
+      }
     } catch (error) { if (mounted) setState(() => _error = BoxController.describe(error)); }
     if (mounted) setState(() => _checking = false);
   }
@@ -84,6 +117,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
         onPressed: _saving || _checking || _loading || _original == null ? null : _save),
       iconActions: [
         IconButtonData(glyph: AppGlyphs.refresh, tooltip: context.tr('Reload'), onPressed: _saving || _checking || _loading ? null : () => _load(confirmDiscard: true)),
+        IconButtonData(glyph: AppGlyphs.add, tooltip: context.tr('Template'), onPressed: _saving || _checking || _loading ? null : _applyTemplate),
         IconButtonData(glyph: AppGlyphs.code, tooltip: context.tr('Format'), onPressed: _saving || _checking || _loading || _original == null ? null : () => _check(format: true)),
         IconButtonData(glyph: AppGlyphs.verified, tooltip: context.tr('Validate'), onPressed: _saving || _checking || _loading || _original == null ? null : _check),
         IconButtonData(glyph: AppGlyphs.search, tooltip: context.tr('Search'), onPressed: () => setState(() => _search = !_search)),
@@ -106,31 +140,13 @@ class _ProfileEditorState extends State<ProfileEditor> {
           )),
           Expanded(child: _original == null
               ? _error == null ? const SizedBox.shrink() : ErrorState(_error!, retry: _load)
-              : CodeEditor(controller: _text, undoController: _undo, readOnly: _saving || _checking || _loading)),
+              : Column(children: [
+                  JsonIssuesStrip(issues: _text.issues, text: _text.text, controller: _text),
+                  Expanded(child: CodeEditor(
+                    controller: _text, undoController: _undo, readOnly: _saving || _checking || _loading)),
+                ])),
         ]),
       )),
     ),
   );
-}
-
-class JsonEditorController extends TextEditingController {
-  static final _tokens = RegExp(r'("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d+)?');
-  @override TextSpan buildTextSpan({required BuildContext context, TextStyle? style, required bool withComposing}) {
-    if (text.length > 150000 || value.composing.isValid && !value.composing.isCollapsed) {
-      return super.buildTextSpan(context: context, style: style, withComposing: withComposing);
-    }
-    final colors = Theme.of(context).colorScheme;
-    final spans = <InlineSpan>[];
-    var end = 0;
-    for (final token in _tokens.allMatches(text)) {
-      if (token.start > end) spans.add(TextSpan(text: text.substring(end, token.start)));
-      spans.add(TextSpan(
-        text: token.group(0),
-        style: TextStyle(color: token.group(2) != null ? colors.primary : token.group(1) != null ? colors.tertiary : colors.secondary),
-      ));
-      end = token.end;
-    }
-    if (end < text.length) spans.add(TextSpan(text: text.substring(end)));
-    return TextSpan(style: style, children: spans);
-  }
 }

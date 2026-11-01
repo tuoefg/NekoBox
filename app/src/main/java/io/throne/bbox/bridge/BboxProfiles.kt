@@ -408,10 +408,14 @@ object BboxProfiles {
     /** The typed form's seed: the node's canonical sing-box JSON (ProfileJson), which the form reads and writes. */
     suspend fun nodeConfig(id: Long): Map<String, Any?> = withContext(Dispatchers.IO) {
         val profile = ProfileManager.getProfile(id) ?: error("No proxy with id $id")
+        val outbound = profile.outbound
         mapOf(
             "id" to profile.id,
             "name" to profile.displayName(),
-            "json" to io.nekohasekai.sagernet.ui.json.ProfileJson.text(profile.outbound),
+            "json" to io.nekohasekai.sagernet.ui.json.ProfileJson.text(outbound),
+            // The JSON editor's schema surface (ProfileJson.schemaRoots / relaxations are Outbound-bound).
+            "xray" to outbound.isXray(),
+            "endpoint" to outbound.isEndpoint(),
         )
     }
 

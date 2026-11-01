@@ -1,12 +1,11 @@
 import 'dart:ui' show BoxHeightStyle;
 import 'package:b_box_ui/components/code_editor.dart';
-import 'package:b_box_ui/pages/profile_editor.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Finder _line(int number) => find.byKey(ValueKey('code-line-$number'));
 
-Future<void> _mount(WidgetTester tester, JsonEditorController text, UndoHistoryController undo,
+Future<void> _mount(WidgetTester tester, JsonCodeController text, UndoHistoryController undo,
     {double width = 320, double scale = 1, double height = 260}) async {
   await tester.pumpWidget(MaterialApp(home: Scaffold(body: Center(child: SizedBox(width: width, height: height,
     child: MediaQuery(data: MediaQueryData(textScaler: TextScaler.linear(scale)),
@@ -29,7 +28,7 @@ double _textY(WidgetTester tester, int offset) {
 void main() {
   for (final scale in [0.8, 1.0, 1.4]) {
     testWidgets('logical numbers stay aligned through wrapping and resize at scale $scale', (tester) async {
-      final text = JsonEditorController()..text = '{\n  "url": "https://example.org/${'segment/' * 8}"\n}\n';
+      final text = JsonCodeController()..text = '{\n  "url": "https://example.org/${'segment/' * 8}"\n}\n';
       final undo = UndoHistoryController();
       addTearDown(() { text.dispose(); undo.dispose(); });
       for (final width in [320.0, 540.0]) {
@@ -46,7 +45,7 @@ void main() {
   }
 
   testWidgets('numbers track scrolling, inserted blank lines and replaced content', (tester) async {
-    final text = JsonEditorController()..text = List.generate(100, (i) => '"line $i"').join('\n');
+    final text = JsonCodeController()..text = List.generate(100, (i) => '"line $i"').join('\n');
     final undo = UndoHistoryController();
     addTearDown(() { text.dispose(); undo.dispose(); });
     await _mount(tester, text, undo);

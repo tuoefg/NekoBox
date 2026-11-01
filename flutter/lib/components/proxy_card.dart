@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import '../widgets.dart';
 import '../pages/protocol_form.dart';
+import '../pages/node_json_page.dart';
 
 // Metrics and card presentation from FlClash v0.9.2 proxies/common.dart and card.dart.
 class ProxyCardMetrics {
@@ -74,21 +75,11 @@ class ProxyNodeCard extends StatelessWidget {
           catch (error) { box.report(error); }
         }),
         CommonPopupMenuItem(glyph: AppGlyphs.edit, label: context.tr('Edit'), onPressed: () async {
-          final box = context.box;
           if (node['isSelector'] == true) {
             await openPage(context, AutoSelectorPage(id: (node['id'] as num?)?.toInt() ?? 0));
             return;
           }
-          try {
-            final info = json(await box.call('profiles.nodeInfo', {'id': node['id']}));
-            if (!context.mounted) return;
-            final saved = await showDialog<Json>(context: context,
-              builder: (context) => _NodeEditor(name: '${info['name'] ?? ''}', content: '${info['content'] ?? ''}'));
-            if (saved == null) return;
-            await box.call('profiles.nodeUpdate', {
-              'id': node['id'], 'name': saved['name'], 'content': saved['content'],
-            });
-          } catch (error) { box.report(error); }
+          await openForm(context, NodeJsonPage(id: (node['id'] as num?)?.toInt() ?? 0));
         }),
         CommonPopupMenuItem(glyph: AppGlyphs.sliders, label: context.tr('Node tuning'), onPressed: () async {
           await openPage(context, NodeTuningPage(id: (node['id'] as num?)?.toInt() ?? 0));
@@ -145,55 +136,4 @@ class ProxyNodeCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The node editor dialog: a rename plus the share link or JSON the outbound is rebuilt from.
-/// Like [SettingLines]'s editor, the controllers live here so the closing animation is safe.
-class _NodeEditor extends StatefulWidget {
-  const _NodeEditor({required this.name, required this.content});
-  final String name, content;
-  @override
-  State<_NodeEditor> createState() => _NodeEditorState();
-}
-
-class _NodeEditorState extends State<_NodeEditor> {
-  late final TextEditingController _name = TextEditingController(text: widget.name);
-  late final TextEditingController _content = TextEditingController(text: widget.content);
-  @override
-  void dispose() {
-    _name.dispose();
-    _content.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(context.tr('Edit')),
-    content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-      TextField(
-        controller: _name, autocorrect: false,
-        decoration: InputDecoration(
-          labelText: context.tr('Node name'),
-          border: const OutlineInputBorder(),
-        ),
-      ),
-      const SizedBox(height: 12),
-      TextField(
-        controller: _content, minLines: 3, maxLines: 8, autocorrect: false,
-        keyboardType: TextInputType.multiline,
-        decoration: InputDecoration(
-          labelText: context.tr('Share link or JSON'),
-          helperText: context.tr('Leave empty to keep the current configuration.'),
-          border: const OutlineInputBorder(),
-        ),
-      ),
-    ]),
-    actions: [
-      TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
-      TextButton(
-        onPressed: () => Navigator.pop(context, {'name': _name.text, 'content': _content.text}),
-        child: Text(context.tr('Save')),
-      ),
-    ],
-  );
 }

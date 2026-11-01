@@ -64,8 +64,12 @@
 
 ## 7. 批次 E2：编辑器 UI
 
-- [ ] 7.1 `components/code_editor.dart` 升级：补全浮层、错误标注、语法配色（JsonColors 进 palette 体系）、格式化、manifest 模板入口；接 `profiles.save`/`checkConfig` 组清单键白名单
-- [ ] 7.2 验收：Flutter 内完成 schema 校验 + 补全 + 格式化全流程；`ui/json/` 进入 L 可删清单
+- [x] 7.1 `components/code_editor.dart` 升级：补全浮层、错误标注、语法配色（JsonColors 进 palette 体系）、格式化、manifest 模板入口；接 `profiles.save`/`checkConfig` 组清单键白名单
+  - `JsonCodeController`（TextEditingController.buildTextSpan）：引擎 span 着色（key=primary/string=tertiary/number=secondary/literal 斜体 secondary，替换 profile_editor 的正则分词器）；issue 波浪下划线按 span 相交叠加（error=colors.error、warning=0xfff08c00 桌面同款）；解析错误标注自身 span。
+  - CodeEditor：可选 `completion`（150ms 防抖，容错扫描逐键上下文建议，底部停靠面板 label+detail+计数，tap 应用 insert/before/after + 选中区间）与 `issues`；`JsonIssuesStrip`（行:列 + 消息 + 严重级图标，tap 跳转 caret）。
+  - profile_editor（组清单）：本地 JsonFormatter 格式化（config.format 桥调用退役）、config.check 白名单保留、Template 动作（空文档播种 {name,url,nodes:[]}）、解析错误入 strip。
+- [x] 7.2 验收：Flutter 内完成 schema 校验 + 补全 + 格式化全流程；`ui/json/` 进入 L 可删清单
+  - 新页 `pages/node_json_page.dart`（proxy_card「Edit」入口，替换原 _NodeEditor 对话框）：profiles.nodeConfig（桥新增 xray/endpoint 旗标）→ ProfileJsonTables.schemaRoots/relaxations（Xray 形态无 schema 优雅降级为纯语法）→ SchemaStore.get 单例；校验 300ms 防抖 + 补全面板 + 本地格式化 + nodeUpdate 保存（桥侧模型校验兜底）。存量 code_editor_test 迁移 JsonCodeController 过（4 用例）。
 - [ ] 7.3 CI/真机验证：`ci.yml` 全绿；真机打开 raw 编辑器验证 补全/错误标注/格式化，回传截图
 
 ## 8. 批次 F：批量测速面板
