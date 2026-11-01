@@ -497,7 +497,10 @@ class BaseService {
                     "ServiceStopTrace serviceId=$serviceId proxyId=$proxyId " +
                         "stage=stopped restart=$restart hasCleanupError=${cleanupError != null}"
                 )
-                if (!finishRestart) DeferredRuleSets.serviceStopped()
+                if (!finishRestart) {
+                    DeferredRuleSets.serviceStopped()
+                    AutoSelectorRuntime.serviceStopped()
+                }
 
                 try {
                     when {
@@ -540,7 +543,11 @@ class BaseService {
             // Tracks the underlying network for VpnService.setUnderlyingNetworks only; the
             // "reset on network change" switch is applied by NativeInterface's monitor callback.
             DefaultNetworkListener.start(this) { network ->
-                if (network == null) return@start
+                if (network == null) {
+                    SagerNet.underlyingNetwork = null
+                    DataStore.vpnService?.updateUnderlyingNetwork()
+                    return@start
+                }
                 SagerNet.connectivity.getLinkProperties(network)?.also { link ->
                     SagerNet.underlyingNetwork = network
                     DataStore.vpnService?.updateUnderlyingNetwork()
@@ -655,6 +662,7 @@ class BaseService {
                     withContext(coreDispatcher) { proxy.init() }
                     DataStore.currentProfile = profile.id
                     DataStore.runningProfiles = proxy.config.involvedProfileIds.map { it.toString() }
+                    DataStore.runningRouteId = proxy.routeId
 
                     withContext(coreDispatcher) { startProcesses() }
                     data.changeState(State.Connected)

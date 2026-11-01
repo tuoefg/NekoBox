@@ -35,12 +35,15 @@ object Key {
     const val HIDE_FROM_RECENT_APPS = "hideFromRecentApps"
     const val PREVIEW_HINT_DISMISSED_VERSION = "previewHintDismissedVersion"
     const val GROUP_LAYOUT_MODE = "groupLayoutMode"
+    const val COMPACT_PROFILE_ROWS = "compactProfileRows"
+    const val COMPACT_GROUP_CARDS = "compactGroupCards"
 
     const val PROFILE_DIRTY = "profileDirty"
     const val PROFILE_ID = "profileId"
     const val PROFILE_GROUP = "profileGroup"
     const val PROFILE_CURRENT = "profileCurrent"
     const val RUNNING_PROFILES = "runningProfiles"
+    const val RUNNING_ROUTE = "runningRoute"
 
     const val SERVER_CONFIG = "serverConfig"
 
