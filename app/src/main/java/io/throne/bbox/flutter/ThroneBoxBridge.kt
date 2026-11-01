@@ -13,6 +13,8 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.nekohasekai.sagernet.BuildConfig
 import io.nekohasekai.sagernet.SagerNet
+import android.os.Build
+import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.SettingsRegistry
 import io.nekohasekai.sagernet.ktx.Logs
@@ -429,11 +431,18 @@ class ThroneBoxBridge(
                     openBatterySettings()
                     result.success(settingsWire())
                 }
-                "systemProxy.set" -> result.error(
-                    "unsupported",
-                    "Throne routes through a VPN service, which leaves no system HTTP proxy to switch",
-                    null,
-                )
+                "systemProxy.set" -> {
+                    // Upstream's switch: the VPN service writes its mixed inbound into the system
+                    // settings, which API 29 allows and the proxy-only mode cannot do at all.
+                    val enabled = call.argument<Boolean>("enabled") == true
+                    if (!systemProxyAvailable()) {
+                        result.error("unsupported", "The system HTTP proxy needs VPN mode and Android 10 or newer", null)
+                    } else {
+                        DataStore.appendHttpProxy = enabled
+                        if (DataStore.serviceState.canStop) SagerNet.reloadService()
+                        result.success(mapOf("available" to true, "enabled" to DataStore.appendHttpProxy))
+                    }
+                }
                 else -> result.error(
                     "unsupported",
                     "This screen is not wired to Throne yet: ${call.method}",
@@ -801,6 +810,10 @@ class ThroneBoxBridge(
         }
     }
 
+    /** The system HTTP proxy is written by the VPN service, so proxy-only mode cannot offer it. */
+    private fun systemProxyAvailable(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && DataStore.serviceMode == Key.MODE_VPN
+
     private fun batteryExempt(): Boolean = runCatching {
         val power = app.getSystemService(Context.POWER_SERVICE) as PowerManager
         power.isIgnoringBatteryOptimizations(app.packageName)
@@ -870,9 +883,9 @@ class ThroneBoxBridge(
             "connections" to 0,
             "memory" to (dashboard.memory?.inUse ?: 0L),
             "goroutines" to 0,
-            // Throne routes through a VPN service, so there is no system proxy the UI could switch off.
-            "systemProxyAvailable" to false,
-            "systemProxy" to false,
+            // Only the VPN service can hand its mixed inbound to apps as the system HTTP proxy.
+            "systemProxyAvailable" to systemProxyAvailable(),
+            "systemProxy" to DataStore.appendHttpProxy,
             "deprecated" to emptyList<Map<String, Any?>>(),
         )
     }

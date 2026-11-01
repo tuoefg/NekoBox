@@ -11,7 +11,7 @@ void main() {
     addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
     const channel = MethodChannel('test.service-settings');
     final events = StreamController<dynamic>.broadcast();
-    final settings = <String, dynamic>{'allowBypass': false, 'showGroupInNotification': false, 'showDirectSpeed': false};
+    final settings = <String, dynamic>{'alwaysShowAddress': false, 'showGroupInNotification': false, 'showDirectSpeed': false};
     final edits = <Json>[];
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
@@ -36,7 +36,7 @@ void main() {
     expect(find.byType(ServiceSettingsPage), findsOneWidget);
     expect(find.text('Apply service changes'), findsNothing);
     for (final (title, key, value, restarts) in [
-      ('Allow VPN bypass', 'allowBypass', true, true),
+      ('Always show the address', 'alwaysShowAddress', true, false),
       ('Show group name in the notification', 'showGroupInNotification', true, false),
       ('Show direct speed', 'showDirectSpeed', true, false),
     ]) {
@@ -63,7 +63,7 @@ void main() {
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == 'ready') return {'version': 'test', 'coreVersion': 'test',
-        'dashboard': {'status': 'Started'}, 'settings': {'allowBypass': false, 'showDirectSpeed': false}};
+        'dashboard': {'status': 'Started'}, 'settings': {'alwaysShowAddress': false, 'showDirectSpeed': false, 'meteredNetwork': false}};
       if (call.method == 'settings.set') { edits.add(json(call.arguments)); return reply.future; }
       return null;
     });
@@ -73,7 +73,10 @@ void main() {
     await tester.pumpAndSettle();
     openPage(tester.element(find.byType(HomePage)), const ServiceSettingsPage());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Allow VPN bypass'));
+    // Only an autoRestart switch asks the host to reload, which is what puts the page in this state.
+    await tester.scrollUntilVisible(find.text('Treat the VPN as metered'), 200, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Treat the VPN as metered'));
     await tester.pump();
     await tester.pump();
     final switches = find.descendant(of: find.byType(ServiceSettingsPage), matching: find.byType(CommonSwitch));
@@ -81,10 +84,10 @@ void main() {
     expect(switches, findsWidgets);
     expect(box.serviceSettingsChanging, true);
     expect(tester.widgetList<CommonSwitch>(switches).every((widget) => widget.onChanged == null), true);
-    await tester.tap(find.text('Show direct speed'));
+    await tester.tap(find.text('Treat the VPN as metered'));
     await tester.pump();
     expect(edits.length, 1);
-    reply.complete({'allowBypass': true, 'showDirectSpeed': false});
+    reply.complete({'meteredNetwork': true, 'alwaysShowAddress': false, 'showDirectSpeed': false});
     await tester.pumpAndSettle();
     expect(box.serviceSettingsChanging, false);
     expect(tester.widgetList<CommonSwitch>(switches).every((widget) => widget.onChanged != null), true);

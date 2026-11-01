@@ -74,6 +74,17 @@ private fun textEntry(
     set: (String) -> Unit,
 ) = Entry(bridgeKey, apply, false, { get() }, { set(it?.toString() ?: "") })
 
+/** A list stored as newline-separated text upstream; the UI edits it as a list of lines. */
+private fun listEntry(bridgeKey: String, apply: Apply, get: () -> List<String>, set: (List<String>) -> Unit) =
+    Entry(bridgeKey, apply, false, { get() }, {
+        val lines = when (it) {
+            is List<*> -> it.filterIsInstance<String>()
+            is String -> it.lineSequence().toList()
+            else -> return@Entry
+        }
+        set(lines.map(String::trim).filter(String::isNotEmpty))
+    })
+
 /** signed-coded minutes: negative = off. Exposed as an enabled flag plus a positive minutes value. */
 private val Int.hoursPair get() = Pair(this > 0, this.absoluteValue)
 
@@ -103,6 +114,15 @@ object Settings {
         ),
         boolEntry("wakeResetConnections", get = { DataStore.wakeResetConnections }, set = { DataStore.wakeResetConnections = it }),
         boolEntry("skipDeleteConfirmation", get = { DataStore.skipDeleteConfirmation }, set = { DataStore.skipDeleteConfirmation = it }),
+        boolEntry("alwaysShowAddress", get = { DataStore.alwaysShowAddress }, set = { DataStore.alwaysShowAddress = it }),
+        boolEntry("updateCheckAuto", get = { DataStore.updateCheckAuto }, set = { DataStore.updateCheckAuto = it }),
+        // Starts the core even when a rule-set download failed, instead of refusing to start.
+        // Upstream stores this one as a long, so it is surfaced as a plain switch here.
+        Entry(
+            bridgeKey = "startWithoutRuleSets",
+            get = { DataStore.startWithoutRuleSets != 0L },
+            set = { DataStore.startWithoutRuleSets = if (it == true) 1L else 0L },
+        ),
         boolEntry("showDirectSpeed", get = { DataStore.showDirectSpeed }, set = { DataStore.showDirectSpeed = it }),
         boolEntry("alwaysShowAddress", get = { DataStore.alwaysShowAddress }, set = { DataStore.alwaysShowAddress = it }),
         boolEntry(
@@ -134,6 +154,11 @@ object Settings {
             get = { DataStore.allowLanAccess },
             set = { DataStore.inboundAddress = if (it == true) LAN_ADDRESS else LOOPBACK_ADDRESS },
         ),
+        // The system HTTP proxy Throne hands to apps: only the VPN service can do this, and only
+        // from API 29, which is why the UI gates the switch on `systemProxy`.
+        boolEntry("appendHttpProxy", Apply.Reload, true, { DataStore.appendHttpProxy }, { DataStore.appendHttpProxy = it }),
+        textEntry("httpProxyBypass", Apply.Reload, { DataStore.httpProxyBypass }, { DataStore.httpProxyBypass = it }),
+        textEntry("customInbound", Apply.Reload, { DataStore.customInbound }, { DataStore.customInbound = it }),
 
         // --- TUN ----------------------------------------------------------------------------------
         intEntry("vpnMtu", Apply.Reload, { DataStore.vpnMtu }, { DataStore.vpnMtu = it }),
@@ -148,6 +173,7 @@ object Settings {
             { DataStore.disablePrivateRangeBypass = it },
         ),
         boolEntry("enableTunRouting", Apply.Reload, { DataStore.enableTunRouting }, { DataStore.enableTunRouting = it }),
+        listEntry("vpnPrivateRanges", Apply.Reload, { DataStore.vpnPrivateRanges }, { DataStore.vpnPrivateRanges = it }),
 
         // --- Per-app proxy ------------------------------------------------------------------------
 
@@ -163,6 +189,37 @@ object Settings {
         boolEntry("adblockEnable", Apply.Reload, true, { DataStore.adblockEnable }, { DataStore.adblockEnable = it }),
         boolEntry("enableWarp", Apply.Reload, { DataStore.enableWarp }, { DataStore.enableWarp = it }),
 
+        // --- WARP ---------------------------------------------------------------------------------
+        // WireGuard and MASQUE keep separate key material; `warpMode` decides which set is used.
+        textEntry("warpMode", Apply.Reload, { DataStore.warpMode }, { DataStore.warpMode = it }),
+        textEntry("warpEndpoint", Apply.Reload, { DataStore.warpEp }, { DataStore.warpEp = it }),
+        textEntry("warpPrivateKey", Apply.Reload, { DataStore.warpPrivateKey }, { DataStore.warpPrivateKey = it }),
+        textEntry("warpPublicKey", Apply.Reload, { DataStore.warpPublicKey }, { DataStore.warpPublicKey = it }),
+        listEntry("warpIfcAddrs", Apply.Reload, { DataStore.warpIfcAddrs }, { DataStore.warpIfcAddrs = it }),
+        listEntry("warpReserved", Apply.Reload, { DataStore.warpReserved }, { DataStore.warpReserved = it }),
+        textEntry("warpMasqueEndpoint", Apply.Reload, { DataStore.warpMasqueEp }, { DataStore.warpMasqueEp = it }),
+        textEntry(
+            "warpMasquePrivateKey",
+            Apply.Reload,
+            { DataStore.warpMasquePrivateKey },
+            { DataStore.warpMasquePrivateKey = it },
+        ),
+        textEntry(
+            "warpMasquePeerPublicKey",
+            Apply.Reload,
+            { DataStore.warpMasquePeerPublicKey },
+            { DataStore.warpMasquePeerPublicKey = it },
+        ),
+        textEntry("warpMasqueSni", Apply.Reload, { DataStore.warpMasqueSni }, { DataStore.warpMasqueSni = it }),
+        intEntry(
+            "warpMasqueHttpMode",
+            Apply.Reload,
+            { DataStore.warpMasqueHttpMode },
+            { DataStore.warpMasqueHttpMode = it },
+        ),
+        listEntry("warpApiHosts", Apply.Reload, { DataStore.warpApiHosts }, { DataStore.warpApiHosts = it }),
+        boolEntry("warpTosAccepted", { DataStore.warpTosAccepted }, { DataStore.warpTosAccepted = it }),
+
         // --- DNS ----------------------------------------------------------------------------------
         textEntry("remoteDns", Apply.Reload, { DataStore.remoteDns }, { DataStore.remoteDns = it }),
         boolEntry("remoteDnsDisableIpv6", Apply.Reload, { DataStore.remoteDnsDisableIpv6 }, { DataStore.remoteDnsDisableIpv6 = it }),
@@ -174,6 +231,17 @@ object Settings {
         boolEntry("fakeipDisableIpv6", Apply.Reload, { DataStore.fakeipDisableIpv6 }, { DataStore.fakeipDisableIpv6 = it }),
         boolEntry("dnsUseHosts", Apply.Reload, { DataStore.dnsUseHosts }, { DataStore.dnsUseHosts = it }),
         boolEntry("dnsPredefinedEnable", Apply.Reload, { DataStore.dnsPredefinedEnable }, { DataStore.dnsPredefinedEnable = it }),
+        listEntry("dnsPredefinedRules", Apply.Reload, { DataStore.dnsPredefinedRules }, { DataStore.dnsPredefinedRules = it }),
+        boolEntry("dnsPersistCache", Apply.Reload, { DataStore.dnsPersistCache }, { DataStore.dnsPersistCache = it }),
+        boolEntry("dnsReverseMapping", Apply.Reload, { DataStore.dnsReverseMapping }, { DataStore.dnsReverseMapping = it }),
+        textEntry("dnsQueryTimeout", Apply.Reload, { DataStore.dnsQueryTimeout }, { DataStore.dnsQueryTimeout = it }),
+        boolEntry("dnsOptimistic", Apply.Reload, { DataStore.dnsOptimistic }, { DataStore.dnsOptimistic = it }),
+        textEntry(
+            "dnsOptimisticTimeout",
+            Apply.Reload,
+            { DataStore.dnsOptimisticTimeout },
+            { DataStore.dnsOptimisticTimeout = it },
+        ),
         textEntry(
             "coreBoxUnderlyingDns",
             Apply.Reload,
@@ -193,6 +261,12 @@ object Settings {
         boolEntry("enableNtp", Apply.Reload, true, { DataStore.enableNtp }, { DataStore.enableNtp = it }),
         textEntry("ntpServerAddress", Apply.Reload, { DataStore.ntpServerAddress }, { DataStore.ntpServerAddress = it }),
         intEntry("ntpServerPort", Apply.Reload, { DataStore.ntpServerPort }, { DataStore.ntpServerPort = it }),
+        textEntry("ntpInterval", Apply.Reload, { DataStore.ntpInterval }, { DataStore.ntpInterval = it }),
+        textEntry("ntpOutbound", Apply.Reload, { DataStore.ntpOutbound }, { DataStore.ntpOutbound = it }),
+        textEntry("xrayLogLevel", Apply.Reload, { DataStore.xrayLogLevel }, { DataStore.xrayLogLevel = it }),
+        boolEntry("useMozillaCerts", Apply.Reload, { DataStore.useMozillaCerts }, { DataStore.useMozillaCerts = it }),
+        boolEntry("xrayUseSystemCa", Apply.Reload, { DataStore.xrayUseSystemCa }, { DataStore.xrayUseSystemCa = it }),
+        textEntry("boxApiSecret", Apply.Reload, { DataStore.coreBoxApiSecret }, { DataStore.coreBoxApiSecret = it }),
 
         // Clash API / sing-box API: one signed port each, split into a flag and a port for the UI.
         Entry(
@@ -241,9 +315,11 @@ object Settings {
         textEntry("exitLookupProvider", { DataStore.exitLookupProvider }, { DataStore.exitLookupProvider = it }),
         intEntry("speedTestMode", { DataStore.speedTestMode }, { DataStore.speedTestMode = it }),
         intEntry("speedTestTimeoutMs", { DataStore.speedTestTimeoutMs }, { DataStore.speedTestTimeoutMs = it }),
+        textEntry("simpleDlUrl", { DataStore.simpleDlUrl }, { DataStore.simpleDlUrl = it }),
 
         // --- Subscriptions ------------------------------------------------------------------------
         textEntry("userAgent", { DataStore.userAgent2 }, { DataStore.userAgent2 = it }),
+        textEntry("subCustomHwidParams", { DataStore.subCustomHwidParams }, { DataStore.subCustomHwidParams = it }),
         boolEntry("netUseProxy", { DataStore.netUseProxy }, { DataStore.netUseProxy = it }),
         boolEntry("netInsecure", { DataStore.netInsecure }, { DataStore.netInsecure = it }),
         boolEntry("subClear", { DataStore.subClear }, { DataStore.subClear = it }),

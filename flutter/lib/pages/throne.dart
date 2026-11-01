@@ -67,6 +67,63 @@ class SettingChoice<T> extends StatelessWidget {
   }
 }
 
+/// A setting Throne stores as a list of lines — private ranges, hosts rows, WARP addresses.
+///
+/// The sheet shows the list inline; editing opens a dialog over it, matching how the other
+/// primitives edit a single value rather than pushing a page.
+class SettingLines extends StatelessWidget {
+  const SettingLines(this.title, this.setting, {super.key, this.hint, this.autoRestart = false});
+  final String title, setting;
+  final String? hint;
+  final bool autoRestart;
+
+  @override Widget build(BuildContext context) {
+    final lines = ((context.box.settings[setting] as List?) ?? const []).cast<String>();
+    return ListItem(
+      title: Text(context.tr(title)),
+      subtitle: lines.isEmpty
+          ? Text(context.tr('Built-in defaults'))
+          : Text(lines.join(', '), maxLines: 1, overflow: TextOverflow.ellipsis),
+      onTap: () => _edit(context, lines),
+    );
+  }
+
+  Future<void> _edit(BuildContext context, List<String> lines) async {
+    final box = context.box;
+    final controller = TextEditingController(text: lines.join('\n'));
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(context.tr(title)),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (hint != null) Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(context.tr(hint!), style: Theme.of(context).textTheme.bodySmall),
+          ),
+          TextField(
+            controller: controller, minLines: 3, maxLines: 10, autocorrect: false,
+            keyboardType: TextInputType.multiline,
+            decoration: const InputDecoration(border: OutlineInputBorder()),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
+        ],
+      ),
+    );
+    if (saved == true) {
+      final value = controller.text
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .toList();
+      box.setSetting(setting, value, autoRestart: autoRestart);
+    }
+    controller.dispose();
+  }
+}
+
 // --------------------------------------------------------------------------------------------- inbound
 
 class InboundPage extends StatelessWidget {
@@ -79,12 +136,18 @@ class InboundPage extends StatelessWidget {
         SettingToggle('Random inbound port', 'randomInboundPort'),
         SettingToggle('Allow LAN access', 'allowLan', autoRestart: true),
         SettingNumber('DNS inbound port', 'coreDnsInPort', min: 1, max: 65535, autoRestart: true),
+        SettingToggle('Disable the mixed inbound', 'disableMixedInbound', autoRestart: true),
       ], footer: context.tr('These four listeners must use different ports.')),
       generateSection(title: context.tr('Inbound authentication'), items: [
         SettingToggle('Enable authentication', 'inboundAuth', autoRestart: true),
         SettingText('Username', 'inboundUser'),
         SettingText('Password', 'inboundPass'),
       ], footer: vpnMode ? null : context.tr('Proxy-only service mode always keeps the mixed inbound.')),
+      if (context.box.capabilities.of('systemProxy')) generateSection(title: context.tr('System proxy'), items: [
+        SettingToggle('Append the HTTP proxy', 'appendHttpProxy', autoRestart: true),
+        SettingLines('Proxy bypass', 'httpProxyBypass',
+          hint: 'One host or CIDR per line. Empty means the proxy is applied to every connection.'),
+      ]),
     ]);
   }
 }
@@ -102,6 +165,9 @@ class TunPage extends StatelessWidget {
     ]),
     generateSection(title: context.tr('Routing'), items: [
       SettingToggle('Bypass private ranges', 'allowBypass', autoRestart: true),
+      if (context.box.settings['allowBypass'] == true)
+        SettingLines('Private ranges', 'vpnPrivateRanges',
+          hint: 'One CIDR per line. These are reached directly instead of through the tunnel.'),
       SettingToggle('Route through TUN', 'enableTunRouting'),
     ]),
   ]);
@@ -130,12 +196,21 @@ class DnsPage extends StatelessWidget {
       SettingToggle('Disable IPv6 for FakeIP', 'fakeipDisableIpv6'),
       SettingToggle('Use system hosts', 'dnsUseHosts'),
       SettingToggle('Predefined hosts', 'dnsPredefinedEnable'),
+      if (context.box.settings['dnsPredefinedEnable'] == true)
+        SettingLines('Predefined hosts entries', 'dnsPredefinedRules',
+          hint: 'One entry per line, in hosts format: "address hostname".'),
       SettingText('Underlying DNS', 'coreBoxUnderlyingDns', hint: 'empty means the system resolver'),
+      SettingToggle('Reverse mapping', 'dnsReverseMapping'),
     ]),
     generateSection(title: context.tr('Cache'), items: [
       SettingToggle('Disable DNS cache', 'dnsDisableCache'),
       SettingToggle('Disable cache expiration', 'dnsDisableExpire'),
       SettingNumber('Cache capacity', 'dnsCacheCapacity', min: 0),
+      SettingToggle('Persist the cache', 'dnsPersistCache'),
+      SettingToggle('Optimistic cache', 'dnsOptimistic'),
+      if (context.box.settings['dnsOptimistic'] == true)
+        SettingText('Optimistic cache timeout', 'dnsOptimisticTimeout', hint: 'e.g. 3m'),
+      SettingText('Query timeout', 'dnsQueryTimeout', hint: 'e.g. 5s, empty to use the core default'),
     ]),
   ]);
 }
@@ -162,9 +237,6 @@ class RoutingPage extends StatelessWidget {
         SettingToggle('Update rule sets', 'routeAutoUpdateEnabled'),
         if (autoUpdate) SettingNumber('Update interval', 'routeAutoUpdateMinutes', min: 30, unit: 'min'),
       ]),
-      generateSection(title: context.tr('WARP'), items: [
-        SettingToggle('Enable WARP', 'enableWarp'),
-      ]),
     ]);
   }
 }
@@ -179,9 +251,57 @@ String _mirrorName(int value) => switch (value) {
   4 => 'Cloudflare Pages', 5 => 'Throne mirror', _ => 'GitHub raw',
 };
 
+// ------------------------------------------------------------------------------------------------- warp
+
+const warpModes = ['wireguard', 'masque', 'amnezia'];
+
+/// Cloudflare WARP, which Throne treats as an outbound of its own rather than a profile.
+///
+/// WireGuard and MASQUE keep separate key material, so only the section of the chosen mode is shown;
+/// the switch and the registration hosts apply to all three.
+class WarpPage extends StatelessWidget {
+  const WarpPage({super.key});
+  @override Widget build(BuildContext context) {
+    final mode = context.box.settings['warpMode']?.toString() ?? 'wireguard';
+    return BoxPage(title: 'WARP', children: [
+      generateSection(items: [
+        SettingToggle('Enable WARP', 'enableWarp', autoRestart: true),
+        SettingChoice<String>('WARP mode', 'warpMode', options: warpModes, text: _warpModeName, autoRestart: true),
+      ], footer: context.tr('WARP replaces the outbound of the running profile with Cloudflare WARP.')),
+      if (mode != 'masque') generateSection(title: context.tr('WireGuard'), items: [
+        SettingText('Endpoint', 'warpEndpoint', hint: 'host:port'),
+        SettingText('Private key', 'warpPrivateKey'),
+        SettingText('Public key', 'warpPublicKey'),
+        SettingLines('Interface addresses', 'warpIfcAddrs', hint: 'One CIDR per line, for example 172.16.0.2/32'),
+        SettingLines('Reserved bytes', 'warpReserved', hint: 'Three comma-separated integers, usually empty'),
+      ]),
+      if (mode == 'masque') generateSection(title: context.tr('MASQUE'), items: [
+        SettingText('Endpoint', 'warpMasqueEndpoint'),
+        SettingText('Private key', 'warpMasquePrivateKey'),
+        SettingText('Peer public key', 'warpMasquePeerPublicKey'),
+        SettingText('SNI', 'warpMasqueSni'),
+        SettingChoice<int>('HTTP mode', 'warpMasqueHttpMode', options: const [0, 1, 2], text: _masqueHttpModeName),
+      ]),
+      generateSection(title: context.tr('Registration'), items: [
+        SettingLines('API hosts', 'warpApiHosts', hint: 'Empty uses api.cloudflareclient.com'),
+      ]),
+    ]);
+  }
+}
+
+String _warpModeName(String value) => switch (value) {
+  'masque' => 'MASQUE', 'amnezia' => 'AmneziaWG', _ => 'WireGuard',
+};
+
+String _masqueHttpModeName(int value) => switch (value) {
+  1 => 'HTTP/3 only', 2 => 'HTTP/2 only', _ => 'HTTP/3 with fallback',
+};
+
 // ------------------------------------------------------------------------------------------------ core
 
 const logLevels = ['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'panic'];
+const xrayLogLevels = ['debug', 'info', 'warning', 'error', 'none'];
+const ntpOutbounds = ['direct', 'proxy'];
 
 class CorePage extends StatelessWidget {
   const CorePage({super.key});
@@ -192,10 +312,13 @@ class CorePage extends StatelessWidget {
       generateSection(items: [
         ListItem(title: Text(context.tr('Core version')), subtitle: Text(context.box.coreVersion)),
         SettingChoice<String>('Log level', 'logLevel', options: logLevels, text: (value) => value.toUpperCase()),
+        SettingChoice<String>('Xray log level', 'xrayLogLevel', options: xrayLogLevels, text: (value) => value.toUpperCase()),
         SettingNumber('Log buffer', 'logBufSize', min: 0, unit: 'KiB'),
         SettingToggle('Traffic statistics', 'enableStats', autoRestart: true),
         SettingToggle('Disable per-profile statistics', 'disableTrafficStats', autoRestart: true),
         SettingToggle('Skip certificate verification', 'skipCert'),
+        SettingToggle('Use the Mozilla root store', 'useMozillaCerts'),
+        SettingToggle('Xray uses the system CA', 'xrayUseSystemCa'),
       ]),
       generateSection(title: context.tr('Clash API'), items: [
         SettingToggle('Enable Clash API', 'clashApiEnabled', autoRestart: true),
@@ -207,12 +330,17 @@ class CorePage extends StatelessWidget {
       ]),
       generateSection(title: context.tr('Core API'), items: [
         SettingToggle('Enable core API', 'boxApiEnabled', autoRestart: true),
-        if (boxApi) SettingNumber('Port', 'boxApiPort', min: 1, max: 65535, autoRestart: true),
+        if (boxApi) ...[
+          SettingNumber('Port', 'boxApiPort', min: 1, max: 65535, autoRestart: true),
+          SettingText('Secret', 'boxApiSecret'),
+        ],
       ]),
       generateSection(title: context.tr('NTP'), items: [
         SettingToggle('Enable NTP', 'enableNtp', autoRestart: true),
         SettingText('NTP server', 'ntpServerAddress'),
         SettingNumber('NTP port', 'ntpServerPort', min: 0, max: 65535),
+        SettingText('NTP interval', 'ntpInterval', hint: 'e.g. 30m, empty to use the core default'),
+        SettingChoice<String>('NTP outbound', 'ntpOutbound', options: ntpOutbounds, text: (value) => value),
       ]),
     ]);
   }
@@ -235,6 +363,8 @@ class TestingPage extends StatelessWidget {
     generateSection(title: context.tr('Speed test'), items: [
       SettingChoice<int>('Speed test mode', 'speedTestMode', options: speedTestModes, text: _speedTestModeName),
       SettingNumber('Speed test timeout', 'speedTestTimeoutMs', min: 0, unit: 'ms'),
+      if (context.box.settings['speedTestMode'] == 3)
+        SettingText('Simple download URL', 'simpleDlUrl', hint: 'A file of known size used to measure throughput'),
     ]),
     generateSection(title: context.tr('Exit detection'), items: [
       SettingToggle('Look up exit country', 'exitCountryLookup'),
@@ -264,6 +394,9 @@ class SubscriptionPage extends StatelessWidget {
         SettingChoice<int>('TLS version', 'subTlsVersion', options: subscriptionTlsVersions, text: _tlsVersionName),
         SettingChoice<int>('HTTP version', 'subHttpVersion', options: subscriptionHttpVersions, text: _httpVersionName),
         SettingToggle('Send device identifier', 'subSendHwid'),
+        if (context.box.settings['subSendHwid'] == true)
+          SettingText('Custom HWID parameters', 'subCustomHwidParams',
+            hint: 'key=value pairs separated by commas, sent alongside the identifier'),
       ]),
       generateSection(title: context.tr('Automatic updates'), items: [
         SettingToggle('Update subscriptions', 'subAutoUpdateEnabled'),
@@ -289,6 +422,7 @@ class UpdatePage extends StatelessWidget {
   @override Widget build(BuildContext context) => BoxPage(title: 'Updates', children: [
     generateSection(items: [
       SettingToggle('Allow beta versions', 'allowBetaUpdate'),
+      SettingToggle('Check for updates automatically', 'updateCheckAuto'),
     ]),
   ]);
 }

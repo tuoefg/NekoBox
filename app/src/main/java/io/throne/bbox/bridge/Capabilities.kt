@@ -1,5 +1,6 @@
 package io.throne.bbox.bridge
 
+import android.os.Build
 import io.nekohasekai.sagernet.BuildConfig
 
 /**
@@ -46,7 +47,8 @@ object Capabilities {
         "backup" to true,          // .thrbackup and WebDAV, see BboxBackup
         "lanProxy" to true,        // mixed inbound "Allow LAN" plus its port
         "update" to BuildConfig.IN_APP_UPDATER,
-        // Throne always routes through the VPN service, so there is no system HTTP proxy to toggle.
-        "systemProxy" to false,
+        // The VPN service can write its mixed inbound into the system HTTP settings, which Android
+        // only allows from API 29 and only outside the proxy-only service mode.
+        "systemProxy" to (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q),
     )
 }

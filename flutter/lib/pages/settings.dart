@@ -35,6 +35,7 @@ class GeneralSettingsPage extends StatelessWidget {
         ListItem.open(leading: const GlyphIcon(AppGlyphs.split), title: Text(context.tr('TUN')), widget: const TunPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.dns), title: Text(context.tr('DNS')), widget: const DnsPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.rules), title: Text(context.tr('Routing')), widget: const RoutingPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.proxies), title: Text(context.tr('WARP')), widget: const WarpPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.cpu), title: Text(context.tr('Core')), widget: const CorePage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.speed), title: Text(context.tr('Testing')), widget: const TestingPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.profiles), title: Text(context.tr('Subscriptions')), widget: const SubscriptionPage()),
@@ -59,7 +60,9 @@ class ServiceSettingsPage extends StatelessWidget {
         textBuilder: (value) => context.tr(value == 'vpn' ? 'VPN' : 'Proxy only'),
         onChanged: (value) => context.box.setSetting('serviceMode', value, autoRestart: true),
       ),
-      const NativeToggle('Allow VPN bypass', 'allowBypass', autoRestart: true),
+      // "Allow bypass" lives on the Access screen as the per-app mode; the private-range switch is
+      // under TUN, because upstream keeps them in two different stores.
+      const NativeToggle('Always show the address', 'alwaysShowAddress', restart: false),
       // Both are read by the host on its next update, so they need no core restart.
       const NativeToggle('Show group name in the notification', 'showGroupInNotification', restart: false),
       const NativeToggle('Show direct speed', 'showDirectSpeed', restart: false),
@@ -73,6 +76,8 @@ class ServiceSettingsPage extends StatelessWidget {
       const NativeToggle('Hide from recent apps', 'hideFromRecentApps', restart: false),
       const NativeToggle('Treat the VPN as metered', 'meteredNetwork', autoRestart: true),
       const NativeToggle('Skip delete confirmation', 'skipDeleteConfirmation', restart: false),
+      // A failed rule-set download normally blocks a start; this lets the core come up anyway.
+      const NativeToggle('Start without rule sets', 'startWithoutRuleSets', restart: false),
     ]),
     generateSection(items: [
       ListItem(title: Text(context.tr('Battery optimization')),
