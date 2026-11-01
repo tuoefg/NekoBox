@@ -17,6 +17,7 @@ import android.os.Build
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.DnsServerHistory
+import io.nekohasekai.sagernet.database.RouteManager
 import io.nekohasekai.sagernet.database.SettingsRegistry
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
@@ -342,6 +343,18 @@ class ThroneBoxBridge(
                 }
                 "routes.resetRules" -> result.respond {
                     BboxRoutes.resetRules(call.argument<Int>("id")?.toLong() ?: -1L)
+                }
+                // The rule-set catalog (the routeprofiles srslist) behind the native rule-set picker.
+                "routes.ruleSets" -> result.respond {
+                    val query = call.argument<String>("query").orEmpty().trim()
+                    val limit = call.argument<Int>("limit") ?: 100
+                    val catalog = withContext(Dispatchers.IO) { RouteManager.catalog() }
+                    mapOf(
+                        "total" to catalog.size,
+                        "entries" to catalog.search(query, limit).map { (name, url) ->
+                            mapOf("name" to name, "url" to url)
+                        },
+                    )
                 }
                 "profiles.autoSelectorCreate" -> result.respond {
                     BboxProfiles.createAutoSelector(call.argument<Int>("groupId")?.toLong())

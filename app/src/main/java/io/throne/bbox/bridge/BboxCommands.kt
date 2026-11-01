@@ -115,13 +115,16 @@ object BboxCommands : BboxActions {
 
     override fun selectProfile(id: Long) {
         scope.launch {
-            val first = withContext(Dispatchers.IO) {
+            val member = withContext(Dispatchers.IO) {
                 val group = GroupRepo.get(id) ?: return@withContext null
                 GroupRepo.setCurrent(group.id)
-                if (DataStore.serviceState.canStop) return@withContext null
-                ProfileManager.memberIds(group.id).firstOrNull()
+                // The selection moves even while the service runs (switchProfile hot-switches it):
+                // the profile card, the proxies screen and the running config all follow the same
+                // selected member. A group that already holds it keeps it; another gets its first.
+                val ids = ProfileManager.memberIds(group.id)
+                ids.firstOrNull { it == DataStore.selectedProxy } ?: ids.firstOrNull()
             }
-            first?.let { select(it) }
+            member?.let { select(it) }
             BboxBridge.scheduleRefresh(immediate = true)
         }
     }

@@ -91,7 +91,14 @@ class _ProxiesPageState extends State<ProxiesPage> {
 
   @override Widget build(BuildContext context) {
     final box = context.box;
-    final groups = box.groups;
+    // The screen follows the configuration selection: whichever profile is selected, its nodes are
+    // what shows here. A selection that names nothing on the wire (or none yet) falls back to all.
+    final selectedId = box.selectedProfileId;
+    final allGroups = box.groups;
+    final picked = selectedId > 0
+        ? allGroups.where((group) => (group['id'] as num?)?.toInt() == selectedId).toList()
+        : allGroups;
+    final groups = picked.isEmpty ? allGroups : picked;
     final liveTags = groups.map((group) => group['tag'].toString()).toSet();
     _selectedOffsets.removeWhere((tag, _) => !liveTags.contains(tag));
     if (_scrolls.keys.any((tag) => !liveTags.contains(tag))) {

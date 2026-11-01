@@ -609,7 +609,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
         if (!isEndpoint && (!isSimple || simpleKind == 'address')) generateSection(title: context.tr('IP and ports'), items: [
           _csvRow('IP CIDR', 'ip_cidr'),
           _csvRow('Source IP CIDR', 'source_ip_cidr'),
-          _csvRow('Rule set', 'rule_set'),
+          _ruleSetRow(),
           _csvRow('Port', 'port'),
           _csvRow('Port range', 'port_range'),
           _csvRow('Source port', 'source_port'),
@@ -711,6 +711,24 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
       onChanged: (value) => _setList(key, value),
     ),
   );
+
+  /// The rule-set row opens the picker over Throne's preset rule sets (the routeprofiles srslist),
+  /// which keeps hand-typed entries in the same field — the native picker's contract.
+  Widget _ruleSetRow() {
+    final current = _listOf('rule_set');
+    return ListItem(
+      title: Text(context.tr('Rule set')),
+      subtitle: Text(current.isEmpty ? context.tr('Comma-separated') : current.join(', ')),
+      onTap: () async {
+        final box = context.box;
+        final value = await showDialog<String>(
+          context: context,
+          builder: (context) => _RuleSetDialog(box: box, initial: current),
+        );
+        if (value != null) _setList('rule_set', value);
+      },
+    );
+  }
 
   Widget _textRow(String title, String key, {String? hint}) => FormRow(
     title: context.tr(title),
@@ -825,6 +843,103 @@ class _BatchAddDialogState extends State<_BatchAddDialog> {
     actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
       TextButton(onPressed: () => Navigator.pop(context, _text.text), child: Text(context.tr('Add'))),
+    ],
+  );
+}
+
+/// Throne's preset rule sets (the routeprofiles srslist) over the rule's own list: search the
+/// catalog, tick what belongs in the rule, and hand-typed entries in the field above survive —
+/// the same contract as the native multi-select picker (unknown entries stay selected).
+class _RuleSetDialog extends StatefulWidget {
+  const _RuleSetDialog({required this.box, required this.initial});
+  final BoxController box;
+  final List<String> initial;
+  @override State<_RuleSetDialog> createState() => _RuleSetDialogState();
+}
+
+class _RuleSetDialogState extends State<_RuleSetDialog> {
+  late final TextEditingController _values = TextEditingController(text: widget.initial.join(', '));
+  late final TextEditingController _query = TextEditingController();
+  List<Json> _entries = const [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _search();
+  }
+
+  @override
+  void dispose() {
+    _values.dispose();
+    _query.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search() async {
+    setState(() => _loading = true);
+    try {
+      final wire = json(await widget.box.call('routes.ruleSets', {'query': _query.text, 'limit': 200}));
+      if (mounted) setState(() { _entries = rows(wire['entries']); _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Set<String> get _selected =>
+      _values.text.split(',').map((value) => value.trim()).where((value) => value.isNotEmpty).toSet();
+
+  void _toggle(String name) {
+    final selected = _selected;
+    if (!selected.remove(name)) selected.add(name);
+    setState(() => _values.text = selected.join(', '));
+  }
+
+  @override Widget build(BuildContext context) => AlertDialog(
+    title: Text(context.tr('Throne preset rules')),
+    content: SizedBox(
+      width: 420, height: 420,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        TextField(
+          controller: _values, autocorrect: false, enableSuggestions: false,
+          minLines: 1, maxLines: 2,
+          decoration: InputDecoration(
+            labelText: context.tr('Rule set'),
+            helperText: context.tr('Comma-separated'),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _query, autocorrect: false, enableSuggestions: false,
+          decoration: InputDecoration(
+            labelText: context.tr('Search'),
+            border: const OutlineInputBorder(),
+            prefixIcon: const GlyphIcon(AppGlyphs.search),
+          ),
+          onChanged: (_) => _search(),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _entries.isEmpty
+                  ? Center(child: Text(context.tr('No results')))
+                  : ListView(children: [
+                      for (final entry in _entries)
+                        CheckboxListTile(
+                          dense: true,
+                          value: _selected.contains('${entry['name']}'),
+                          title: Text('${entry['name']}'),
+                          onChanged: (_) => _toggle('${entry['name']}'),
+                        ),
+                    ]),
+        ),
+      ]),
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
+      TextButton(onPressed: () => Navigator.pop(context, _values.text), child: Text(context.tr('Save'))),
     ],
   );
 }

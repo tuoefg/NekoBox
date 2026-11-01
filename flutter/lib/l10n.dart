@@ -626,6 +626,7 @@ const _zh = <String, String>{
   'Restore default rules': '恢复默认规则',
   'Restore default rules?': '恢复默认规则？',
   'The rules become the Default profile\'s own: one hijack-dns rule that routes DNS.': '规则将替换为 Default 档的默认规则：一条路由 DNS 的 hijack-dns 规则。',
+  'Throne preset rules': 'Throne 预设规则',
 };
 
 extension BoxLocalization on BuildContext {
