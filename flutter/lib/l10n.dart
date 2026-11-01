@@ -485,6 +485,10 @@ const _zh = <String, String>{
   'a SNI to offer instead of the real one': '用作替代真实 SNI 的伪装域名',
   'e.g. 5m, empty to use the core default': '如 5m，留空使用内核默认值',
   'e.g. 30s, empty to use the core default': '如 30s，留空使用内核默认值',
+  'Delete node?': '删除节点？',
+  'Node name': '节点名称',
+  'Share link or JSON': '分享链接或 JSON',
+  'Leave empty to keep the current configuration.': '留空则保持当前配置不变。',
 };
 
 extension BoxLocalization on BuildContext {

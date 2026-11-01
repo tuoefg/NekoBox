@@ -290,6 +290,19 @@ class ThroneBoxBridge(
                     val jsonLink = call.argument<Boolean>("json") == true
                     result.respond { BboxProfiles.nodeLink(group, tag, jsonLink) }
                 }
+                "profiles.nodeInfo" -> result.respond {
+                    BboxProfiles.nodeInfo(call.argument<Int>("id")?.toLong() ?: -1L)
+                }
+                "profiles.nodeUpdate" -> result.respond {
+                    BboxProfiles.updateNode(
+                        call.argument<Int>("id")?.toLong() ?: -1L,
+                        call.argument<String>("name"),
+                        call.argument<String>("content"),
+                    )
+                }
+                "profiles.nodeDelete" -> result.respond {
+                    BboxProfiles.deleteNode(call.argument<Int>("id")?.toLong() ?: -1L); null
+                }
                 "profiles.importFile" -> result.respond { importFile() }
                 "profiles.scan" -> {
                     val session = call.argument<String>("session").orEmpty()
@@ -922,12 +935,14 @@ class ThroneBoxBridge(
     private fun groupsWire(state: BboxUiState): List<Map<String, Any?>> =
         state.dashboard.groups.map { group: ProxyGroup ->
             mapOf(
+                "id" to group.id.toInt(),
                 "tag" to group.tag,
                 "type" to group.type,
                 "selected" to group.selected,
                 "selectable" to group.selectable,
                 "items" to group.nodes.map { node ->
                     mapOf(
+                        "id" to node.id.toInt(),
                         "tag" to node.tag,
                         "type" to node.type,
                         "delay" to node.delay,

@@ -157,6 +157,47 @@ object BboxProfiles {
             link
         }
 
+    /** The editor's seed for one node: its name, type and the share link it can be edited from. */
+    suspend fun nodeInfo(id: Long): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val profile = ProfileManager.getProfile(id) ?: error("No proxy with id $id")
+        mapOf(
+            "id" to profile.id,
+            "name" to profile.displayName(),
+            "type" to profile.displayType(),
+            "content" to profile.exportLink().ifBlank { profile.exportJsonLink() },
+        )
+    }
+
+    /**
+     * Renames a node and/or replaces its outbound with one share link or JSON document. The content
+     * must describe exactly one node — a whole subscription belongs to a group save, not here.
+     */
+    suspend fun updateNode(id: Long, name: String?, content: String?): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val profile = ProfileManager.getProfile(id) ?: error("No proxy with id $id")
+        val text = content?.trim().orEmpty()
+        if (text.isNotEmpty() && text != "{}") {
+            val inbound = parseOutbounds(text)
+            if (inbound.size != 1) error("The content must describe exactly one node, got ${inbound.size}")
+            profile.putOutbound(inbound.single())
+        }
+        val renamed = name?.trim().orEmpty()
+        if (renamed.isNotEmpty() && renamed != profile.displayName()) {
+            val outbound = profile.outbound
+            outbound.name = renamed
+            profile.putOutbound(outbound)
+        }
+        ProfileManager.updateProfile(profile)
+        BboxBridge.scheduleRefresh(immediate = true)
+        nodeInfo(profile.id)
+    }
+
+    /** Deletes one node from its group; the group itself stays. */
+    suspend fun deleteNode(id: Long): Unit = withContext(Dispatchers.IO) {
+        val profile = ProfileManager.getProfile(id) ?: error("No proxy with id $id")
+        ProfileManager.deleteProfile(profile.groupId, id)
+        BboxBridge.scheduleRefresh(immediate = true)
+    }
+
     /** The group as the configuration editor's document. */
     suspend fun config(id: Long): Config = withContext(Dispatchers.IO) {
         val group = GroupRepo.get(id) ?: error("No configuration with id $id")

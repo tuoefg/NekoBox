@@ -33,6 +33,7 @@ data class EgressInfo(
 )
 
 data class ProxyNode(
+    val id: Long = 0L,
     val tag: String,
     val type: String = "",
     val delay: Int = 0,
@@ -40,6 +41,7 @@ data class ProxyNode(
 )
 
 data class ProxyGroup(
+    val id: Long = 0L,
     val tag: String,
     val type: String = "",
     val selected: String = "",

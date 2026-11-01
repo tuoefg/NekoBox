@@ -47,6 +47,7 @@ object BboxCatalog {
         val uiGroups = entities.map { (group, members) ->
             val selectedName = members.firstOrNull { it.id == selected }?.displayName().orEmpty()
             UiGroup(
+                id = group.id,
                 tag = group.displayName(),
                 type = if (group.isSubscription) "subscription" else "group",
                 selected = selectedName,
@@ -83,6 +84,7 @@ object BboxCatalog {
     }
 
     private fun node(profile: ProxyEntity) = ProxyNode(
+        id = profile.id,
         tag = profile.displayName(),
         type = profile.displayType(),
         delay = profile.latency,
