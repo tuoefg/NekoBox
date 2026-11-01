@@ -146,8 +146,9 @@ class SagerNet : Application(),
                 PendingIntent.getActivity(
                     it,
                     0,
+                    // The ported interface is the app's only screen (batch L0).
                     Intent(
-                        application, MainActivity::class.java
+                        application, io.throne.bbox.flutter.BboxFlutterActivity::class.java
                     ).setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT),
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
                 )

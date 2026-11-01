@@ -1,3 +1,13 @@
+#### 3.0.0
+
+* The ported Flutter interface completes the full-parity plan and the old Fragment UI retires: the VPN notification, app restarts and the always-on prompts land in the Flutter host, and the settings screens, protocol editors, JSON editor and their activities are gone
+* Settings: the three-column diff closed — every registry key has a form control, grouped like the native screens
+* Profiles: typed settings forms for 21 protocol types (Shadowsocks through WireGuard and the long tail), a raw JSON editor with schema validation, completion and formatting, and group settings covering every ProxyGroup field
+* Connectivity: a batch test panel (progress, latency histogram, ranked results, speed-test live curve, sort/remove/connect), TV previous/next server switching
+* Subscription: change reports surface as dialogs and snackbars; updates walk the Wi-Fi permission flow when a rule needs it
+* Diagnostics: a logcat tab beside the core log, first-start prompts in the Flutter host
+* Engine: the JSON schema engine (parse, validate, complete, format) ported to Dart with the generated sing-box schema bundled, covered by tests on every push
+
 #### 2.1.0
 
 * Add the B-box Flutter interface as the primary UI (FlClash 0.9.2 presentation over Throne's core); the old Fragment UI stays for one more series

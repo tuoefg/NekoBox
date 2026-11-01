@@ -186,7 +186,7 @@ fun triggerFullRestart(ctx: Context) {
         SagerConnection.restartingApp = true
         val connection = SagerConnection(SagerConnection.CONNECTION_ID_RESTART_BG)
         connection.connect(ctx, RestartCallback {
-            ProcessPhoenix.triggerRebirth(ctx, Intent(ctx, MainActivity::class.java))
+            ProcessPhoenix.triggerRebirth(ctx, Intent(ctx, io.throne.bbox.flutter.BboxFlutterActivity::class.java))
         })
     }
 }

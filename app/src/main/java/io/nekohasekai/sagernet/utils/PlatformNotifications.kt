@@ -35,7 +35,7 @@ object PlatformNotifications {
 
     fun cancelAlwaysOnNoProfile(context: Context) = cancel(context, ID_ALWAYS_ON)
 
-    private fun mainIntent(context: Context) = Intent(context, MainActivity::class.java)
+    private fun mainIntent(context: Context) = Intent(context, io.throne.bbox.flutter.BboxFlutterActivity::class.java)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
 
     private fun post(context: Context, id: Int, @StringRes title: Int, @StringRes text: Int, intent: Intent) {

@@ -129,8 +129,14 @@
 
 ## 14. 批次 L：旧 UI 退役（D4）
 
-- [ ] 14.1 L0 改指：VPN 通知点击/ProcessPhoenix/configureIntent（SagerNet.kt、PlatformNotifications.kt、ktx/Utils.kt）→ BboxFlutterActivity；QS 磁贴、小部件、快捷方式保留（不可删）
+- [x] 14.1 L0 改指：VPN 通知点击/ProcessPhoenix/configureIntent（SagerNet.kt、PlatformNotifications.kt、ktx/Utils.kt）→ BboxFlutterActivity；QS 磁贴、小部件、快捷方式保留（不可删）
+  - 三处已改指；Manifest 保持 Flutter 主入口 + MainActivity（QS tile preferences + .thrbackup 导入意图，见其注释）。
 - [ ] 14.2 CI/真机验证：`ci.yml` 全绿；真机验证通知点击/扫码落新 UI，回传截图
-- [ ] 14.3 L1 删除（每删一组跑一次 `assembleOssDebug` CI）：Fragment 树全量、29 协议 Activity（前提 D）、`ui/json/` + JsonEditorActivity（前提 E）、AppListActivity/AppManagerActivity/WebDAVSettingsActivity/ScannerActivity/GroupSettingsActivity/AutoSelectorStatusActivity/FirstStartPrompts/WifiPermissionFlow/BackupFragment 等；每项 `git grep` 核对引用后再删
+- [ ] 14.3 L1 删除（每删一组跑一次 `assembleOssDebug` CI）：Fragment 树全量、29 协议 Activity（前提 D）、`ui/json/` + JsonEditorActivity（前提 E）、AppListActivity/AppManagerActivity/WebDAVSettingsActivity/ScannerActivity/GroupSettingsActivity/AutoSelectorStatusActivity/BackupFragment 等；每项 `git grep` 核对引用后再删
+  - **执行前置（2026-11-01 核查）**：本机无 Android 编译能力 + 基线 17 提交未过 CI——L1 必须在推送且 CI 全绿后按组执行，每组一推。
+  - **保留边界（桥接层引用的旧 UI 文件，删除时豁免）**：`ui/warp/WarpClient`（BboxWarp）、`ui/settings/SettingChecks`（BboxProfiles 校验）、`ui/test/{TestSessionClient,TestSessionModel,TestUiState}`（BboxTestSession）、`ui/FirstStartPrompts`+`ui/WifiPermissionFlow`（批次 I 已入 Flutter 宿主——但 FirstStartPrompts 的 MainActivity 分支需先剥除，其 openSettingsScreen 引用 GeneralSettingsFragment）、`utils/{BatteryOptimizations,WifiStateAccess}`。
+  - **先迁移**：`ui/profiles/GroupFields` → `database/`（BboxTestSession.sort 引用）。
+  - **删除组序**：① 协议 Activity ×29 + ProfileSettingsRouter/BindingSettingsActivity/PreferenceBlocks（FirstStartPrompts 分支剥离同组）；② Fragment 树 + MainActivity 缩壳（LogcatFragment/LiveGraphsFragment/DashboardFragment/RouteFragment 树/GroupFragment/ConfigurationFragment/BackupFragment/ToolsFragment 等 + TvControls/SubscriptionReportDialog）；③ `ui/json/` + JsonEditorActivity + JsonRelaxations（Kotlin 版）；④ AppList/AppManager/WebDAV/Scanner/GroupSettings/AutoSelectorStatus/ProfileSelect + widget/{QRCodeDialog,StatsBar} + ui/{profiles,route,settings,warp} 残余（warp 保留 WarpClient 链）。
+  - **Manifest 同步**：被删 Activity 的声明、MainActivity 缩壳后的 intent-filter 复核。
 - [ ] 14.4 L2 收尾：MainActivity 保留为无 UI 壳；strings.xml 清理（Fragment 专属删、app 级留）；openspec 归档 + `openspec/history/bbox-ui-migration.md` 补录
 - [ ] 14.5 CI/真机验证：`assembleOssRelease` 产物功能完好（通知/磁贴/小部件/快捷方式/备份导入全通），`ci.yml` 全绿；发 3.0.0（nb4a.properties bump + CHANGELOG + release.yml dispatch），回传 release 链接
