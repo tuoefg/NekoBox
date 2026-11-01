@@ -121,8 +121,10 @@
 
 ## 13. 批次 K：i18n（zh + en）
 
-- [ ] 13.1 以 Flutter 全部 UI 字符串为 key 清单（en=原文），`l10n.dart` `_zh` map 全覆盖；术语与旧 `values-zh/strings.xml` 对齐
-- [ ] 13.2 CI 加缺键校验步骤（入 android-build 或独立 step）
+- [x] 13.1 以 Flutter 全部 UI 字符串为 key 清单（en=原文），`l10n.dart` `_zh` map 全覆盖；术语与旧 `values-zh/strings.xml` 对齐
+  - 直接字面量形式 `tr('...')` 的键全量入册（本轮补 21 键：Advanced/Authenticate/Not valid JSON/Template/TLS/Dial/路由规则编辑三键/Custom inbound 等 throne.dart 批次 B 遗漏 + routes.dart 规则排序/端点/终端数键）；动态透传（map 键回退、三元表达式）走运行时英文回退，不可静态枚举，测试注释在案；表单标签经 _Field/_Section 字面量扫描全覆盖（protocol_form 42 标签已补）。
+- [x] 13.2 CI 加缺键校验步骤（入 android-build 或独立 step）
+  - `flutter/test/i18n_coverage_test.dart`：扫描 lib/**.dart 的直接 tr 字面量 + _Field/_Section 标签，断言 _zh 全覆盖——flutter-tests job 的 `flutter test` 即跑，无需独立 step。
 - [ ] 13.3 CI/真机验证：校验步骤 + `ci.yml` 全绿；真机切换中文抽查全部页面无英文回退，回传截图
 
 ## 14. 批次 L：旧 UI 退役（D4）
