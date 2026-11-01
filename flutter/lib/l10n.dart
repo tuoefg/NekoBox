@@ -158,6 +158,7 @@ const _zh = <String, String>{
   'Rule matched': '匹配规则', 'Outbound': '出站', 'Inbound': '入站', 'Chain': '代理链',
   'Process': '进程', 'Created': '创建时间', 'No connections': '暂无连接',
   'Pause': '暂停', 'Resume': '继续', 'Clear': '清空', 'No logs': '暂无日志',
+  'Core log': '核心日志',
   'Level': '级别', 'Error': '错误', 'Retry': '重试', 'Done': '完成', 'OK': '确定',
   'Appearance': '外观', 'Theme': '主题', 'System': '跟随系统', 'Light': '浅色', 'Dark': '深色',
   'Accent color': '主题色',

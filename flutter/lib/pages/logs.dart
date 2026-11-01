@@ -10,6 +10,7 @@ class LogsPage extends StatefulWidget {
 
 class _LogsPageState extends State<LogsPage> {
   String _query = '', _level = 'Default';
+  bool _logcat = false;
   static const _priorities = {
     'panic': 0, 'fatal': 1, 'error': 2, 'warn': 3, 'warning': 3,
     'info': 4, 'debug': 5, 'trace': 6,
@@ -20,7 +21,7 @@ class _LogsPageState extends State<LogsPage> {
   @override void dispose() { _scroll.dispose(); super.dispose(); }
 
   void _pause() {
-    if (_paused == null) setState(() => _paused = List.of(context.box.logs));
+    if (_paused == null) setState(() => _paused = List.of(_logcat ? context.box.logcat : context.box.logs));
   }
 
   void _resume() {
@@ -30,7 +31,8 @@ class _LogsPageState extends State<LogsPage> {
   bool _matchesLevel(Json item, String? defaultLevel) {
     final level = item['level'].toString().toLowerCase();
     if (_level == 'Default') {
-      final threshold = _priorities[defaultLevel?.toLowerCase()];
+      // Logcat has no configured level to follow, so Default means everything there.
+      final threshold = _logcat ? null : _priorities[defaultLevel?.toLowerCase()];
       // Before the core reports its level, keep received records available.
       if (threshold == null) return true;
       final priority = _priorities[level];
@@ -41,34 +43,44 @@ class _LogsPageState extends State<LogsPage> {
 
   @override Widget build(BuildContext context) {
     final box = context.watchBox(BoxAspect.logs);
+    if (_logcat) context.watchBox(BoxAspect.logcat);
     final words = _query.toLowerCase().trim().split(RegExp(r'\s+'));
-    final logs = (_paused ?? box.logs).where((item) =>
+    final logs = (_paused ?? (_logcat ? box.logcat : box.logs)).where((item) =>
       _matchesLevel(item, box.defaultLogLevel) &&
       words.every(([item['level'], item['message']].join(' ').toLowerCase()).contains),
     ).toList();
-    return BoxDataSubscription(data: BoxData.logs, child: CommonScaffold(
+    return BoxDataSubscription(data: _logcat ? BoxData.logcat : BoxData.logs, child: CommonScaffold(
       title: context.tr('Logs'),
       onKeywordsUpdate: (words) => setState(() => _query = words.join(' ')),
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
       iconActions: [IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'), onPressed: () => box.act('document.save', {
-        // redact: the core log lines carry URLs and keys; the bridge redacts like the native export.
-        'name': 'B-box.log', 'redact': true,
+        // redact: log lines carry URLs and keys; the bridge redacts like the native export.
+        'name': _logcat ? 'Logcat.log' : 'B-box.log', 'redact': true,
         'content': logs.map((line) => '${recordTime(line['receivedAt'])} [${line['level']}] ${line['message']}').join('\n'),
       }))],
       menuItems: [
         CommonPopupMenuItem(glyph: _paused == null ? AppGlyphs.playPause(1) : AppGlyphs.playPause(0),
           label: context.tr(_paused == null ? 'Pause' : 'Resume'), onPressed: _paused == null ? _pause : _resume),
         CommonPopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Clear'), onPressed: () async {
-          if (await box.act('logs.clear') && mounted) setState(() => _paused = null);
+          if (await box.act(_logcat ? 'logs.logcat.clear' : 'logs.clear') && mounted) setState(() => _paused = null);
         }),
         for (final level in ['Default', 'All', 'Trace', 'Debug', 'Info', 'Warn', 'Error', 'Fatal', 'Panic'])
           CommonPopupMenuItem(label: level == 'Default'
-              ? '${context.tr('Follow configuration')}${box.defaultLogLevel == null ? '' : ' (${context.tr(box.defaultLogLevel!)})'}'
+              ? '${context.tr('Follow configuration')}${_logcat || box.defaultLogLevel == null ? '' : ' (${context.tr(box.defaultLogLevel!)})'}'
               : context.tr(level), checked: _level == level,
             section: level == 'Default' ? CommonPopupMenuSection(title: context.tr('Log level')) : null,
             onPressed: () => setState(() => _level = level)),
       ],
-      body: NullStatusSwitcher(
+      body: Column(children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: SegmentedControl<bool>(
+            segments: [(false, context.tr('Core log')), (true, 'Logcat')],
+            value: _logcat,
+            onChanged: (value) => setState(() { _logcat = value; _paused = null; }),
+          ),
+        ),
+        Expanded(child: NullStatusSwitcher(
         isEmpty: logs.isEmpty, isSearching: _query.trim().isNotEmpty || !['Default', 'All'].contains(_level),
         nullStatus: NullStatus(label: context.tr('No logs'), illustration: NullStatusIllustration.logs),
         child: logs.isEmpty ? const SizedBox.shrink() : Align(
@@ -103,6 +115,7 @@ class _LogsPageState extends State<LogsPage> {
             ),
           ),
         ),
+        ))],
       ),
     ));
   }

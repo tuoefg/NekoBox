@@ -13,8 +13,8 @@ Json json(Object? value) => value is Map
     : <String, dynamic>{};
 List<Json> rows(Object? value) => value is List ? value.map(json).toList() : [];
 
-enum BoxAspect { state, appearance, traffic, memory, connections, logs }
-enum BoxData { memory, logs }
+enum BoxAspect { state, appearance, traffic, memory, connections, logs, logcat }
+enum BoxData { memory, logs, logcat }
 
 class BoxController extends ChangeNotifier {
   BoxController({MethodChannel? channel, Stream<dynamic>? events})
@@ -38,7 +38,7 @@ class BoxController extends ChangeNotifier {
   Json memory = {}, lan = {};
   List<Json> transfers = [], usbDevices = [];
   List<Json> outbounds = [];
-  List<Json> profiles = [], groups = [], connections = [], logs = [];
+  List<Json> profiles = [], groups = [], connections = [], logs = [], logcat = [];
   String? defaultLogLevel;
   final uploadHistory = <double>[];
   final downloadHistory = <double>[];
@@ -80,8 +80,11 @@ class BoxController extends ChangeNotifier {
   }
 
   void _syncData(BoxData data) {
-    unawaited(act(data == BoxData.memory ? 'dashboard.memory.visible' : 'logs.visible',
-      {'visible': _dataOwners[data]?.isNotEmpty == true}));
+    unawaited(act(switch (data) {
+      BoxData.memory => 'dashboard.memory.visible',
+      BoxData.logcat => 'logs.logcat.visible',
+      _ => 'logs.visible',
+    }, {'visible': _dataOwners[data]?.isNotEmpty == true}));
   }
 
   Future<Json> profileStats(int id) => _profileStats.putIfAbsent(id, () async => json(await call('profiles.stats', {'id': id})));
@@ -311,6 +314,18 @@ class BoxController extends ChangeNotifier {
         }
         defaultLogLevel = logState['defaultLogLevel'] as String?;
         aspects = const [BoxAspect.logs];
+      case 'logcat':
+        final logState = json(value);
+        final entries = rows(logState['entries']);
+        if (logState['reset'] == false) {
+          final firstId = (logState['firstId'] as num?)?.toInt();
+          final retained = firstId == null ? <Json>[] : logcat.where((entry) => (entry['id'] as num).toInt() >= firstId);
+          final lastId = logcat.isEmpty ? -1 : (logcat.last['id'] as num).toInt();
+          logcat = [...retained, ...entries.where((entry) => (entry['id'] as num).toInt() > lastId)];
+        } else {
+          logcat = entries;
+        }
+        aspects = const [BoxAspect.logcat];
       case 'settings': settings = json(value);
       case 'preferences':
         final nextPreferences = json(value);

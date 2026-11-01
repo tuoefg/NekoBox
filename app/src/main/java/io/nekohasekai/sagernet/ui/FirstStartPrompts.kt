@@ -5,9 +5,11 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.database.DataStore
@@ -19,7 +21,7 @@ import io.nekohasekai.sagernet.utils.BatteryOptimizations
  * [shown] is set before the battery prompt shows, so a kill or a rotation never asks twice. Create it while the
  * activity initialises.
  */
-class FirstStartPrompts(private val activity: MainActivity) {
+class FirstStartPrompts(private val activity: ComponentActivity) {
 
     private val notificationPermission = activity.registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -108,11 +110,21 @@ class FirstStartPrompts(private val activity: MainActivity) {
 
     private fun showLaterHint() {
         if (activity.isFinishing || activity.isDestroyed) return
-        activity.snackbar(R.string.battery_prompt_later).setAction(R.string.settings) {
-            activity.openSettingsScreen(
-                GeneralSettingsFragment::class.java.name, activity.getString(R.string.settings_general)
-            )
-        }.show()
+        // The native general-settings screen only exists behind MainActivity; the Flutter host
+        // (and any other host) shows the plain hint, its settings live in the ported UI.
+        if (activity is MainActivity) {
+            val host = activity as MainActivity
+            host.snackbar(R.string.battery_prompt_later).setAction(R.string.settings) {
+                host.openSettingsScreen(
+                    GeneralSettingsFragment::class.java.name, host.getString(R.string.settings_general)
+                )
+            }.show()
+        } else {
+            Snackbar.make(
+                activity.window.decorView.findViewById(android.R.id.content) ?: activity.window.decorView,
+                R.string.battery_prompt_later, Snackbar.LENGTH_LONG,
+            ).show()
+        }
     }
 
     private companion object {

@@ -39,13 +39,15 @@ class WifiPermissionFlow(private val activity: ComponentActivity) {
 
     /**
      * A call while a walk-through runs is dropped: a second one would stack its rationale on the first and leave that
-     * one open over an activity that may finish when the walk-through ends.
+     * one open over an activity that may finish when the walk-through ends. Whether this call actually started (rather
+     * than being dropped) is the answer — a caller that waits for [onDone] would wait forever on a dropped one.
      */
-    fun run(onDone: (granted: Boolean) -> Unit = {}) {
-        if (this.onDone != null) return
+    fun run(onDone: (granted: Boolean) -> Unit = {}): Boolean {
+        if (this.onDone != null) return false
         this.onDone = onDone
         step = null
         next()
+        return true
     }
 
     private fun next() {

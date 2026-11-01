@@ -33,6 +33,7 @@ import io.throne.bbox.bridge.BboxBackup
 import io.throne.bbox.bridge.BboxBridge
 import io.throne.bbox.bridge.BboxCommands
 import io.throne.bbox.bridge.BboxEgress
+import io.throne.bbox.bridge.BboxLogcat
 import io.throne.bbox.bridge.BboxLogs
 import io.throne.bbox.bridge.BboxProfiles
 import io.throne.bbox.bridge.BboxRoutes
@@ -134,6 +135,7 @@ class ThroneBoxBridge(
         connectionsJob?.cancel()
         memoryJob?.cancel()
         BboxLogs.stop()
+        BboxLogcat.stop()
         probes.values.forEach { runCatching { it.dispatcher.executorService.shutdown() } }
         probes.clear()
         channel.setMethodCallHandler(null)
@@ -472,6 +474,12 @@ class ThroneBoxBridge(
                         "direct" to DnsServerHistory.directSuggestions(),
                     )
                 )
+                // What Wi-Fi rules need (location, background, services): the native walk-through
+                // runs its dialogs and answers whether everything was granted. The caller saves the
+                // rule either way — a refusal leaves the rules inactive, as in the native editor.
+                "wifiPermissions.ensure" -> result.respond {
+                    (activity as? BboxFlutterActivity)?.ensureWifiPermissions() ?: false
+                }
                 "url.open" -> {
                     val url = call.argument<String>("url").orEmpty()
                     BboxCommands.openUrl(url)
@@ -503,6 +511,20 @@ class ThroneBoxBridge(
                 "logs.clear" -> {
                     BboxLogs.clear()
                     emit("logs", BboxLogs.wire(BboxLogs.Batch(reset = true)))
+                    result.success(null)
+                }
+                // The system logcat tab: same shape as the core log's events, a different source.
+                "logs.logcat.visible" -> {
+                    if (call.argument<Boolean>("visible") == true) {
+                        BboxLogcat.start(scope) { emit("logcat", BboxLogcat.wire(it)) }
+                    } else {
+                        BboxLogcat.stop()
+                    }
+                    result.success(null)
+                }
+                "logs.logcat.clear" -> {
+                    BboxLogcat.clear()
+                    emit("logcat", BboxLogcat.wire(BboxLogcat.Batch(reset = true)))
                     result.success(null)
                 }
                 "dashboard.memory.visible" -> {

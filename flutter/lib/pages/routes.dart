@@ -537,6 +537,11 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
     setState(() { _saving = true; _error = null; });
     final box = context.box;
     try {
+      // A rule that matches Wi-Fi needs the location walk-through (RouteRuleActivity.finishWith
+      // ran it before completing the save); a refusal leaves the rules inactive but the save stands.
+      final usesWifi = _listOf('wifi_ssid').any((v) => v.trim().isNotEmpty)
+          || _listOf('wifi_bssid').any((v) => v.trim().isNotEmpty);
+      if (usesWifi && !box.remote) await box.act('wifiPermissions.ensure');
       final rules = [...widget.rules];
       if (widget.index < 0) {
         rules.add(_rule);

@@ -79,8 +79,14 @@
 
 ## 11. 批次 I：诊断补全
 
-- [ ] 11.1 logcat 通道：复用 `LogcatFragment` tail-reader 模式（IO 线程 `reader.poll()` + commit 推进，取消安全），`logs.logcat.visible/clear` 事件流；Flutter 日志页加 logcat 页签
-- [ ] 11.2 LiveGraphs 与 `line_chart` 对齐确认；首启引导/WifiPermissionFlow 移植评估（已覆盖则记录关闭）
+- [x] 11.1 logcat 通道：复用 `LogcatFragment` tail-reader 模式（IO 线程 `reader.poll()` + commit 推进，取消安全），`logs.logcat.visible/clear` 事件流；Flutter 日志页加 logcat 页签
+  - 新增 `BboxLogcat.kt`（bridge 包，与 `BboxLogs` 同构）：tail-reader 对 logcat 的等价物是 `logcat -v threadtime -T 500` 流进程（旧 UI 的 LogTail 是 RandomAccessFile poll/commit，管道无可 commit 的偏移，改为逐行读取 + 500ms 批量 flush，进程死亡自动重开，取消即 destroy 进程解除阻塞）；threadtime 优先级字母 V/D/I/W/E/F 映射到日志页已有的级别词表；`logcat -c` 即清空（buffer 清 + pendingReset）；条目容量 1500 同 BboxLogs，firstId 保留语义一致。
+  - `ThroneBoxBridge` 加 `logs.logcat.visible`/`logs.logcat.clear` dispatch，事件走 `logcat` 通道；close() 补 `BboxLogcat.stop()`。
+  - Dart：`BoxData`/`BoxAspect` 各加 `logcat`，`box.logcat` 缓冲与 `logs` 同款 reset/firstId 合并；日志页加 SegmentedControl（核心日志 / Logcat）页签，数据订阅随页签切换（BoxDataSubscription didUpdateWidget 已支持），暂停/搜索/级别过滤/导出（Logcat.log，同 redact）/清空全复用，logcat 页签 Default 级别 = 全部（无配置级别可跟随）。
+- [x] 11.2 LiveGraphs 与 `line_chart` 对齐确认；首启引导/WifiPermissionFlow 移植评估（已覆盖则记录关闭）
+  - LiveGraphs：**确认关闭**——对齐对象是 B-box UI，B-box 本就无独立流量图表屏，其仪表盘背景速率曲线（`line_chart.dart`，upload/download 30 样本）即同款功能；thronefa 的 LiveGraphsFragment（1/2/5/10 分钟窗口 + 代理/直连分线 + 图例开关）是旧 UI 专属，随批次 L 退役；`traffic_graph_*` 维持批次 B 的 SHELL_OWNED 册定论。
+  - 首启引导：**已移植**——`FirstStartPrompts` 放宽为 `ComponentActivity`（MainActivity 路径原样保留：ThemedActivity snackbar + openSettingsScreen；其余宿主走 decorView Snackbar 无设置跳转），`BboxFlutterActivity.onCreate(savedInstanceState == null)` 触发（同 MainActivity 位置），13+ 通知权限 → 电池优化豁免各问一次的语义不变。
+  - WifiPermissionFlow：**已移植**——该类本就只依赖 ComponentActivity，`BboxFlutterActivity` 持字段；`run()` 改返回 Boolean（并发调用被丢弃时调用方立即拿到 false 而非永久挂起，原有两处调用方不受影响）；触发点对齐 `RouteRuleActivity.finishWith`：保存含 wifi_ssid/wifi_bssid 的规则时先走一遍向导（`wifiPermissions.ensure` 桥方法，非阻塞、拒绝不影响保存），通知 deep-link（EXTRA_WIFI_PERMISSION）在 onCreate 同样生效。
 - [ ] 11.3 CI/真机验证：`ci.yml` 全绿；真机查看并清空 logcat，回传截图
 
 ## 12. 批次 J：TV

@@ -2,10 +2,14 @@ package io.throne.bbox.flutter
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import android.view.KeyEvent
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.nekohasekai.sagernet.SagerNet
+import io.nekohasekai.sagernet.ui.FirstStartPrompts
+import io.nekohasekai.sagernet.ui.WifiPermissionFlow
+import io.nekohasekai.sagernet.utils.PlatformNotifications
 import io.throne.bbox.bridge.BboxCommands
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -31,6 +35,22 @@ class BboxFlutterActivity : FlutterFragmentActivity() {
 
     private var openHandler: ((Uri?) -> Unit)? = null
     private var saveHandler: ((Uri?) -> Unit)? = null
+
+    // The first-start prompts and the Wi-Fi walk-through register their launchers at construction,
+    // which is what the framework requires; the old UI keeps them as MainActivity fields the same way.
+    private val firstStart = FirstStartPrompts(this)
+    private val wifiFlow = WifiPermissionFlow(this)
+
+    /** A walk-through is running and owns [wifiFlow]'s single callback slot. */
+    private var wifiWaiting = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) {
+            firstStart.start()
+            if (intent?.getBooleanExtra(PlatformNotifications.EXTRA_WIFI_PERMISSION, false) == true) wifiFlow.run()
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -83,6 +103,31 @@ class BboxFlutterActivity : FlutterFragmentActivity() {
                 REQUEST_SAVE,
             )
         }.onFailure { saveHandler = null; continuation.resume(null) }
+    }
+
+    /**
+     * Walks the user through what Wi-Fi rules need (WifiPermissionFlow); false when nothing was
+     * granted or another walk-through already runs. Never blocking: the rule saves either way, the
+     * same "a refusal leaves the rules inactive" contract the native rule editor keeps.
+     */
+    suspend fun ensureWifiPermissions(): Boolean {
+        if (wifiWaiting) return false
+        wifiWaiting = true
+        return try {
+            suspendCancellableCoroutine { continuation ->
+                val started = wifiFlow.run { granted ->
+                    wifiWaiting = false
+                    if (continuation.isActive) continuation.resume(granted)
+                }
+                if (!started) {
+                    wifiWaiting = false
+                    if (continuation.isActive) continuation.resume(false)
+                }
+            }
+        } catch (e: Throwable) {
+            wifiWaiting = false
+            throw e
+        }
     }
 
     @Deprecated("Deprecated in Java")
