@@ -32,6 +32,7 @@ import io.throne.bbox.bridge.BboxCommands
 import io.throne.bbox.bridge.BboxEgress
 import io.throne.bbox.bridge.BboxLogs
 import io.throne.bbox.bridge.BboxProfiles
+import io.throne.bbox.bridge.BboxRoutes
 import io.throne.bbox.bridge.Capabilities
 import io.throne.bbox.bridge.Apply
 // Aliased: this file also uses android.provider.Settings for the battery-optimisation intents.
@@ -302,6 +303,19 @@ class ThroneBoxBridge(
                 }
                 "profiles.nodeDelete" -> result.respond {
                     BboxProfiles.deleteNode(call.argument<Int>("id")?.toLong() ?: -1L); null
+                }
+                "routes.list" -> result.respond { BboxRoutes.list() }
+                "routes.get" -> result.respond { BboxRoutes.get(call.argument<Int>("id")?.toLong() ?: -1L) }
+                "routes.save" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val values = call.argument<Map<String, Any?>>("value") ?: call.arguments as? Map<String, Any?>
+                    result.respond { BboxRoutes.save(values.orEmpty()) }
+                }
+                "routes.delete" -> result.respond {
+                    BboxRoutes.delete(call.argument<Int>("id")?.toLong() ?: -1L); null
+                }
+                "routes.setCurrent" -> result.respond {
+                    BboxRoutes.setCurrent(call.argument<Int>("id")?.toLong() ?: -1L)
                 }
                 "profiles.importFile" -> result.respond { importFile() }
                 "profiles.scan" -> {

@@ -489,6 +489,20 @@ const _zh = <String, String>{
   'Node name': '节点名称',
   'Share link or JSON': '分享链接或 JSON',
   'Leave empty to keep the current configuration.': '留空则保持当前配置不变。',
+  'Route profiles': '路由档',
+  'Add route profile': '新建路由档',
+  'Delete route profile?': '删除路由档？',
+  'Untitled': '未命名',
+  'rules': '条规则',
+  'Proxy': '代理',
+  'Block': '拒绝',
+  'WARP bypass': 'WARP 绕过',
+  'Remote profile': '远程路由档',
+  'Simple rules': '简单规则',
+  'Rules': '规则',
+  'Use this profile': '使用此路由档',
+  'The current profile builds every configuration that has no group override.': '当前路由档将用于所有未单独指定路由档的分组。',
+  'One rule per line: suffix:example.com -> proxy. Outbounds are proxy, direct, block and warp-bypass.': '每行一条规则：suffix:example.com -> proxy。出站可选 proxy、direct、block、warp-bypass。',
 };
 
 extension BoxLocalization on BuildContext {

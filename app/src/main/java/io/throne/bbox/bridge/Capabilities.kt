@@ -32,7 +32,7 @@ object Capabilities {
         "perAppManaged" to false,  // no Shizuku-managed package list
         "rootQuery" to false,      // packages come from PackageManager only
         "dnsObject" to false,      // no raw DNS object editor
-        "routes" to false,         // route profiles still live in the native UI
+        "routes" to true,          // RouteManager over routes.list/get/save/delete, see BboxRoutes
         "autoSelector" to false,   // auto selector UI is not ported
         "warp" to false,           // WARP is configured through the core, not a dedicated page
 

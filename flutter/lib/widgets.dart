@@ -8,6 +8,7 @@ export 'package:material_ui/material_ui.dart';
 export 'box.dart';
 export 'l10n.dart';
 export 'pages/throne.dart';
+export 'pages/routes.dart';
 export 'ui/ui.dart';
 export 'ui/icons/icons.dart';
 

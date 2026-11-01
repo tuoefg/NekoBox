@@ -257,6 +257,9 @@ class RoutingPage extends StatelessWidget {
     final autoUpdate = context.box.settings['routeAutoUpdateEnabled'] == true;
     return BoxPage(title: 'Routing', children: [
       generateSection(items: [
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.rulePresets), title: Text(context.tr('Route profiles')), widget: const RouteProfilesPage()),
+      ], footer: context.tr('The current profile builds every configuration that has no group override.')),
+      generateSection(items: [
         SettingChoice<String>('Outbound domain strategy', 'outboundDomainStrategy',
           options: routingDomainStrategies, text: _strategyName),
         SettingChoice<String>('Domain strategy', 'domainStrategy',
