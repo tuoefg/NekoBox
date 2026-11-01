@@ -317,6 +317,13 @@ class ThroneBoxBridge(
                 "routes.setCurrent" -> result.respond {
                     BboxRoutes.setCurrent(call.argument<Int>("id")?.toLong() ?: -1L)
                 }
+                "routes.presets" -> result.respond { BboxRoutes.presets() }
+                "routes.addPreset" -> result.respond {
+                    BboxRoutes.addPreset(
+                        call.argument<String>("country").orEmpty(),
+                        call.argument<Boolean>("autoUpdate") != false,
+                    )
+                }
                 "routes.rules" -> result.respond {
                     BboxRoutes.rules(call.argument<Int>("id")?.toLong() ?: -1L)
                 }
@@ -389,6 +396,18 @@ class ThroneBoxBridge(
                     @Suppress("UNCHECKED_CAST")
                     val values = call.argument<Map<String, Any?>>("value").orEmpty()
                     applySettings(values)
+                    result.success(settingsWire())
+                }
+                "settings.reset" -> {
+                    val keys = call.argument<List<Any>>("keys").orEmpty().filterIsInstance<String>()
+                    if (keys.isEmpty()) {
+                        ThroneSettings.resetAll()
+                    } else {
+                        keys.forEach { ThroneSettings.reset(it) }
+                    }
+                    if (call.argument<Boolean>("restart") == true && DataStore.serviceState.canStop) {
+                        SagerNet.reloadService()
+                    }
                     result.success(settingsWire())
                 }
                 "url.open" -> {

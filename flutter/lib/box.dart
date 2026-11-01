@@ -246,6 +246,16 @@ class BoxController extends ChangeNotifier {
     } catch (error) { report(error); return false; }
   }
 
+  /// Returns the listed settings (every Throne setting when [keys] is empty) to their Throne defaults.
+  Future<bool> resetSettings(List<String> keys, {bool restart = true}) async {
+    try {
+      settings = json(await call('settings.reset', {'keys': keys, if (restart) 'restart': true}));
+      if (restart && running && !remote) applyRequired = 'Restart';
+      _notify([BoxAspect.state]);
+      return true;
+    } catch (error) { report(error); return false; }
+  }
+
   void report(Object error) { if (!_disposed) messages.add(describe(error)); }
   static String describe(Object error) => error is PlatformException
       ? error.message ?? error.code : error.toString();

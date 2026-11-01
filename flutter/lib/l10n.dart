@@ -616,6 +616,13 @@ const _zh = <String, String>{
   'App settings': '应用设置',
   'This configuration carries only its node list; membership is edited on the Proxies screen.': '此配置仅包含节点列表；成员在代理页管理。',
   'DNS, routing rules and log settings are app settings, as in Throne.': 'DNS、路由规则和日志设置由应用统一控制，与 Throne 一致。',
+  'Restore defaults?': '恢复默认配置？',
+  'Every setting on this page returns to its Throne default.': '本页所有设置将恢复为 Throne 默认值。',
+  'Restore defaults': '恢复默认',
+  'Throne official profiles': 'Throne 官方预置路由档',
+  'The official profiles are remote route profiles of the routeprofiles repository.': '官方预置为 routeprofiles 仓库的远程路由档。',
+  'No official profiles are bundled in this build': '此构建未内置官方预置',
+  'route profiles added': '条路由档已添加',
 };
 
 extension BoxLocalization on BuildContext {

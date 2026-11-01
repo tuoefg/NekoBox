@@ -43,6 +43,50 @@ class _RouteProfilesPageState extends State<RouteProfilesPage> {
     if (mounted) await _load();
   }
 
+  /// The official routeprofiles bundles: pick a country and its remote profiles are added,
+  /// prefilled from the snapshot and fetched online — the native "Download profiles" flow.
+  Future<void> _addPresets() async {
+    final box = context.box;
+    List<Json> bundles;
+    try {
+      final data = json(await box.call('routes.presets'));
+      bundles = (data['bundles'] as List? ?? const []).map((e) => json(e)).toList();
+    } catch (error) {
+      box.report(error);
+      return;
+    }
+    if (!mounted) return;
+    if (bundles.isEmpty) {
+      box.report(StateError(context.tr('No official profiles are bundled in this build')));
+      return;
+    }
+    final picked = await showDialog<Json>(context: context, builder: (context) => SimpleDialog(
+      title: Text(context.tr('Throne official profiles')),
+      children: [
+        for (final bundle in bundles)
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, bundle),
+            child: Text('${bundle['country']} (${((bundle['entries'] as List?) ?? const []).length})'),
+          ),
+      ],
+    ));
+    if (picked == null || !mounted) return;
+    try {
+      final result = json(await box.call('routes.addPreset', {
+        'country': picked['country'], 'autoUpdate': true,
+      }));
+      final added = (result['added'] as num?)?.toInt() ?? 0;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('$added ${context.tr('route profiles added')}'),
+        ));
+        await _load();
+      }
+    } catch (error) {
+      box.report(error);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BoxPage(title: 'Route profiles', children: [
@@ -66,7 +110,12 @@ class _RouteProfilesPageState extends State<RouteProfilesPage> {
             title: Text(context.tr('Add route profile')),
             onTap: () => _open(const {'id': 0}),
           ),
-        ]),
+          ListItem(
+            leading: const GlyphIcon(AppGlyphs.cloudDownload),
+            title: Text(context.tr('Throne official profiles')),
+            onTap: _addPresets,
+          ),
+        ], footer: context.tr('The official profiles are remote route profiles of the routeprofiles repository.')),
       ],
     ]);
   }

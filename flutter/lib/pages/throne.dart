@@ -155,13 +155,30 @@ class _LinesEditorState extends State<_LinesEditor> {
   );
 }
 
+/// The page action that returns the listed settings to their Throne defaults: the rows are dropped
+/// so every read falls back to the default the schema carries. Each settings page lists its own keys.
+IconButtonData restoreDefaultsAction(BuildContext context, List<String> keys) => IconButtonData(
+  glyph: AppGlyphs.reset, tooltip: context.tr('Restore defaults'),
+  onPressed: () async {
+    final box = context.box;
+    final ok = await confirm(context, 'Restore defaults?', action: 'Restore',
+      message: context.tr('Every setting on this page returns to its Throne default.'));
+    if (ok) await box.resetSettings(keys);
+  },
+);
+
 // --------------------------------------------------------------------------------------------- inbound
 
 class InboundPage extends StatelessWidget {
   const InboundPage({super.key});
   @override Widget build(BuildContext context) {
     final vpnMode = context.box.settings['serviceMode'] != 'proxy';
-    return BoxPage(title: 'Inbound', children: [
+    return BoxPage(title: 'Inbound', actions: [
+      restoreDefaultsAction(context, const [
+        'inboundSocksPort', 'randomInboundPort', 'allowLan', 'coreDnsInPort', 'disableMixedInbound',
+        'inboundAuth', 'inboundUser', 'inboundPass', 'appendHttpProxy', 'httpProxyBypass',
+      ]),
+    ], children: [
       generateSection(items: [
         SettingNumber('Mixed port', 'inboundSocksPort', min: 1, max: 65535, autoRestart: true),
         SettingToggle('Random inbound port', 'randomInboundPort'),
@@ -187,7 +204,11 @@ class InboundPage extends StatelessWidget {
 
 class TunPage extends StatelessWidget {
   const TunPage({super.key});
-  @override Widget build(BuildContext context) => BoxPage(title: 'TUN', children: [
+  @override Widget build(BuildContext context) => BoxPage(title: 'TUN', actions: [
+    restoreDefaultsAction(context, const [
+      'vpnMtu', 'vpnIpv6', 'vpnTunIpv4Cidr', 'vpnTunIpv6Cidr', 'allowBypass', 'vpnPrivateRanges', 'enableTunRouting',
+    ]),
+  ], children: [
     generateSection(items: [
       SettingNumber('MTU', 'vpnMtu', min: 1000, max: 10000, autoRestart: true),
       SettingToggle('TUN IPv6', 'vpnIpv6', autoRestart: true),
@@ -211,7 +232,15 @@ const dnsFinalOuts = ['remote', 'direct'];
 
 class DnsPage extends StatelessWidget {
   const DnsPage({super.key});
-  @override Widget build(BuildContext context) => BoxPage(title: 'DNS', children: [
+  @override Widget build(BuildContext context) => BoxPage(title: 'DNS', actions: [
+    restoreDefaultsAction(context, const [
+      'remoteDns', 'remoteDnsDisableIpv6', 'directDns', 'directDnsDisableIpv6', 'dnsFinalOut',
+      'enableDnsRouting', 'fakeDns', 'fakeipDisableIpv6', 'dnsUseHosts', 'dnsPredefinedEnable',
+      'dnsPredefinedRules', 'coreBoxUnderlyingDns', 'dnsReverseMapping', 'dnsDisableCache',
+      'dnsDisableExpire', 'dnsCacheCapacity', 'dnsPersistCache', 'dnsOptimistic', 'dnsOptimisticTimeout',
+      'dnsQueryTimeout',
+    ]),
+  ], children: [
     generateSection(title: context.tr('Remote DNS'), items: [
       SettingText('Remote DNS', 'remoteDns', hint: 'https://1.1.1.1/dns-query'),
       SettingToggle('Disable IPv6 answers', 'remoteDnsDisableIpv6'),
@@ -255,7 +284,12 @@ class RoutingPage extends StatelessWidget {
   const RoutingPage({super.key});
   @override Widget build(BuildContext context) {
     final autoUpdate = context.box.settings['routeAutoUpdateEnabled'] == true;
-    return BoxPage(title: 'Routing', children: [
+    return BoxPage(title: 'Routing', actions: [
+      restoreDefaultsAction(context, const [
+        'outboundDomainStrategy', 'domainStrategy', 'rulesetMirror', 'adblockEnable',
+        'routeAutoUpdateEnabled', 'routeAutoUpdateMinutes',
+      ]),
+    ], children: [
       generateSection(items: [
         ListItem.open(leading: const GlyphIcon(AppGlyphs.rulePresets), title: Text(context.tr('Route profiles')), widget: const RouteProfilesPage()),
       ], footer: context.tr('The current profile builds every configuration that has no group override.')),
@@ -297,7 +331,13 @@ class WarpPage extends StatelessWidget {
   const WarpPage({super.key});
   @override Widget build(BuildContext context) {
     final mode = context.box.settings['warpMode']?.toString() ?? 'wireguard';
-    return BoxPage(title: 'WARP', children: [
+    return BoxPage(title: 'WARP', actions: [
+      restoreDefaultsAction(context, const [
+        'enableWarp', 'warpMode', 'warpEndpoint', 'warpPrivateKey', 'warpPublicKey', 'warpIfcAddrs',
+        'warpReserved', 'warpMasqueEndpoint', 'warpMasquePrivateKey', 'warpMasquePeerPublicKey',
+        'warpMasqueSni', 'warpMasqueHttpMode', 'warpApiHosts',
+      ]),
+    ], children: [
       generateSection(items: [
         SettingToggle('Enable WARP', 'enableWarp', autoRestart: true),
         SettingChoice<String>('WARP mode', 'warpMode', options: warpModes, text: _warpModeName, autoRestart: true),
@@ -342,7 +382,14 @@ class CorePage extends StatelessWidget {
   @override Widget build(BuildContext context) {
     final clashApi = context.box.settings['clashApiEnabled'] == true;
     final boxApi = context.box.settings['boxApiEnabled'] == true;
-    return BoxPage(title: 'Core', children: [
+    return BoxPage(title: 'Core', actions: [
+      restoreDefaultsAction(context, const [
+        'logLevel', 'xrayLogLevel', 'logBufSize', 'enableStats', 'disableTrafficStats', 'skipCert',
+        'useMozillaCerts', 'xrayUseSystemCa', 'clashApiEnabled', 'clashApiPort', 'clashApiListenAddr',
+        'clashApiSecret', 'boxApiEnabled', 'boxApiPort', 'boxApiSecret', 'enableNtp', 'ntpServerAddress',
+        'ntpServerPort', 'ntpInterval', 'ntpOutbound',
+      ]),
+    ], children: [
       generateSection(items: [
         ListItem(title: Text(context.tr('Core version')), subtitle: Text(context.box.coreVersion)),
         SettingChoice<String>('Log level', 'logLevel', options: logLevels, text: (value) => value.toUpperCase()),
@@ -387,7 +434,12 @@ const exitLookupProviders = ['auto', 'ip-api', 'ipwho', 'ipinfo', 'ipapi-co', 'i
 
 class TestingPage extends StatelessWidget {
   const TestingPage({super.key});
-  @override Widget build(BuildContext context) => BoxPage(title: 'Testing', children: [
+  @override Widget build(BuildContext context) => BoxPage(title: 'Testing', actions: [
+    restoreDefaultsAction(context, const [
+      'testUrl', 'urlTestTimeoutMs', 'testConcurrent', 'directTestUrl', 'speedTestMode',
+      'speedTestTimeoutMs', 'simpleDlUrl', 'exitCountryLookup', 'exitLookupProvider',
+    ]),
+  ], children: [
     generateSection(items: [
       SettingText('Test URL', 'testUrl'),
       SettingNumber('Test timeout', 'urlTestTimeoutMs', min: 0, unit: 'ms'),
@@ -426,7 +478,17 @@ class PresetsPage extends StatelessWidget {
   const PresetsPage({super.key});
   @override Widget build(BuildContext context) {
     final brutal = context.box.settings['muxBrutal'] == true;
-    return BoxPage(title: 'Node presets', children: [
+    return BoxPage(title: 'Node presets', actions: [
+      restoreDefaultsAction(context, const [
+        'muxProtocol', 'muxMode', 'muxConcurrency', 'muxMaxConnections', 'muxMinStreams', 'muxPadding',
+        'muxBrutal', 'muxBrutalUpMbps', 'muxBrutalDownMbps', 'muxDefaultOn', 'xrayMuxConcurrency',
+        'xrayMuxMaxConnections', 'xrayMuxXudpConcurrency', 'xrayMuxXudpProxyUdp443', 'xrayMuxDefaultOn',
+        'fragmentDefaultOn', 'fragmentImplementation', 'fragmentSize', 'fragmentSleep', 'tlsTricksDefaultOn',
+        'utlsFingerprint', 'tlsSpoof', 'tlsSpoofMethod', 'h2IdleTimeout', 'h2KeepAlivePeriod',
+        'h2StreamReceiveWindow', 'h2ConnectionReceiveWindow', 'h2MaxConcurrentStreams',
+        'quicInitialPacketSize', 'quicDisablePathMtuDiscovery',
+      ]),
+    ], children: [
       generateSection(title: context.tr('Mux'), items: [
         SettingChoice<String>('Mux protocol', 'muxProtocol', options: muxProtocols, text: (value) => value),
         SettingChoice<String>('Mux mode', 'muxMode', options: muxModes, text: _muxModeName),
@@ -496,7 +558,13 @@ class SubscriptionPage extends StatelessWidget {
   const SubscriptionPage({super.key});
   @override Widget build(BuildContext context) {
     final autoUpdate = context.box.settings['subAutoUpdateEnabled'] == true;
-    return BoxPage(title: 'Subscriptions', children: [
+    return BoxPage(title: 'Subscriptions', actions: [
+      restoreDefaultsAction(context, const [
+        'userAgent', 'netUseProxy', 'netInsecure', 'subTlsVersion', 'subHttpVersion', 'subSendHwid',
+        'subCustomHwidParams', 'subAutoUpdateEnabled', 'subAutoUpdateMinutes', 'subRespectServerInterval',
+        'subClear', 'subShowChangePopup', 'allowStoppingActiveProfile',
+      ]),
+    ], children: [
       generateSection(title: context.tr('Request'), items: [
         SettingText('User agent', 'userAgent', hint: 'empty means the built-in user agent'),
         SettingToggle('Fetch through the proxy', 'netUseProxy'),
@@ -529,7 +597,9 @@ String _httpVersionName(int value) => switch (value) { 1 => 'HTTP/1.1', _ => 'Au
 
 class UpdatePage extends StatelessWidget {
   const UpdatePage({super.key});
-  @override Widget build(BuildContext context) => BoxPage(title: 'Updates', children: [
+  @override Widget build(BuildContext context) => BoxPage(title: 'Updates', actions: [
+    restoreDefaultsAction(context, const ['allowBetaUpdate', 'updateCheckAuto']),
+  ], children: [
     generateSection(items: [
       SettingToggle('Allow beta versions', 'allowBetaUpdate'),
       SettingToggle('Check for updates automatically', 'updateCheckAuto'),

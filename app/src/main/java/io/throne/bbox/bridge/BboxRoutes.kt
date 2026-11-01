@@ -2,6 +2,8 @@ package io.throne.bbox.bridge
 
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.RouteManager
+import io.nekohasekai.sagernet.database.RouteRepo
+import io.nekohasekai.sagernet.group.RemoteRouteUpdater
 import io.nekohasekai.sagernet.route.OutboundIds
 import io.nekohasekai.sagernet.route.RouteProfile
 import io.nekohasekai.sagernet.route.RouteRule
@@ -210,6 +212,37 @@ object BboxRoutes {
         DataStore.currentRouteId = p.id
         BboxBridge.scheduleRefresh(immediate = true)
         mapOf("currentId" to p.id)
+    }
+
+    /** The official route profiles of the routeprofiles snapshot: one bundle per country (Download profiles). */
+    suspend fun presets(): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val bundles = try {
+            RouteRepo.bundles()
+        } catch (e: Exception) {
+            error("Cannot read the bundled route profiles: ${e.message}")
+        }
+        mapOf(
+            "bundles" to bundles.map { bundle ->
+                mapOf(
+                    "country" to bundle.country,
+                    "entries" to bundle.entries.map { entry ->
+                        mapOf("name" to entry.name, "url" to entry.url)
+                    },
+                )
+            },
+        )
+    }
+
+    /**
+     * Adds one country bundle as remote route profiles: saved at once, prefilled from the snapshot
+     * and fetched online, exactly as the native "Download profiles" flow adds them.
+     */
+    suspend fun addPreset(country: String, autoUpdate: Boolean): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val bundle = RouteRepo.bundles().firstOrNull { it.country == country }
+            ?: error("No official profile bundle named \"$country\"")
+        val ids = RemoteRouteUpdater.addRemote(bundle.entries, autoUpdate)
+        BboxBridge.scheduleRefresh(immediate = true)
+        mapOf("added" to ids.size, "profiles" to list()["profiles"])
     }
 
     // ------------------------------------------------------------------------------------------------ rules

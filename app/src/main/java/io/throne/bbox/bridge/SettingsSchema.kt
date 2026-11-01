@@ -421,6 +421,56 @@ object Settings {
     }
 
     fun read(): Map<String, Any?> = entries.associate { entry -> entry.bridgeKey to entry.get() }
+
+    /**
+     * The rows a bridge key lives under when its own name is not one: the split views (a flag and a
+     * port sharing one signed row) and the keys the Android side names differently from the bridge.
+     */
+    private val RESET_ROW_ALIASES = mapOf(
+        "allowBypass" to "disable_private_range_bypass",
+        "userAgent" to "user_agent2",
+        "fakeDns" to "fakedns",
+        "warpEndpoint" to "warp_ep",
+        "warpMasqueEndpoint" to "warp_masque_ep",
+        "perAppEnabled" to "proxyApps",
+        "perAppMode" to "bypassMode",
+        "perAppList" to "individual",
+        "routeAutoUpdateEnabled" to "route_auto_update",
+        "routeAutoUpdateMinutes" to "route_auto_update",
+        "subAutoUpdateEnabled" to "sub_auto_update",
+        "subAutoUpdateMinutes" to "sub_auto_update",
+        "clashApiEnabled" to "core_box_clash_api",
+        "clashApiPort" to "core_box_clash_api",
+        "clashApiListenAddr" to "core_box_clash_listen_addr",
+        "clashApiSecret" to "core_box_clash_api_secret",
+        "boxApiEnabled" to "core_box_api_port",
+        "boxApiPort" to "core_box_api_port",
+        "boxApiSecret" to "core_box_api_secret",
+    )
+
+    private fun camelToSnake(key: String) = buildString(key.length + 4) {
+        for (c in key) {
+            if (c.isUpperCase()) { append('_'); append(c.lowercaseChar()) } else append(c)
+        }
+    }
+
+    /**
+     * Drops the key's rows so every read falls back to the Throne default, and returns the entry's
+     * follow-up action; null when the key is unknown. A row that is not there is simply not removed.
+     */
+    fun reset(key: String): Apply? {
+        val entry = index[key] ?: return null
+        val store = DataStore.configurationStore
+        val rows = LinkedHashSet<String>()
+        rows.add(camelToSnake(key))
+        rows.add(key)
+        RESET_ROW_ALIASES[key]?.let { rows.add(it) }
+        rows.forEach { store.remove(it) }
+        return entry.apply
+    }
+
+    /** [reset] over every key the schema knows; returns the heaviest follow-up action. */
+    fun resetAll(): Apply? = entries.mapNotNull { reset(it.bridgeKey) }.maxByOrNull { it.ordinal }
 }
 
 /** Whether the app is exempt from battery optimisation; the read-only `batteryExempt` key. */
