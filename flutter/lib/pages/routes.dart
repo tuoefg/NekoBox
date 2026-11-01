@@ -360,14 +360,23 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
         generateSection(title: context.tr('Rules'), items: [
           for (final (index, rule) in _rules.indexed)
             ListItem(
-              title: Text(_ruleName(rule, index)),
-              subtitle: Text(_ruleSummary(rule)),
+              title: Text(ruleName(rule, index)),
+              subtitle: Text(ruleSummary(context, rule)),
               onTap: _isRaw ? null : () => _editRule(index),
             ),
           if (!_isRaw) ListItem(
             leading: const GlyphIcon(AppGlyphs.add),
             title: Text(context.tr('Add rule')),
             onTap: () => _editRule(-1),
+          ),
+          if (!_isRaw && _rules.length >= 2) ListItem(
+            leading: const GlyphIcon(AppGlyphs.sort),
+            title: Text(context.tr('Reorder rules')),
+            subtitle: Text(context.tr('Drag a rule to change the order; the first match wins')),
+            onTap: () async {
+              final changed = await openPage<bool>(context, RuleOrderPage(profileId: widget.id, rules: _rules));
+              if (changed == true && mounted) await _loadRules();
+            },
           ),
           if (!_isRaw) ListItem(
             leading: const GlyphIcon(AppGlyphs.importFile),
@@ -408,30 +417,81 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
     'warp-bypass' => 'WARP bypass',
     _ => 'Direct',
   };
+}
 
-  String _ruleName(Json rule, int index) {
-    final name = rule['name']?.toString() ?? '';
-    if (name.isNotEmpty) return name;
-    for (final key in const ['domain', 'domain_suffix', 'ip_cidr', 'port', 'rule_set', 'package_name']) {
-      final list = rule[key];
-      if (list is List && list.isNotEmpty) return '${list.first}';
-    }
-    return '#${index + 1}';
+/// A rule's row title: its name, or the first match value, or its position.
+String ruleName(Json rule, int index) {
+  final name = rule['name']?.toString() ?? '';
+  if (name.isNotEmpty) return name;
+  for (final key in const ['domain', 'domain_suffix', 'ip_cidr', 'port', 'rule_set', 'package_name']) {
+    final list = rule[key];
+    if (list is List && list.isNotEmpty) return '${list.first}';
   }
+  return '#${index + 1}';
+}
 
-  String _ruleSummary(Json rule) {
-    final action = rule['action']?.toString() ?? 'route';
-    final conditions = <String>[];
-    for (final key in const [
-      'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'ip_cidr', 'source_ip_cidr',
-      'port', 'port_range', 'process_name', 'package_name', 'rule_set',
-    ]) {
-      final list = rule[key];
-      if (list is List && list.isNotEmpty) conditions.add('$key(${list.length})');
-    }
-    if (rule['invert'] == true) conditions.add(context.tr('Inverted'));
-    return conditions.isEmpty ? action : '$action · ${conditions.join(' ')}';
+/// A rule's row subtitle: the action plus a count per non-empty match list.
+String ruleSummary(BuildContext context, Json rule) {
+  final action = rule['action']?.toString() ?? 'route';
+  final conditions = <String>[];
+  for (final key in const [
+    'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'ip_cidr', 'source_ip_cidr',
+    'port', 'port_range', 'process_name', 'package_name', 'rule_set', 'network_type',
+    'wifi_ssid', 'wifi_bssid',
+  ]) {
+    final list = rule[key];
+    if (list is List && list.isNotEmpty) conditions.add('$key(${list.length})');
   }
+  if (rule['network_is_expensive'] == true) conditions.add(context.tr('Metered'));
+  if (rule['invert'] == true) conditions.add(context.tr('Inverted'));
+  return conditions.isEmpty ? action : '$action · ${conditions.join(' ')}';
+}
+
+/// The rules in drag order. The list *is* the profile's rule order, so a reorder saves the same
+/// rules permuted — the bridge stores rules in list order and nothing else changes.
+class RuleOrderPage extends StatefulWidget {
+  const RuleOrderPage({super.key, required this.profileId, required this.rules});
+  final int profileId;
+  final List<Json> rules;
+  @override
+  State<RuleOrderPage> createState() => _RuleOrderPageState();
+}
+
+class _RuleOrderPageState extends State<RuleOrderPage> {
+  late final List<Json> _rules = List.of(widget.rules);
+  bool _saving = false;
+
+  Widget _item(int index) => ReorderableDelayedDragStartListener(
+    key: ObjectKey(_rules[index]), index: index,
+    child: ItemPositionProvider(position: ItemPosition.get(index, _rules.length),
+      child: DecorationListItem(contentPadding: const EdgeInsets.only(left: 16),
+        title: Text(ruleName(_rules[index], index)),
+        subtitle: Text(ruleSummary(context, _rules[index])),
+        trailing: SortHandle(index: index))),
+  );
+
+  @override
+  Widget build(BuildContext context) => CommonScaffold(
+    title: context.tr('Reorder rules'),
+    confirmationAction: IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Save'), isLoading: _saving,
+      onPressed: _saving ? null : () async {
+        setState(() => _saving = true);
+        try {
+          await context.box.call('routes.saveRules', {'id': widget.profileId, 'rules': _rules});
+          if (mounted) context.safeNestedPop(true);
+        } catch (error) {
+          if (mounted) { setState(() => _saving = false); context.box.report(error); }
+        }
+      }),
+    body: AbsorbPointer(absorbing: _saving, child: ReorderableListView.builder(
+      buildDefaultDragHandles: false,
+      padding: EdgeInsets.fromLTRB(16, context.contentTopPadding, 16, 32 + context.bottomInset),
+      itemCount: _rules.length,
+      proxyDecorator: (child, index, animation) => commonProxyDecorator(_item(index), index, animation),
+      onReorderItem: (old, next) => setState(() => _rules.insert(next, _rules.removeAt(old))),
+      itemBuilder: (_, index) => _item(index),
+    )),
+  );
 }
 
 /// One route rule as a form: the match attributes on top, the action fields below, exactly the
@@ -637,7 +697,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
           ]),
         if (!isSimple && !isEndpoint) generateSection(title: context.tr('Network'), items: [
           _csvRow('Inbound', 'inbound'),
-          _csvRow('Network type', 'network_type'),
+          _networkTypeRow(),
           _csvRow('Wi-Fi SSID', 'wifi_ssid'),
           _csvRow('Wi-Fi BSSID', 'wifi_bssid'),
           _textRow('IP version', 'ip_version', hint: 'ipv4 / ipv6'),
@@ -711,6 +771,27 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
       onChanged: (value) => _setList(key, value),
     ),
   );
+
+  /// sing-box's network types as a multi-choice, the way the native rule editor offers them
+  /// (RouteRuleActivity's multi-choice dialog over route_rule_network_type_entries); the empty
+  /// selection means the condition does not narrow the match, as upstream.
+  Widget _networkTypeRow() {
+    const options = ['wifi', 'cellular', 'ethernet', 'other'];
+    final current = _listOf('network_type');
+    return ListItem(
+      title: Text(context.tr('Network type')),
+      subtitle: Text(current.isEmpty ? context.tr('Any') : current.map(_networkTypeName).join(', ')),
+      onTap: () async {
+        final picked = await showDialog<Set<String>>(
+          context: context,
+          builder: (context) => _MultiChoiceDialog(
+            title: context.tr('Network type'), options: options, initial: current.toSet(),
+          ),
+        );
+        if (picked != null) _setList('network_type', options.where(picked.contains).join(','));
+      },
+    );
+  }
 
   /// The rule-set row opens the picker over Throne's preset rule sets (the routeprofiles srslist),
   /// which keeps hand-typed entries in the same field — the native picker's contract.
@@ -806,6 +887,43 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
       ],
     );
   }
+}
+
+String _networkTypeName(String value) => switch (value) {
+  'wifi' => 'Wi-Fi', 'cellular' => 'Cellular', 'ethernet' => 'Ethernet', _ => 'Other',
+};
+
+/// A multi-choice dialog over a fixed option set; the answer is the selected subset.
+class _MultiChoiceDialog extends StatefulWidget {
+  const _MultiChoiceDialog({required this.title, required this.options, required this.initial});
+  final String title;
+  final List<String> options;
+  final Set<String> initial;
+  @override
+  State<_MultiChoiceDialog> createState() => _MultiChoiceDialogState();
+}
+
+class _MultiChoiceDialogState extends State<_MultiChoiceDialog> {
+  late final _selected = widget.initial.toSet();
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    content: Column(mainAxisSize: MainAxisSize.min, children: [
+      for (final option in widget.options)
+        ListItem.checkbox(
+          value: _selected.contains(option),
+          title: Text(context.tr(_networkTypeName(option))),
+          onChanged: (value) => setState(() {
+            if (value == true) { _selected.add(option); } else { _selected.remove(option); }
+          }),
+        ),
+    ]),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
+      TextButton(onPressed: () => Navigator.pop(context, _selected), child: Text(context.tr('Save'))),
+    ],
+  );
 }
 
 /// The batch-add dialog: one simple rule per line, `prefix:value` with an optional `-> target`.

@@ -71,7 +71,8 @@
 
 ## 10. 批次 H：路由收口
 
-- [ ] 10.1 routes.dart 补 SSID/BSSID、网络类型、计费网络三类规则条件（旧 RouteFragment 条件集）；规则列表拖拽排序
+- [x] 10.1 routes.dart 补 SSID/BSSID、网络类型、计费网络三类规则条件（旧 RouteFragment 条件集）；规则列表拖拽排序
+  - 增量审计结论：三类条件在基线后提交中已进入 RuleEditorPage（`network_type`/`wifi_ssid`/`wifi_bssid` CSV 行 + `network_is_expensive` 开关，桥接经 RouteRule 反射字段透传），gap matrix 该行系 0.5 时点旧数据；本批补两处收口：`network_type` 由自由文本升级为旧 RouteRuleActivity 的多选对话框（wifi/cellular/ethernet/other），规则列表新增 `RuleOrderPage` 拖拽排序（复用 ProfileOrderPage 的 ReorderableListView 模式，经 `routes.saveRules` 保存，`ruleName`/`ruleSummary` 提为顶层函数两页复用，摘要补 network_type/wifi_ssid/wifi_bssid/metered 计数）。
 - [ ] 10.2 CI/真机验证：`ci.yml` 全绿；真机建含三类条件的规则并验证命中，回传截图
 
 ## 11. 批次 I：诊断补全

@@ -98,7 +98,7 @@
 | 需求 | 状态 | 批次 | 缺口 |
 | --- | --- | --- | --- |
 | Routing rule definition | wired | — | RuleEditorPage（custom/simple/endpoint_preferred_by） |
-| Rule ordering | partial | **H** | 上下移动已有、拖拽排序未做；规则条件缺 SSID/BSSID/网络类型/计费网络三类 |
+| Rule ordering | wired | — | 拖拽排序已入 `RuleOrderPage`（批次 H）；SSID/BSSID/网络类型/计费网络四条件在 RuleEditorPage 全量可达，network_type 为多选对话框 |
 | Routing profiles | wired | — | routes.list/get/save/delete + 只读 raw + 恢复默认规则 |
 | Rule set references | wired | — | `routes.ruleSets` 预设规则集选择器（`4100c426`） |
 
