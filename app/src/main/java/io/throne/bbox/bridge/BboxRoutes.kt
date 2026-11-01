@@ -72,6 +72,9 @@ object BboxRoutes {
         }
     }
 
+    /** The ids in `endpoint_profile_ids`/`inner_hop_endpoint_ids`, which store a JSON array of ids as text. */
+    private val ID_RE = Regex("-?\\d+")
+
     /** Every profile as a list row; the rules themselves arrive only through [get]. */
     suspend fun list(): Map<String, Any?> = withContext(Dispatchers.IO) {
         val current = DataStore.currentRouteId
@@ -105,6 +108,7 @@ object BboxRoutes {
             "remoteUrl" to p.remote_url,
             "autoUpdate" to p.auto_update,
             "isRaw" to p.is_raw,
+            "endpointIds" to ID_RE.findAll(p.endpoint_profile_ids).map { it.value.toLong() },
             "rules" to simpleRulesText(p),
             "ruleCount" to p.rules.size,
         )
@@ -123,6 +127,9 @@ object BboxRoutes {
         (values["isRemote"] as? Boolean)?.let { p.is_remote = it }
         (values["remoteUrl"] as? String)?.let { p.remote_url = it.trim() }
         (values["autoUpdate"] as? Boolean)?.let { p.auto_update = it }
+        (values["endpointIds"] as? List<*>)?.let { ids ->
+            p.endpoint_profile_ids = ids.filterIsInstance<Number>().joinToString(",", "[", "]") { it.toLong().toString() }
+        }
         val rules = values["rules"] as? String
         if (rules != null) {
             p.rules.removeAll { it.type in addressTypes }

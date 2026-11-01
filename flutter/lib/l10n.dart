@@ -605,6 +605,12 @@ const _zh = <String, String>{
   'Simple rules share one outbound and one action; the match goes in the fields below.': '简单规则共用一个出站和一个动作；匹配内容填在下方字段。',
   'Read-only': '只读',
   'This profile is built in and cannot be changed here.': '此配置为内置预置，无法在此修改。',
+  'Endpoint ids': '端点 ID',
+  'Profile ids whose endpoints this route can prefer; used by preferred-by rules.': '此路由可优选的端点所属 profile ID；供 preferred-by 规则使用。',
+  'Endpoint preferred by': '端点优选',
+  'Preferred endpoint': '优选端点',
+  'This rule names one endpoint as preferred; it has no match conditions.': '此规则指定一个优选端点；没有匹配条件。',
+  'A remote profile downloads its rules from the URL.': '远程配置从 URL 下载规则。',
 };
 
 extension BoxLocalization on BuildContext {

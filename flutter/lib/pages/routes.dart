@@ -101,6 +101,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
   bool _isRaw = false;
   bool _saving = false;
   String? _error;
+  String _endpointIds = '';
   List<Json> _rules = const [];
 
   @override
@@ -131,6 +132,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
         _url.text = data['remoteUrl']?.toString() ?? '';
         _autoUpdate = data['autoUpdate'] == true;
         _isRaw = data['isRaw'] == true;
+        _endpointIds = (data['endpointIds'] as List? ?? const []).join(', ');
         _current = (list['currentId'] as num?)?.toInt() == widget.id;
       });
       await _loadRules();
@@ -175,6 +177,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
         'isRemote': _isRemote,
         'remoteUrl': _url.text,
         'autoUpdate': _autoUpdate,
+        'endpointIds': _endpointIds.split(',').map((e) => int.tryParse(e.trim())).whereType<int>().toList(),
       }});
       if (mounted) context.safeNestedPop();
     } catch (error) {
@@ -260,7 +263,16 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
             value: _autoUpdate,
             onChanged: (value) => setState(() => _autoUpdate = value),
           ),
-        ]),
+        ], footer: context.tr('A remote profile downloads its rules from the URL.')),
+        generateSection(title: context.tr('Endpoints'), items: [
+          FormRow(title: context.tr('Endpoint ids'), trailing: FormRowTextField(
+            initialValue: _endpointIds,
+            hintText: '1, 2, 3',
+            keyboardType: TextInputType.number,
+            autocorrect: false, enableSuggestions: false,
+            onChanged: (value) => _endpointIds = value,
+          )),
+        ], footer: context.tr('Profile ids whose endpoints this route can prefer; used by preferred-by rules.')),
         generateSection(title: context.tr('Rules'), items: [
           for (final (index, rule) in _rules.indexed)
             ListItem(
@@ -411,10 +423,13 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
     final outboundId = (_rule['outbound_id'] as num?)?.toInt() ?? -2;
     final typeToken = _rule['type']?.toString() ?? 'custom';
     final isSimple = typeToken.startsWith('simple_');
+    final isEndpoint = typeToken == 'endpoint_preferred_by';
     final simpleAction = isSimple ? _actionFromToken(typeToken) : '';
     final simpleKind = isSimple
         ? typeToken.substring('simple_'.length, typeToken.length - simpleAction.length - 1)
         : '';
+    final typeLabel = isSimple ? _simpleKindName(simpleKind)
+        : isEndpoint ? 'Endpoint preferred by' : 'Custom';
     return FormPage(
       title: widget.index < 0 ? 'Add rule' : 'Edit rule',
       saving: _saving,
@@ -437,21 +452,25 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
           ),
           ListItem(
             title: Text(context.tr('Type')),
-            trailing: Text(isSimple ? context.tr(_simpleKindName(simpleKind)) : context.tr('Custom')),
+            trailing: Text(context.tr(typeLabel)),
             onTap: () async {
               final picked = await showDialog<String>(context: context, builder: (context) => SimpleDialog(
                 title: Text(context.tr('Type')),
                 children: [
-                  for (final value in const ['custom', 'address', 'process_name', 'process_path'])
+                  for (final (value, label) in [
+                    ('custom', 'Custom'), ('address', 'Simple address'),
+                    ('process_name', 'Simple process name'), ('process_path', 'Simple process path'),
+                    ('endpoint_preferred_by', 'Endpoint preferred by'),
+                  ])
                     SimpleDialogOption(
                       onPressed: () => Navigator.pop(context, value),
-                      child: Text(context.tr(value == 'custom' ? 'Custom' : _simpleKindName(value))),
+                      child: Text(context.tr(label)),
                     ),
                 ],
               ));
               if (picked == null) return;
-              if (picked == 'custom') {
-                _set('type', 'custom');
+              if (picked == 'custom' || picked == 'endpoint_preferred_by') {
+                setState(() => _rule = {..._rule, 'type': picked});
               } else {
                 _applySimple(picked, simpleAction.isEmpty ? 'proxy' : simpleAction);
               }
@@ -475,7 +494,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
             },
           ),
           if (!isSimple) ListItem(
-            title: Text(context.tr('Outbound')),
+            title: Text(context.tr(isEndpoint ? 'Preferred endpoint' : 'Outbound')),
             trailing: Text(_outboundName(outboundId)),
             onTap: () async {
               final picked = await showDialog<int>(context: context, builder: _outboundDialog);
@@ -484,14 +503,16 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
           ),
         ], footer: isSimple
             ? context.tr('Simple rules share one outbound and one action; the match goes in the fields below.')
-            : null),
-        if (!isSimple || simpleKind == 'address') generateSection(title: context.tr('Domains'), items: [
+            : isEndpoint
+                ? context.tr('This rule names one endpoint as preferred; it has no match conditions.')
+                : null),
+        if (!isEndpoint && (!isSimple || simpleKind == 'address')) generateSection(title: context.tr('Domains'), items: [
           _csvRow('Domain', 'domain'),
           _csvRow('Domain suffix', 'domain_suffix'),
           _csvRow('Domain keyword', 'domain_keyword'),
           _csvRow('Domain regex', 'domain_regex'),
         ]),
-        if (!isSimple || simpleKind == 'address') generateSection(title: context.tr('IP and ports'), items: [
+        if (!isEndpoint && (!isSimple || simpleKind == 'address')) generateSection(title: context.tr('IP and ports'), items: [
           _csvRow('IP CIDR', 'ip_cidr'),
           _csvRow('Source IP CIDR', 'source_ip_cidr'),
           _csvRow('Rule set', 'rule_set'),
@@ -510,7 +531,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
             onChanged: (value) => _set('ip_is_private', value),
           ),
         ]),
-        if (!isSimple || simpleKind == 'process_name' || simpleKind == 'process_path')
+        if (!isEndpoint && (!isSimple || simpleKind == 'process_name' || simpleKind == 'process_path'))
           generateSection(title: context.tr('Processes and apps'), items: [
             if (!isSimple || simpleKind == 'process_name') _csvRow('Process name', 'process_name'),
             if (!isSimple || simpleKind == 'process_path') _csvRow('Process path', 'process_path'),
@@ -520,7 +541,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
               _csvRow('Package name regex', 'package_name_regex'),
             ],
           ]),
-        if (!isSimple) generateSection(title: context.tr('Network'), items: [
+        if (!isSimple && !isEndpoint) generateSection(title: context.tr('Network'), items: [
           _csvRow('Inbound', 'inbound'),
           _csvRow('Network type', 'network_type'),
           _csvRow('Wi-Fi SSID', 'wifi_ssid'),
@@ -539,7 +560,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
             onChanged: (value) => _set('invert', value),
           ),
         ]),
-        if (!isSimple) generateSection(title: context.tr('Action'), items: [
+        if (!isSimple && !isEndpoint) generateSection(title: context.tr('Action'), items: [
           ListItem(
             title: Text(context.tr('Action')),
             trailing: Text(_rule['action']?.toString() ?? 'route'),
