@@ -73,10 +73,12 @@ class _RouteProfilesPageState extends State<RouteProfilesPage> {
 
   String _summary(Json profile) {
     final rules = (profile['ruleCount'] as num?)?.toInt() ?? 0;
-    final remote = profile['isRemote'] == true;
-    return remote
-        ? '${context.tr('Remote')} · $rules ${context.tr('rules')}'
-        : '$rules ${context.tr('rules')}';
+    final marks = <String>[
+      if (profile['isRaw'] == true) context.tr('Read-only'),
+      if (profile['isRemote'] == true) context.tr('Remote'),
+      '$rules ${context.tr('rules')}',
+    ];
+    return marks.join(' · ');
   }
 }
 
@@ -96,6 +98,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
   bool _isRemote = false;
   bool _autoUpdate = false;
   bool _current = false;
+  bool _isRaw = false;
   bool _saving = false;
   String? _error;
   List<Json> _rules = const [];
@@ -127,6 +130,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
         _isRemote = data['isRemote'] == true;
         _url.text = data['remoteUrl']?.toString() ?? '';
         _autoUpdate = data['autoUpdate'] == true;
+        _isRaw = data['isRaw'] == true;
         _current = (list['currentId'] as num?)?.toInt() == widget.id;
       });
       await _loadRules();
@@ -201,13 +205,20 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
     return FormPage(
       title: widget.id == 0 ? 'Add route profile' : 'Edit',
       saving: _saving,
-      onSave: _save,
+      onSave: _isRaw ? null : _save,
       error: _error,
       actions: [
-        if (widget.id > 0)
+        if (widget.id > 0 && !_isRaw)
           IconButtonData(glyph: AppGlyphs.delete, tooltip: 'Delete', onPressed: _delete),
       ],
       children: [
+        if (_isRaw) generateSection(items: [
+          ListItem(
+            leading: const GlyphIcon(AppGlyphs.info),
+            title: Text(context.tr('Read-only')),
+            subtitle: Text(context.tr('This profile is built in and cannot be changed here.')),
+          ),
+        ]),
         generateSection(items: [
           FormRow(title: context.tr('Name'), trailing: FormRowTextField(
             controller: _name, hintText: context.tr('Required'),
@@ -255,14 +266,16 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
             ListItem(
               title: Text(_ruleName(rule, index)),
               subtitle: Text(_ruleSummary(rule)),
-              onTap: () => _editRule(index),
+              onTap: _isRaw ? null : () => _editRule(index),
             ),
-          ListItem(
+          if (!_isRaw) ListItem(
             leading: const GlyphIcon(AppGlyphs.add),
             title: Text(context.tr('Add rule')),
             onTap: () => _editRule(-1),
           ),
-        ], footer: context.tr('Rules run top to bottom; the first match wins.')),
+        ], footer: _isRaw
+            ? context.tr('This profile is built in and cannot be changed here.')
+            : context.tr('Rules run top to bottom; the first match wins.')),
         if (widget.id > 0) generateSection(items: [
           ListItem.toggle(
             title: Text(context.tr('Use this profile')),

@@ -81,6 +81,7 @@ object BboxRoutes {
                 "name" to p.name,
                 "current" to (p.id == current),
                 "isRemote" to p.is_remote,
+                "isRaw" to p.is_raw,
                 "ruleCount" to p.rules.size,
                 "simpleRuleCount" to p.rules.count { it.type in addressTypes },
             )

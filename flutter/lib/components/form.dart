@@ -4,10 +4,10 @@ import '../widgets.dart';
 // Grouped form rows adapted from FlClash v0.9.2 features/form.
 
 class FormPage extends StatelessWidget {
-  const FormPage({super.key, required this.title, required this.onSave, required this.children,
+  const FormPage({super.key, required this.title, this.onSave, required this.children,
     this.error, this.saving = false, this.actions = const []});
   final String title;
-  final VoidCallback onSave;
+  final VoidCallback? onSave;
   final String? error;
   final bool saving;
   final List<Widget> children;
@@ -15,7 +15,7 @@ class FormPage extends StatelessWidget {
 
   @override Widget build(BuildContext context) => CommonScaffold(
     title: context.tr(title), iconActions: actions,
-    confirmationAction: IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Save'),
+    confirmationAction: onSave == null ? null : IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Save'),
       isLoading: saving, onPressed: saving ? null : onSave),
     body: AbsorbPointer(absorbing: saving, child: ListView(shrinkWrap: true,
       padding: EdgeInsets.fromLTRB(16, context.sectionsTopPadding, 16, 20 + context.bottomInset),

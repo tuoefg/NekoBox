@@ -603,6 +603,8 @@ const _zh = <String, String>{
   'Simple process name': '简单进程名',
   'Simple process path': '简单进程路径',
   'Simple rules share one outbound and one action; the match goes in the fields below.': '简单规则共用一个出站和一个动作；匹配内容填在下方字段。',
+  'Read-only': '只读',
+  'This profile is built in and cannot be changed here.': '此配置为内置预置，无法在此修改。',
 };
 
 extension BoxLocalization on BuildContext {
