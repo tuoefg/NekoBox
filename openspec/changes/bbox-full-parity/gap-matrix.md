@@ -116,7 +116,7 @@
 | --- | --- |
 | B | settings 三列差集（settings-storage/backup 自动备份长尾） |
 | C | 组设置与订阅报告（profile-management / settings-storage 覆盖）；已完成：`groupSettings.get/set` 桥（旧编辑器同款校验与 save 语义，restart 即时 reload）+ `GroupSettingsPage` 全字段表单 + 订阅报告事件流（弹层/snackbar/Apply 提示） |
-| D | 协议 typed 表单 ×29（outbound-protocols） |
+| D | 协议 typed 表单 ×29（outbound-protocols）；首批 7 协议已完成：`nodeConfig` 桥（ProfileJson 规范 JSON）+ `updateNode` 模型校验保存门 + `ProtocolFormPage` schema 驱动表单（TLS/Transport/Mux/QUIC 共享块 + 各协议专有字段），长尾 22 协议待 5.3 |
 | E1/E2 | JSON 引擎与编辑器（outbound-protocols custom/raw） |
 | F | 批量测速面板（connectivity-testing）；已完成：`BboxTestSession` 薄包装（start/stop/dismiss/sort/remove + TestUiState 全量 wire）+ 400ms 可见性 feed + `TestPanelPage`（进度/直方图/排行/速度曲线/排序/移除/一键连最快） |
 | G | WARP 注册（已完成：`warp.register` 桥 + ToS 一次确认 + WarpPage 生成行，capabilities warp=true；注销/状态查询上游不存在，`isGenerated()` 即状态） |

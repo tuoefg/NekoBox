@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import '../widgets.dart';
+import '../pages/protocol_form.dart';
 
 // Metrics and card presentation from FlClash v0.9.2 proxies/common.dart and card.dart.
 class ProxyCardMetrics {
@@ -92,6 +93,8 @@ class ProxyNodeCard extends StatelessWidget {
         CommonPopupMenuItem(glyph: AppGlyphs.sliders, label: context.tr('Node tuning'), onPressed: () async {
           await openPage(context, NodeTuningPage(id: (node['id'] as num?)?.toInt() ?? 0));
         }),
+        CommonPopupMenuItem(glyph: AppGlyphs.customize, label: context.tr('Edit settings'),
+          onPressed: () => openForm(context, ProtocolFormPage(id: (node['id'] as num?)?.toInt() ?? 0))),
         CommonPopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Delete'), danger: true, onPressed: () async {
           final box = context.box;
           try {

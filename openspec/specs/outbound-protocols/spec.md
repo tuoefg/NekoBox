@@ -20,6 +20,17 @@ Each protocol profile SHALL persist its settings in a typed, named field set, va
 - **WHEN** the user edits protocol-specific fields and saves
 - **THEN** only that profile's settings change and invalid values are rejected with a visible error
 
+### Requirement: Typed settings forms in the ported UI
+The ported UI SHALL offer a typed settings form per protocol, starting with Shadowsocks, VMess, VLESS, Trojan, TUIC, Hysteria (v1/v2) and WireGuard: the fields the native editors bind, at the configuration's own paths, with the shared TLS, transport, multiplex and QUIC blocks and their native visibility rules, and the same save gate — required address and credentials, the port range, and the model's own validation run over the parsed document before anything is stored. A protocol without a typed form yet keeps the raw editor.
+
+#### Scenario: Edit a Shadowsocks node through the form
+- **WHEN** the user opens the typed form of a Shadowsocks node, changes the method and saves
+- **THEN** the stored configuration carries the new method and the other fields are unchanged
+
+#### Scenario: Save refused by the model validation
+- **WHEN** the user saves a form whose document the outbound model rejects (a missing credential, an out-of-range port)
+- **THEN** nothing is stored and the error names the field
+
 ### Requirement: Config serialization
 The app SHALL serialize each profile into the core's configuration format when starting a connection, including required credentials, transport, TLS/Reality and multiplex options where applicable; serialization failures SHALL prevent the start and report the profile as misconfigured.
 

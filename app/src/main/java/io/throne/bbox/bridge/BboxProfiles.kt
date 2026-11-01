@@ -405,9 +405,20 @@ object BboxProfiles {
         )
     }
 
+    /** The typed form's seed: the node's canonical sing-box JSON (ProfileJson), which the form reads and writes. */
+    suspend fun nodeConfig(id: Long): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val profile = ProfileManager.getProfile(id) ?: error("No proxy with id $id")
+        mapOf(
+            "id" to profile.id,
+            "name" to profile.displayName(),
+            "json" to io.nekohasekai.sagernet.ui.json.ProfileJson.text(profile.outbound),
+        )
+    }
+
     /**
      * Renames a node and/or replaces its outbound with one share link or JSON document. The content
-     * must describe exactly one node — a whole subscription belongs to a group save, not here.
+     * must describe exactly one node — a whole subscription belongs to a group save, not here. The
+     * parsed outbound is validated with the model's own checks (the native editor's save gate).
      */
     suspend fun updateNode(id: Long, name: String?, content: String?): Map<String, Any?> = withContext(Dispatchers.IO) {
         val profile = ProfileManager.getProfile(id) ?: error("No proxy with id $id")
@@ -415,7 +426,14 @@ object BboxProfiles {
         if (text.isNotEmpty() && text != "{}") {
             val inbound = parseOutbounds(text)
             if (inbound.size != 1) error("The content must describe exactly one node, got ${inbound.size}")
-            profile.putOutbound(inbound.single())
+            val outbound = inbound.single()
+            val issues = ArrayList<io.nekohasekai.sagernet.validation.Issue>()
+            outbound.validate(issues, SettingsMapper.buildContext())
+            issues.filter { it.severity == io.nekohasekai.sagernet.validation.Severity.Error }
+                .firstOrNull()?.let { issue ->
+                    error(listOf(issue.field, issue.message).filter { it.isNotBlank() }.joinToString(": "))
+                }
+            profile.putOutbound(outbound)
         }
         val renamed = name?.trim().orEmpty()
         if (renamed.isNotEmpty() && renamed != profile.displayName()) {
