@@ -396,6 +396,12 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
   @override
   Widget build(BuildContext context) {
     final outboundId = (_rule['outbound_id'] as num?)?.toInt() ?? -2;
+    final typeToken = _rule['type']?.toString() ?? 'custom';
+    final isSimple = typeToken.startsWith('simple_');
+    final simpleAction = isSimple ? _actionFromToken(typeToken) : '';
+    final simpleKind = isSimple
+        ? typeToken.substring('simple_'.length, typeToken.length - simpleAction.length - 1)
+        : '';
     return FormPage(
       title: widget.index < 0 ? 'Add rule' : 'Edit rule',
       saving: _saving,
@@ -417,6 +423,45 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
             onChanged: (value) => _set('disabled', value),
           ),
           ListItem(
+            title: Text(context.tr('Type')),
+            trailing: Text(isSimple ? context.tr(_simpleKindName(simpleKind)) : context.tr('Custom')),
+            onTap: () async {
+              final picked = await showDialog<String>(context: context, builder: (context) => SimpleDialog(
+                title: Text(context.tr('Type')),
+                children: [
+                  for (final value in const ['custom', 'address', 'process_name', 'process_path'])
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(context, value),
+                      child: Text(context.tr(value == 'custom' ? 'Custom' : _simpleKindName(value))),
+                    ),
+                ],
+              ));
+              if (picked == null) return;
+              if (picked == 'custom') {
+                _set('type', 'custom');
+              } else {
+                _applySimple(picked, simpleAction.isEmpty ? 'proxy' : simpleAction);
+              }
+            },
+          ),
+          if (isSimple) ListItem(
+            title: Text(context.tr('Target')),
+            trailing: Text(context.tr(_simpleActionName(simpleAction))),
+            onTap: () async {
+              final picked = await showDialog<String>(context: context, builder: (context) => SimpleDialog(
+                title: Text(context.tr('Target')),
+                children: [
+                  for (final value in const ['proxy', 'bypass', 'block', 'warp_bypass'])
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(context, value),
+                      child: Text(context.tr(_simpleActionName(value))),
+                    ),
+                ],
+              ));
+              if (picked != null) _applySimple(simpleKind, picked);
+            },
+          ),
+          if (!isSimple) ListItem(
             title: Text(context.tr('Outbound')),
             trailing: Text(_outboundName(outboundId)),
             onTap: () async {
@@ -424,14 +469,16 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
               if (picked != null) _set('outbound_id', picked);
             },
           ),
-        ]),
-        generateSection(title: context.tr('Domains'), items: [
+        ], footer: isSimple
+            ? context.tr('Simple rules share one outbound and one action; the match goes in the fields below.')
+            : null),
+        if (!isSimple || simpleKind == 'address') generateSection(title: context.tr('Domains'), items: [
           _csvRow('Domain', 'domain'),
           _csvRow('Domain suffix', 'domain_suffix'),
           _csvRow('Domain keyword', 'domain_keyword'),
           _csvRow('Domain regex', 'domain_regex'),
         ]),
-        generateSection(title: context.tr('IP and ports'), items: [
+        if (!isSimple || simpleKind == 'address') generateSection(title: context.tr('IP and ports'), items: [
           _csvRow('IP CIDR', 'ip_cidr'),
           _csvRow('Source IP CIDR', 'source_ip_cidr'),
           _csvRow('Rule set', 'rule_set'),
@@ -450,14 +497,17 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
             onChanged: (value) => _set('ip_is_private', value),
           ),
         ]),
-        generateSection(title: context.tr('Processes and apps'), items: [
-          _csvRow('Process name', 'process_name'),
-          _csvRow('Process path', 'process_path'),
-          _csvRow('Process path regex', 'process_path_regex'),
-          _csvRow('Package name', 'package_name'),
-          _csvRow('Package name regex', 'package_name_regex'),
-        ]),
-        generateSection(title: context.tr('Network'), items: [
+        if (!isSimple || simpleKind == 'process_name' || simpleKind == 'process_path')
+          generateSection(title: context.tr('Processes and apps'), items: [
+            if (!isSimple || simpleKind == 'process_name') _csvRow('Process name', 'process_name'),
+            if (!isSimple || simpleKind == 'process_path') _csvRow('Process path', 'process_path'),
+            if (!isSimple) ...[
+              _csvRow('Process path regex', 'process_path_regex'),
+              _csvRow('Package name', 'package_name'),
+              _csvRow('Package name regex', 'package_name_regex'),
+            ],
+          ]),
+        if (!isSimple) generateSection(title: context.tr('Network'), items: [
           _csvRow('Inbound', 'inbound'),
           _csvRow('Network type', 'network_type'),
           _csvRow('Wi-Fi SSID', 'wifi_ssid'),
@@ -476,7 +526,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
             onChanged: (value) => _set('invert', value),
           ),
         ]),
-        generateSection(title: context.tr('Action'), items: [
+        if (!isSimple) generateSection(title: context.tr('Action'), items: [
           ListItem(
             title: Text(context.tr('Action')),
             trailing: Text(_rule['action']?.toString() ?? 'route'),
@@ -551,6 +601,44 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
     -2 => 'Direct',
     > 0 => '#$id',
     _ => '$id',
+  };
+
+  /// The action suffix of a simple token (`warp_bypass` contains an underscore, so match longest first).
+  static String _actionFromToken(String token) {
+    for (final action in const ['warp_bypass', 'proxy', 'bypass', 'block']) {
+      if (token.endsWith('_$action')) return action;
+    }
+    return '';
+  }
+
+  /// A simple rule's kind is its match and its action its fixed target: `simple_<kind>_<action>`.
+  /// Block rejects (action=reject, outbound BLOCK); the rest route with the matching outbound.
+  void _applySimple(String kind, String action) {
+    final token = 'simple_${kind}_$action';
+    final isBlock = action == 'block';
+    setState(() => _rule = {
+      ..._rule,
+      'type': token,
+      'action': isBlock ? 'reject' : 'route',
+      'outbound_id': switch (action) {
+        'proxy' => -1, 'bypass' => -2, 'warp_bypass' => -5, _ => -3,
+      },
+    });
+  }
+
+  String _simpleKindName(String kind) => switch (kind) {
+    'address' => 'Simple address',
+    'process_name' => 'Simple process name',
+    'process_path' => 'Simple process path',
+    _ => 'Custom',
+  };
+
+  String _simpleActionName(String action) => switch (action) {
+    'proxy' => 'Proxy',
+    'bypass' => 'Direct',
+    'block' => 'Block',
+    'warp_bypass' => 'WARP bypass',
+    _ => 'Proxy',
   };
 
   Widget _outboundDialog(BuildContext context) {

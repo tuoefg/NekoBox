@@ -597,6 +597,12 @@ const _zh = <String, String>{
   '0 = unbounded': '0 = 不限',
   'Xray-core multiplex (smux over Xray transports). Counts are -1 to 32767.': 'Xray-core 复用（Xray 传输上的 smux）。计数范围 -1 到 32767。',
   'Refreshes every few seconds while this page is open.': '页面打开期间每几秒自动刷新。',
+  'Type': '类型',
+  'Target': '目标',
+  'Simple address': '简单地址',
+  'Simple process name': '简单进程名',
+  'Simple process path': '简单进程路径',
+  'Simple rules share one outbound and one action; the match goes in the fields below.': '简单规则共用一个出站和一个动作；匹配内容填在下方字段。',
 };
 
 extension BoxLocalization on BuildContext {
