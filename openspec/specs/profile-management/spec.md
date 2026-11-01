@@ -20,6 +20,17 @@ The app SHALL organize profiles into ordered groups; a group is a subscription i
 - **WHEN** the user creates a group with a subscription URL
 - **THEN** the group is treated as a subscription and can be updated by fetching that URL
 
+### Requirement: Group settings surface
+The ported UI SHALL expose every group field the native editor manages through one settings screen — name, subscription URL, front/landing proxy chaining, routing profile with subscription import, skip-auto-update, auto-clear-unavailable, the subscription options (user agent, TLS/HTTP version overrides, send-HWID mode with device fields, update interval, server-interval handling, the after-update pruning and test options, name filters, info card), and the kept sort — with the native editor's validation: a subscription URL must be http(s) (or content://), name filters must compile as regular expressions, the update interval must be empty or at least 30 minutes, and header values must be single lines under the length cap.
+
+#### Scenario: Edit the routing profile of the running group
+- **WHEN** the user saves a group whose routing profile changed while that group's profile is running
+- **THEN** the service reloads so the running configuration follows the new routing profile
+
+#### Scenario: Validation blocks an invalid save
+- **WHEN** the user saves with an interval below 30 minutes, or a name filter that does not compile
+- **THEN** the save is refused and the field is marked with the reason
+
 ### Requirement: Subscription update
 The app SHALL fetch a subscription URL and replace the group's profiles with the parsed result, preserving per-profile pins/selection where applicable, recording the last update time and the raw Subscription-UserInfo header.
 
@@ -30,6 +41,13 @@ The app SHALL fetch a subscription URL and replace the group's profiles with the
 #### Scenario: Subscription fetch failure
 - **WHEN** the fetch or parse fails
 - **THEN** existing profiles are kept unchanged and an error is shown
+
+### Requirement: Subscription change report
+A manual subscription update SHALL report its changes to the user as a dismissable, selectable change window with a copy action; update errors and untitled status lines SHALL surface as transient messages; and a refresh that re-pointed the running configuration's routing SHALL raise the apply hint the dashboard shows.
+
+#### Scenario: Review the changes of an update
+- **WHEN** the user updates a subscription and the fetch reports changes
+- **THEN** a change window opens with the added/removed/renamed summary and the text can be copied
 
 ### Requirement: Import and share
 The app SHALL import profiles from share links and raw configs (URL schemes, clipboard, QR scan, file), and SHALL export a profile as a share link or config text.

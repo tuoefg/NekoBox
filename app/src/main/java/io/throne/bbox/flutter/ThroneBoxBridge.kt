@@ -17,8 +17,10 @@ import android.os.Build
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.DnsServerHistory
+import io.nekohasekai.sagernet.database.GroupRepo
 import io.nekohasekai.sagernet.database.RouteManager
 import io.nekohasekai.sagernet.database.SettingsRegistry
+import io.nekohasekai.sagernet.group.SubscriptionClient
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.outbound.OutboundFactory
@@ -103,6 +105,9 @@ class ThroneBoxBridge(
     private var connectionsJob: Job? = null
     private var memoryJob: Job? = null
 
+    /** The update queue's change reports, for as long as the host lives. */
+    private var reportsJob: Job? = null
+
     /** QR scans that span several frames: what has arrived so far, per session. */
     private val scans = ConcurrentHashMap<String, StringBuilder>()
 
@@ -128,12 +133,19 @@ class ThroneBoxBridge(
     fun attach() {
         channel.setMethodCallHandler(this)
         events.setStreamHandler(this)
+        // Subscription change reports (SubscriptionReportDialog.observe): popups, errors, status
+        // lines and reload hints of the update queue, forwarded while the host is alive. A report
+        // that arrives before the UI listens is dropped, as the native window drops them while closed.
+        reportsJob = scope.launch {
+            SubscriptionClient.reports.collect { report -> emitReport(report) }
+        }
     }
 
     override fun close() {
         pump?.cancel()
         connectionsJob?.cancel()
         memoryJob?.cancel()
+        reportsJob?.cancel()
         BboxLogs.stop()
         BboxLogcat.stop()
         probes.values.forEach { runCatching { it.dispatcher.executorService.shutdown() } }
@@ -277,6 +289,17 @@ class ThroneBoxBridge(
                 "profiles.switchRelative" -> {
                     BboxCommands.switchServer(call.argument<Int>("step") ?: 0)
                     result.success(null)
+                }
+                // The group settings form: every ProxyGroup field the native editor exposes, with the
+                // choices and defaults its menus resolve to. The save validates with the native
+                // editor's own checks and reloads the service when a running route re-pointed.
+                "groupSettings.get" -> result.respond {
+                    BboxProfiles.groupSettings(call.argument<Int>("id")?.toLong() ?: -1L)
+                }
+                "groupSettings.set" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val values = call.argument<Map<String, Any?>>("value") ?: call.arguments as? Map<String, Any?>
+                    result.respond { BboxProfiles.saveGroupSettings(values.orEmpty()) }
                 }
                 "profiles.stats" -> result.respond {
                     BboxProfiles.stats(call.argument<Int>("id")?.toLong() ?: -1L)
@@ -713,6 +736,40 @@ class ThroneBoxBridge(
             return
         }
         BboxLogs.start(scope) { emit("logs", BboxLogs.wire(it)) }
+    }
+
+    /**
+     * One queue report, split the way the native window splits it: a reload hint raises the apply
+     * badge, an error or an untitled status line is a snackbar, a popup opens the change window.
+     * The group's name rides along so the UI never has to ask.
+     */
+    private suspend fun emitReport(report: SubscriptionClient.Report) {
+        val groupName = withContext(Dispatchers.IO) {
+            runCatching { GroupRepo.get(report.gid)?.displayName() }.getOrNull()
+        }
+        when {
+            report.reload -> emit("applyRequired", "Reload")
+
+            report.error -> emit("subscriptionReport", mapOf(
+                "kind" to "error",
+                "groupName" to groupName,
+                "text" to report.text.ifBlank { report.title },
+            ))
+
+            report.popup -> emit("subscriptionReport", mapOf(
+                "kind" to "popup",
+                "groupName" to groupName,
+                "title" to report.title.ifBlank {
+                    app.getString(io.nekohasekai.sagernet.R.string.grp_change_of, groupName.orEmpty())
+                },
+                "text" to report.text,
+            ))
+
+            report.title.isEmpty() && report.text.isNotBlank() -> emit("subscriptionReport", mapOf(
+                "kind" to "status",
+                "text" to report.text,
+            ))
+        }
     }
 
     /** Memory is cheap to read but not free on a television, so it is sampled only while a panel shows it. */

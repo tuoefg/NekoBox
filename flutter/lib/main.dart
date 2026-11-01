@@ -30,17 +30,36 @@ class BoxApp extends StatefulWidget {
 class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
   final _messenger = GlobalKey<ScaffoldMessengerState>();
   StreamSubscription<String>? _messages;
+  StreamSubscription<Json>? _reports;
   @override void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _messages = widget.controller.messages.stream.listen((message) {
       _messenger.currentState?.showSnackBar(SnackBar(content: Text(message)));
     });
+    // A subscription update's change window (SubscriptionReportDialog): the report body selectable,
+    // a copy action beside OK.
+    _reports = widget.controller.subscriptionReports.stream.listen((report) {
+      final context = _messenger.currentState?.context;
+      if (context == null) return;
+      final text = report['text']?.toString() ?? '';
+      showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+        title: Text(report['title']?.toString() ?? context.tr('Change of configuration')),
+        content: SizedBox(width: 480, child: SingleChildScrollView(child: SelectableText(
+          text.trim().isEmpty ? context.tr('Nothing changed') : text))),
+        actions: [
+          TextButton(onPressed: () => Clipboard.setData(ClipboardData(text: text.trim())),
+            child: Text(context.tr('Copy'))),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(context.tr('OK'))),
+        ],
+      ));
+    });
     widget.controller.initialize();
   }
   @override void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _messages?.cancel();
+    _reports?.cancel();
     widget.controller.dispose();
     super.dispose();
   }

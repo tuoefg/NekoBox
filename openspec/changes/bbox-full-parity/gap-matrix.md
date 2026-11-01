@@ -115,7 +115,7 @@
 | 批次 | 承载缺口 |
 | --- | --- |
 | B | settings 三列差集（settings-storage/backup 自动备份长尾） |
-| C | 组设置与订阅报告（profile-management / settings-storage 覆盖） |
+| C | 组设置与订阅报告（profile-management / settings-storage 覆盖）；已完成：`groupSettings.get/set` 桥（旧编辑器同款校验与 save 语义，restart 即时 reload）+ `GroupSettingsPage` 全字段表单 + 订阅报告事件流（弹层/snackbar/Apply 提示） |
 | D | 协议 typed 表单 ×29（outbound-protocols） |
 | E1/E2 | JSON 引擎与编辑器（outbound-protocols custom/raw） |
 | F | 批量测速面板（connectivity-testing） |

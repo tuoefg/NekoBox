@@ -30,10 +30,14 @@
 
 ## 4. 批次 C：订阅组管理
 
-- [ ] 4.1 桥新增 `groupSettings.get/set`，覆盖 ProxyGroup 长尾字段（subOptions、autoClearUnavailable、testSortBy/trafficSortBy/testItemsToShow、frontProxyId/landingProxyId、routeId/importSubRoute、sortMethod/sortDescending/displayOrder、skipAutoUpdate）
-- [ ] 4.2 Dart `GroupSettingsPage` 表单校验等价旧 `FormIssue(Severity.Error)` 流；订阅变更报告弹层等价 `SubscriptionReportDialog`/`SubscribeFlows`
-- [ ] 4.3 本地静态校验 + 提交（kotlin/analyze/test）
-- [ ] 4.4 规范同步：`profile-management` 的组设置与订阅报告 delta 合入主规范
+- [x] 4.1 桥新增 `groupSettings.get/set`，覆盖 ProxyGroup 长尾字段（subOptions、autoClearUnavailable、testSortBy/trafficSortBy/testItemsToShow、frontProxyId/landingProxyId、routeId/importSubRoute、sortMethod/sortDescending/displayOrder、skipAutoUpdate）
+  - `BboxProfiles.groupSettings(id)`：悬空前/落地代理按 dialog_edit_group.cpp:42-49 重置并落库；载荷含 candidates（排除 autoselector，`AutoSelectorProfiles.TYPE`）、routeChoices（含本订阅自有路由标记）、options 全字段（tlsVersion/httpVersion 为 null=跟随默认，respectServerInterval 三态 0/1/2）、defaults（RequestIdentity.resolve(null) 全局解析值 + subAutoUpdate/subRespectServerInterval）、serverIntervalHours。
+  - `BboxProfiles.saveGroupSettings(values)`：服务端校验用旧 UI 同一套助手（`Validation.url`+`SettingChecks.HTTP/Empty.Required` 的 content:// 豁免、`SubscriptionNameFilter.error`、`SettingChecks.groupUpdateInterval`/`headerValue`，HWID 字段仅在发送时校验）；save 语义对齐 `GroupSettingsActivity.save()`——URL 变更重置 subMetadata/subLastUpdate/info、basic 组无 URL、pickedRoute≠initialRoute 才应用、importSubRoute 空 URL 强制 false；restartNeeded 计算同款，差异：**桥直接 reloadService()**（旧 UI 是回传重启标记由列表页提示，桥侧有 service.reload 通道故即时生效，台账记录该差异）。displayOrder 仅在 get/set 往返中保留，UI 编辑走既有 profiles.reorder。
+- [x] 4.2 Dart `GroupSettingsPage` 表单校验等价旧 `FormIssue(Severity.Error)` 流；订阅变更报告弹层等价 `SubscriptionReportDialog`/`SubscribeFlows`
+  - 新页 `pages/group_settings.dart`（profiles 页每行菜单「分组设置」入口，远端会话隐藏）：分区 常规/链式/路由配置/订阅/设备标识/更新后/名称过滤/排序与显示；URL 用 content:// 豁免 + http(s)+host 校验、名称过滤正则编译（caseSensitive:false + unicode 对齐 Pattern FLAGS）、间隔空/0 或 ≥30、header 值 <1000 字符单行；错误行标红 + 顶部错误条（FormPage.error）。HWID 字段按发送模式启用，placeholder 为全局解析默认值。
+  - 订阅报告：`ThroneBoxBridge` attach 起 `SubscriptionClient.reports` 收集（close 取消），按旧 handle() 四分支拆事件——reload→applyRequired("Reload")（仪表盘出现 Apply 行）、error/status→`messages` snackbar（带分组名前缀）、popup→`subscriptionReports` 流；`main.dart` BoxApp 监听弹 AlertDialog（可选中文本 + Copy + OK，空文本显「无变更」）。
+- [x] 4.3 本地静态校验 + 提交（kotlin/analyze/test）——括号配平/重复键/缺键扫描全过（本机无 SDK，编译待 CI）
+- [x] 4.4 规范同步：`profile-management` 的组设置与订阅报告 delta 合入主规范（Group settings surface + Subscription change report 两条 Requirement）
 - [ ] 4.5 CI/真机验证：`ci.yml` 全绿；真机场景为订阅更新后查看变更报告、组设置逐字段读写与校验拦截，回传 workflow 链接 + 截图
 
 ## 5. 批次 D：协议 typed 表单（两小批）

@@ -1,14 +1,26 @@
 package io.throne.bbox.bridge
 
+import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyGroup
+import io.nekohasekai.sagernet.database.RouteManager
 import io.nekohasekai.sagernet.database.SagerDatabase
+import io.nekohasekai.sagernet.database.SendHwid
 import io.nekohasekai.sagernet.database.SettingsMapper
+import io.nekohasekai.sagernet.database.SubHttpVersion
+import io.nekohasekai.sagernet.database.SubTlsVersion
+import io.nekohasekai.sagernet.database.SubUserInfo
+import io.nekohasekai.sagernet.database.SubscriptionOptions
 import io.nekohasekai.sagernet.bg.autoselector.AutoSelectorProfiles
 import io.nekohasekai.sagernet.bg.autoselector.AutoSelectorRuntime
+import io.nekohasekai.sagernet.group.RequestIdentity
+import io.nekohasekai.sagernet.group.SubscriptionNameFilter
 import io.nekohasekai.sagernet.group.SubscriptionQueue
+import io.nekohasekai.sagernet.group.SubscriptionScheduler
+import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.outbound.Outbound
 import io.nekohasekai.sagernet.outbound.common.MUX_CUSTOM
 import io.nekohasekai.sagernet.outbound.common.Multiplex
@@ -18,6 +30,9 @@ import io.nekohasekai.sagernet.outbound.common.XrayMultiplex
 import io.nekohasekai.sagernet.outbound.common.xrayXudpProxyUDP443Modes
 import io.nekohasekai.sagernet.outbound.import.ProfileImport
 import io.nekohasekai.sagernet.outbound.types.AutoSelector
+import io.nekohasekai.sagernet.ui.settings.SettingChecks
+import io.nekohasekai.sagernet.validation.Empty
+import io.nekohasekai.sagernet.validation.Validation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -110,6 +125,217 @@ object BboxProfiles {
         }
         BboxBridge.scheduleRefresh(immediate = true)
         saved
+    }
+
+    // ------------------------------------------------------------------------------------------------ group settings
+
+    /** The fetcher reads content:// URLs (a picked file) too, and those carry no host — the native form's rule. */
+    private fun subscriptionUrlError(text: String): String {
+        if (text.startsWith("content://", ignoreCase = true)) return ""
+        return Validation.url(text, SettingChecks.HTTP, Empty.Required)
+    }
+
+    /**
+     * Everything the group settings form renders, in one answer: the row itself, the choices the
+     * menus offer (front/landing candidates, routing profiles), and the global defaults the
+     * "Keep default" overrides resolve to.
+     */
+    suspend fun groupSettings(id: Long): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val group = GroupRepo.get(id) ?: error("No such group")
+        // dialog_edit_group.cpp:42-49: a front/landing profile that no longer exists is reset and saved on open.
+        var changed = false
+        if (group.frontProxyId > 0 && ProfileManager.getProfile(group.frontProxyId) == null) {
+            group.frontProxyId = -1L; changed = true
+        }
+        if (group.landingProxyId > 0 && ProfileManager.getProfile(group.landingProxyId) == null) {
+            group.landingProxyId = -1L; changed = true
+        }
+        if (changed) GroupRepo.save(group)
+
+        val identity = RequestIdentity.resolve(null)
+        val device = identity.device
+        val options = group.subOptions
+        // "Default (<global profile>)", then every routing profile Android can use, this subscription's own marked.
+        val routeChoices = arrayListOf(
+            listOf("-1", app.getString(R.string.grp_route_profile_default, RouteManager.current().name))
+        )
+        for (route in RouteManager.usable()) {
+            val name = route.name.ifBlank { "#" + route.id }
+            val label = if (id > 0 && route.source_gid == id) {
+                app.getString(R.string.grp_route_profile_from_subscription, name)
+            } else name
+            routeChoices.add(listOf(route.id.toString(), label))
+        }
+        val initialRoute = group.routeId.toString().takeIf { picked -> routeChoices.any { it[0] == picked } } ?: "-1"
+
+        // The front/landing picker's menu: every profile the fixed slots accept, auto selectors refused
+        // (dialog_edit_group.cpp:63 — they move server on their own).
+        val candidates = GroupRepo.all().flatMap { candidateGroup ->
+            ProfileManager.members(candidateGroup.id)
+                .filter { it.type != AutoSelectorProfiles.TYPE }
+                .map { listOf(it.id.toString(), "[" + candidateGroup.displayName() + "] " + it.displayName()) }
+        }
+
+        mapOf(
+            "id" to group.id,
+            "type" to if (group.isSubscription) "subscription" else "basic",
+            "name" to group.name,
+            "url" to group.url,
+            "skipAutoUpdate" to group.skipAutoUpdate,
+            "autoClearUnavailable" to group.autoClearUnavailable,
+            "frontProxyId" to group.frontProxyId,
+            "landingProxyId" to group.landingProxyId,
+            "candidates" to candidates,
+            "routeId" to initialRoute,
+            "routeChoices" to routeChoices,
+            "importSubRoute" to group.importSubRoute,
+            "sortMethod" to group.sortMethod,
+            "sortDescending" to group.sortDescending,
+            "testSortBy" to group.testSortBy,
+            "trafficSortBy" to group.trafficSortBy,
+            "testItemsToShow" to group.testItemsToShow,
+            "displayOrder" to group.displayOrder,
+            "options" to mapOf(
+                "userAgent" to options.userAgent,
+                "tlsVersion" to options.tlsVersion?.value,
+                "httpVersion" to options.httpVersion?.value,
+                "sendHwid" to options.sendHwid.value,
+                "hwid" to options.hwid,
+                "hwidOs" to options.hwidOs,
+                "hwidOsVersion" to options.hwidOsVersion,
+                "hwidModel" to options.hwidModel,
+                "updateInterval" to options.updateInterval,
+                // 0 keeps the global setting, 1 uses what the server said, 2 ignores it.
+                "respectServerInterval" to when (options.respectServerInterval) {
+                    null -> 0; true -> 1; false -> 2
+                },
+                "keepWorking" to options.keepWorking,
+                "removeDuplicates" to options.removeDuplicates,
+                "removeInsecure" to options.removeInsecure,
+                "removeInvalid" to options.removeInvalid,
+                "urlTest" to options.urlTest,
+                "removeUnavailable" to options.removeUnavailable,
+                "sortByLatency" to options.sortByLatency,
+                "nameInclude" to options.nameInclude,
+                "nameExclude" to options.nameExclude,
+                "showInfoCard" to options.showInfoCard,
+            ),
+            "defaults" to mapOf(
+                "userAgent" to identity.userAgent,
+                "hwid" to device.hwid, "hwidOs" to device.os,
+                "hwidOsVersion" to device.osVersion, "hwidModel" to device.model,
+                "sendHwid" to identity.sendHwid,
+                "tlsVersion" to identity.tlsVersion.value,
+                "httpVersion" to identity.httpVersion.value,
+                "autoUpdate" to DataStore.subAutoUpdate,
+                "respectServerInterval" to DataStore.subRespectServerInterval,
+            ),
+            "serverIntervalHours" to group.subInfo.serverInterval,
+        )
+    }
+
+    /**
+     * Saves the group settings form, with the native editor's gates and consequences: the same
+     * validation (subscription URL, name-filter patterns, update interval, header values), a URL
+     * change drops what the old server said, a basic group keeps no URL, a changed routing profile
+     * of the running group reloads the service.
+     */
+    suspend fun saveGroupSettings(values: Map<String, Any?>): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val id = (values["id"] as? Number)?.toLong() ?: 0L
+        val group = GroupRepo.get(id) ?: error("No such group")
+        @Suppress("UNCHECKED_CAST")
+        val sent = values["options"] as? Map<String, Any?> ?: emptyMap()
+
+        val type = values["type"] as? String ?: if (group.isSubscription) "subscription" else "basic"
+        // The form always sends url; an absent key keeps the stored one rather than clearing it.
+        val url = if (values.containsKey("url")) (values["url"] as? String)?.trim().orEmpty() else group.url
+        val newUrl = if (type == "subscription") url else ""
+        subscriptionUrlError(newUrl).takeIf { it.isNotEmpty() }?.let { error(it) }
+
+        fun text(key: String) = (sent[key] as? String).orEmpty().trim()
+        fun flag(key: String) = sent[key] as? Boolean ?: false
+        fun number(key: String) = (sent[key] as? Number)?.toInt()
+
+        // The Advanced checks, which the native form runs while collapsed too.
+        val identity = RequestIdentity.resolve(null)
+        val globalSendHwid = identity.sendHwid
+        val mode = SendHwid.of(number("sendHwid") ?: SendHwid.KEEP_DEFAULT.value)
+        val hwidSent = mode == SendHwid.ON || (mode == SendHwid.KEEP_DEFAULT && globalSendHwid)
+        SettingChecks.headerValue(text("userAgent")).takeIf { it.isNotEmpty() }?.let { error(it) }
+        if (hwidSent) for (key in listOf("hwid", "hwidOs", "hwidOsVersion", "hwidModel")) {
+            SettingChecks.headerValue(text(key)).takeIf { it.isNotEmpty() }?.let { error(it) }
+        }
+        SettingChecks.groupUpdateInterval(text("updateInterval")).takeIf { it.isNotEmpty() }?.let { error(it) }
+        for (key in listOf("nameInclude", "nameExclude")) {
+            SubscriptionNameFilter.error(text(key))?.let { error("Invalid regular expression: $it") }
+        }
+
+        // dialog_edit_group.cpp accept: what the old URL's server said no longer applies.
+        if (group.url != newUrl) {
+            group.subMetadata = SubUserInfo()
+            group.subLastUpdate = 0L
+            group.info = ""
+        }
+        (values["name"] as? String)?.let { group.name = it.trim() }
+        group.url = newUrl
+        group.autoClearUnavailable = values["autoClearUnavailable"] as? Boolean ?: group.autoClearUnavailable
+        group.skipAutoUpdate = values["skipAutoUpdate"] as? Boolean ?: group.skipAutoUpdate
+        group.subOptions = SubscriptionOptions(
+            userAgent = text("userAgent"),
+            tlsVersion = number("tlsVersion")?.let(SubTlsVersion::of),
+            httpVersion = number("httpVersion")?.let(SubHttpVersion::of),
+            sendHwid = mode,
+            hwid = text("hwid"),
+            hwidOs = text("hwidOs"),
+            hwidOsVersion = text("hwidOsVersion"),
+            hwidModel = text("hwidModel"),
+            updateInterval = (text("updateInterval").toIntOrNull() ?: 0).takeIf { it > 0 } ?: 0,
+            respectServerInterval = when (number("respectServerInterval")) { 1 -> true; 2 -> false; else -> null },
+            keepWorking = flag("keepWorking"),
+            removeDuplicates = flag("removeDuplicates"),
+            removeInsecure = flag("removeInsecure"),
+            removeInvalid = flag("removeInvalid"),
+            urlTest = flag("urlTest"),
+            removeUnavailable = flag("removeUnavailable"),
+            sortByLatency = flag("sortByLatency"),
+            nameInclude = text("nameInclude"),
+            nameExclude = text("nameExclude"),
+            showInfoCard = sent["showInfoCard"] as? Boolean ?: true,
+        )
+        group.frontProxyId = (values["frontProxyId"] as? Number)?.toLong() ?: group.frontProxyId
+        group.landingProxyId = (values["landingProxyId"] as? Number)?.toLong() ?: group.landingProxyId
+        // A routing profile the menus did not offer (a dangling one) is kept while the choice stands.
+        val routeChoices = groupSettingsRouteChoices(group.id)
+        val initialRoute = group.routeId.toString().takeIf { picked -> routeChoices.any { it[0] == picked } } ?: "-1"
+        val pickedRoute = values["routeId"] as? String ?: initialRoute
+        if (pickedRoute != initialRoute) group.routeId = pickedRoute.toLongOrNull()?.takeIf { it > 0 } ?: -1L
+        group.importSubRoute = newUrl.isNotEmpty() && flag("importSubRoute")
+        (values["sortMethod"] as? Number)?.let { group.sortMethod = it.toInt() }
+        (values["sortDescending"] as? Boolean)?.let { group.sortDescending = it }
+        (values["testSortBy"] as? Number)?.let { group.testSortBy = it.toInt() }
+        (values["trafficSortBy"] as? Number)?.let { group.trafficSortBy = it.toInt() }
+        (values["testItemsToShow"] as? Number)?.let { group.testItemsToShow = it.toInt() }
+
+        // dialog_edit_group.cpp: the running profile of this group now resolves to another routing profile.
+        val running = RouteManager.runningRouteId()
+        val restart = running > 0L &&
+            ProfileManager.getProfile(ProfileManager.runningProfileId())?.groupId == group.id &&
+            RouteManager.resolveRouteId(group.routeId) != running
+        GroupRepo.save(group)
+        SubscriptionScheduler.schedule()
+        if (restart && DataStore.serviceState.canStop) SagerNet.reloadService()
+        mapOf("restartNeeded" to restart)
+    }
+
+    /** The routing-profile choices of [saveGroupSettings], recomputed the way [groupSettings] built them. */
+    private fun groupSettingsRouteChoices(id: Long): List<List<String>> {
+        val choices = arrayListOf(
+            listOf("-1", app.getString(R.string.grp_route_profile_default, RouteManager.current().name))
+        )
+        for (route in RouteManager.usable()) {
+            choices.add(listOf(route.id.toString(), route.name.ifBlank { "#" + route.id }))
+        }
+        return choices
     }
 
     /**

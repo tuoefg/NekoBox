@@ -24,6 +24,7 @@ class BoxController extends ChangeNotifier {
   final MethodChannel _channel;
   final Stream<dynamic> _events;
   final messages = StreamController<String>.broadcast();
+  final subscriptionReports = StreamController<Json>.broadcast();
   final intents = StreamController<String>.broadcast();
   final browserEvents = StreamController<Json>.broadcast();
   StreamSubscription<dynamic>? _subscription;
@@ -346,6 +347,17 @@ class BoxController extends ChangeNotifier {
         aspects = const [BoxAspect.traffic];
       case 'error': messages.add(value.toString()); return;
       case 'applyRequired': applyRequired = value.toString();
+      case 'subscriptionReport':
+        // Errors and untitled status lines are snackbars; a popup report opens the change window
+        // (SubscriptionReportDialog equivalence) — the app shell listens on the stream.
+        final report = json(value);
+        if (report['kind'] == 'popup') {
+          subscriptionReports.add(report);
+        } else {
+          final group = report['groupName']?.toString() ?? '';
+          messages.add(group.isEmpty ? report['text'].toString() : '$group: ${report['text']}');
+        }
+        return;
       case 'intentAvailable':
         call('intent.take').then((uri) { if (uri is String) { pendingIntents.add(uri); intents.add(uri); } }).catchError(report);
         return;

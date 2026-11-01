@@ -5,6 +5,7 @@ import '../components/form.dart';
 import '../components/profile_card.dart';
 import 'profile_editor.dart';
 import 'profile_details.dart';
+import 'group_settings.dart';
 
 // libbox remote_profile.go stores the display name in the URL fragment.
 String remoteProfileLink(Json profile) => Uri(
@@ -57,6 +58,8 @@ class _ProfilesPageState extends State<ProfilesPage> {
   }
   List<CommonPopupMenuItem> _menu(Json profile) => [
     CommonPopupMenuItem(glyph: AppGlyphs.edit, label: context.tr('Edit'), onPressed: () => openForm(context, ProfileDetailsPage(profile: profile))),
+    if (context.box.remote != true) CommonPopupMenuItem(glyph: AppGlyphs.customize, label: context.tr('Group settings'),
+      onPressed: () => openForm(context, GroupSettingsPage(id: (profile['id'] as num).toInt()))),
     if (profile['remote'] == true)
       CommonPopupMenuItem(glyph: AppGlyphs.sync, label: context.tr('Update'), onPressed: () => _update(profile)),
     if (profile['remote'] == true) ...[
