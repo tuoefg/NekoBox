@@ -117,6 +117,7 @@ interface BboxActions {
     fun deleteProfile(id: Long) {}
     fun addProfile() {}
     fun updateSubscription(id: Long) {}
+    fun switchServer(step: Int) {}
     fun openUrl(url: String) {}
     fun clearLogs() {}
     fun closeConnection(id: String) {}

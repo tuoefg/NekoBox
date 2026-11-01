@@ -2,6 +2,7 @@ package io.throne.bbox.bridge
 
 import android.os.Build
 import io.nekohasekai.sagernet.BuildConfig
+import io.nekohasekai.sagernet.SagerNet
 
 /**
  * The single source of truth for what the Flutter UI may show.
@@ -46,6 +47,7 @@ object Capabilities {
         "perApp" to true,          // PROXY_APPS / BYPASS_MODE / INDIVIDUAL
         "backup" to true,          // .thrbackup and WebDAV, see BboxBackup
         "lanProxy" to true,        // mixed inbound "Allow LAN" plus its port
+        "tv" to SagerNet.isTv,     // the profiles toolbar's previous / next server over profiles.switchRelative
         "update" to BuildConfig.IN_APP_UPDATER,
         // The VPN service can write its mixed inbound into the system HTTP settings, which Android
         // only allows from API 29 and only outside the proxy-only service mode.

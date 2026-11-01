@@ -8,6 +8,7 @@ import io.nekohasekai.sagernet.bg.test.TestSpec
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.GroupRepo
 import io.nekohasekai.sagernet.database.ProfileManager
+import io.nekohasekai.sagernet.database.ProfileOrder
 import io.nekohasekai.sagernet.group.SubscriptionQueue
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
@@ -133,6 +134,37 @@ object BboxCommands : BboxActions {
         if (id <= 0L) return
         runCatching { SubscriptionQueue.refreshGroup(id, showDiff = true) }
             .onFailure { Logs.w(it) }
+    }
+
+    /**
+     * Previous / next server, the television's way of changing profiles (TvControls.switchServer):
+     * a running service hot-switches through the same broadcast its notification buttons send, a
+     * stopped one just moves the selection inside the current group.
+     */
+    override fun switchServer(step: Int) {
+        if (step == 0) return
+        if (DataStore.serviceState.canStop) {
+            app.sendBroadcast(
+                Intent(if (step > 0) Action.SWITCH_NEXT else Action.SWITCH_PREVIOUS)
+                    .setPackage(app.packageName)
+            )
+            return
+        }
+        scope.launch {
+            val moved = withContext(Dispatchers.IO) {
+                val old = DataStore.selectedProxy
+                val target = ProfileOrder.neighbour(old, step) ?: return@withContext null
+                DataStore.selectedProxy = target.id
+                old to target.id
+            } ?: return@launch
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    ProfileManager.postUpdate(moved.first, true)
+                    ProfileManager.postUpdate(moved.second, true)
+                }
+            }
+            BboxBridge.scheduleRefresh(immediate = true)
+        }
     }
 
     override fun deleteProfile(id: Long) {

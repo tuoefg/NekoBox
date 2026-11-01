@@ -234,6 +234,7 @@ const _zh = <String, String>{
   'This URL must serve a sing-box JSON configuration.': '此链接需要返回 sing-box JSON 配置。',
   'Empty clipboard': '剪贴板为空', 'Required': '必填', 'At least 15 minutes': '至少 15 分钟',
   'No profiles yet': '还没有配置', 'Import a sing-box JSON configuration to get started.': '导入 sing-box JSON 配置即可开始使用。',
+  'Previous server': '上一个服务器', 'Next server': '下一个服务器',
   'Configuration changes will replace the remote content until its next update.': '修改将保留到远程配置下次更新。',
   'New profile': '新建配置', 'Import from URL': '从链接导入',
   'Open configuration': '打开配置内容', 'QR code': '二维码', 'No remote servers': '暂无远程服务器',

@@ -85,7 +85,9 @@
 
 ## 12. 批次 J：TV
 
-- [ ] 12.1 prev/next 服务器：桥发 `SWITCH_NEXT`/`SWITCH_PREVIOUS` 广播（同 `TvControls.switchServer`）
+- [x] 12.1 prev/next 服务器：桥发 `SWITCH_NEXT`/`SWITCH_PREVIOUS` 广播（同 `TvControls.switchServer`）
+  - `BboxActions` 加 `switchServer(step)`（默认空实现，preview 不受影响）；`BboxCommands.switchServer` 按 TvControls 语义：运行中（canStop）发同款包内广播（BaseService.switchRelative 热切换），停止态 IO 线程 `ProfileOrder.neighbour` 移动选择 + postUpdate + scheduleRefresh。`ThroneBoxBridge` 加 `profiles.switchRelative` dispatch。
+  - Dart：`Capabilities` 新增 `"tv" to SagerNet.isTv`（旧 UI 的 isTv 门控等价物），profiles 页工具栏在 tv 能力下加 上一/下一个服务器 两个 iconAction（chevronBack/chevronForward，>1 个配置才显示，远端/选择器模式不显示）；l10n zh 键按 values-zh-rCN 术语（上一个服务器/下一个服务器）。
 - [ ] 12.2 逐屏 D-pad/focus 验证（vendored `ui/focus_*.dart` 基础）
 - [ ] 12.3 CI/真机验证：`ci.yml` 全绿；TV 模拟器/真机全流程可操作，回传录屏
 

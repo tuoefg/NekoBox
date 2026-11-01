@@ -86,6 +86,14 @@ class _ProfilesPageState extends State<ProfilesPage> {
         onPressed: open,
       ))],
       iconActions: box.remote || widget.picker || profiles.isEmpty ? const [] : [
+        // The television has no notification shade, so the profiles toolbar carries the
+        // previous / next server pair (TvControls.addServerSwitch gated on isTv there).
+        if (box.capabilities.of('tv') && profiles.length > 1) ...[
+          IconButtonData(glyph: AppGlyphs.chevronBack, tooltip: context.tr('Previous server'),
+            onPressed: () => box.act('profiles.switchRelative', {'step': -1})),
+          IconButtonData(glyph: AppGlyphs.chevronForward, tooltip: context.tr('Next server'),
+            onPressed: () => box.act('profiles.switchRelative', {'step': 1})),
+        ],
         IconButtonData(glyph: AppGlyphs.sync, tooltip: context.tr('Update all'), isLoading: _updatingAll || _updating.isNotEmpty,
           onPressed: _updatingAll || _updating.isNotEmpty || !profiles.any((p) => p['remote'] == true) ? null : _updateAll),
         IconButtonData(glyph: AppGlyphs.sort, tooltip: context.tr('Reorder'), onPressed: profiles.length < 2 ? null : () => openForm(context, const ProfileOrderPage())),

@@ -270,6 +270,12 @@ class ThroneBoxBridge(
                     BboxCommands.updateSubscription(call.argument<Int>("id")?.toLong() ?: -1L)
                     result.success(null)
                 }
+                // The television's previous / next server (TvControls.switchServer): a running
+                // service hot-switches, a stopped one moves the selection.
+                "profiles.switchRelative" -> {
+                    BboxCommands.switchServer(call.argument<Int>("step") ?: 0)
+                    result.success(null)
+                }
                 "profiles.stats" -> result.respond {
                     BboxProfiles.stats(call.argument<Int>("id")?.toLong() ?: -1L)
                 }
