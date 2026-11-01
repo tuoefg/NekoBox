@@ -33,7 +33,8 @@ runs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        channel: stable
+        # Pinned to the toolchain the AAR is developed against; `flutter --version` on the dev box is the source.
+        flutter-version: '3.47.9'
         cache: true
     - name: Flutter AAR
       shell: bash
