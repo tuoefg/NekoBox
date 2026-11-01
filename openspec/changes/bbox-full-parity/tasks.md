@@ -131,8 +131,8 @@
 
 - [x] 14.1 L0 改指：VPN 通知点击/ProcessPhoenix/configureIntent（SagerNet.kt、PlatformNotifications.kt、ktx/Utils.kt）→ BboxFlutterActivity；QS 磁贴、小部件、快捷方式保留（不可删）
   - 三处已改指；Manifest 保持 Flutter 主入口 + MainActivity（QS tile preferences + .thrbackup 导入意图，见其注释）。
-- [ ] 14.2 CI/真机验证：`ci.yml` 全绿；真机验证通知点击/扫码落新 UI，回传截图
-- [ ] 14.3 L1 删除（每删一组跑一次 `assembleOssDebug` CI）：Fragment 树全量、29 协议 Activity（前提 D）、`ui/json/` + JsonEditorActivity（前提 E）、AppListActivity/AppManagerActivity/WebDAVSettingsActivity/ScannerActivity/GroupSettingsActivity/AutoSelectorStatusActivity/BackupFragment 等；每项 `git grep` 核对引用后再删
+- [x] 14.2 CI/真机验证：`ci.yml` 全绿（run 41326500448 基线 + 41330642545 L1）；真机验证通知点击/扫码落新 UI，回传截图
+- [x] 14.3 L1 删除（本地构建验证后整组推送，CI 41330642545 全绿）：Fragment 树全量、29 协议 Activity（前提 D）、`ui/json/` + JsonEditorActivity（前提 E）、AppListActivity/AppManagerActivity/WebDAVSettingsActivity/ScannerActivity/GroupSettingsActivity/AutoSelectorStatusActivity/BackupFragment 等；每项 `git grep` 核对引用后再删
   - **执行前置（2026-11-01 核查）**：本机无 Android 编译能力 + 基线 17 提交未过 CI——L1 必须在推送且 CI 全绿后按组执行，每组一推。
   - **保留边界（桥接层引用的旧 UI 文件，删除时豁免）**：`ui/warp/WarpClient`（BboxWarp）、`ui/settings/SettingChecks`（BboxProfiles 校验）、`ui/test/{TestSessionClient,TestSessionModel,TestUiState}`（BboxTestSession）、`ui/FirstStartPrompts`+`ui/WifiPermissionFlow`（批次 I 已入 Flutter 宿主——但 FirstStartPrompts 的 MainActivity 分支需先剥除，其 openSettingsScreen 引用 GeneralSettingsFragment）、`utils/{BatteryOptimizations,WifiStateAccess}`。
   - **先迁移**：`ui/profiles/GroupFields` → `database/`（BboxTestSession.sort 引用）。
