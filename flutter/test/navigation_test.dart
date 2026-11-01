@@ -101,7 +101,7 @@ void main() {
       for (final (label, page) in <(String, Widget)>[
         ('Connections', const ConnectionsPage()), ('Logs', const LogsPage()),
         ('Appearance', const AppearancePage()), ('Access', const AccessPage()),
-        ('Service', const ServiceSettingsPage()), ('Core', const CoreSettingsPage()),
+        ('Service', const ServiceSettingsPage()), ('Core', const CorePage()),
         ('Remote', const RemotePage()), ('Backup', const BackupPage()),
         ('Quality', const DiagnosticsPage(quality: true)), ('STUN', const DiagnosticsPage(quality: false)),
         ('Reports', const ReportsPage(kind: 'crash')), ('About', const AboutPage()),

@@ -56,6 +56,12 @@ data class ProfileInfo(
     val expiry: String? = null,
     val selected: Boolean = false,
     val url: String = "",
+    /** Epoch milliseconds of the group's last subscription fetch; 0 when it was never fetched. */
+    val updatedAt: Long = 0L,
+    /** False when the group has "skip auto update" set, which is Throne's per-subscription switch. */
+    val autoUpdate: Boolean = false,
+    /** The subscription's own refresh interval in minutes; 0 leaves it to the global default. */
+    val interval: Int = 0,
 )
 
 data class MemoryInfo(val inUse: Long = 0, val total: Long = 0)

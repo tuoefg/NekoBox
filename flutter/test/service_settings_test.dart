@@ -11,7 +11,7 @@ void main() {
     addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
     const channel = MethodChannel('test.service-settings');
     final events = StreamController<dynamic>.broadcast();
-    final settings = <String, dynamic>{'allowBypass': false, 'autoRedirect': false, 'dynamicNotification': true};
+    final settings = <String, dynamic>{'allowBypass': false, 'showGroupInNotification': false, 'showDirectSpeed': false};
     final edits = <Json>[];
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
@@ -35,14 +35,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(ServiceSettingsPage), findsOneWidget);
     expect(find.text('Apply service changes'), findsNothing);
-    for (final (title, key, value) in [
-      ('Allow VPN bypass', 'allowBypass', true),
-      ('Auto redirect', 'autoRedirect', true),
-      ('Dynamic notification', 'dynamicNotification', false),
+    for (final (title, key, value, restarts) in [
+      ('Allow VPN bypass', 'allowBypass', true, true),
+      ('Show group name in the notification', 'showGroupInNotification', true, false),
+      ('Show direct speed', 'showDirectSpeed', true, false),
     ]) {
       await tester.tap(find.text(title));
       await tester.pumpAndSettle();
-      expect(edits.last, {'key': key, 'value': value, 'restart': true});
+      // Only a switch marked autoRestart asks the host to reload the running service.
+      expect(edits.last, {'key': key, 'value': value, if (restarts) 'restart': true});
       expect(box.settings[key], value);
       expect(box.applyRequired, null);
     }
@@ -62,7 +63,7 @@ void main() {
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
       if (call.method == 'ready') return {'version': 'test', 'coreVersion': 'test',
-        'dashboard': {'status': 'Started'}, 'settings': {'allowBypass': false, 'autoRedirect': false, 'dynamicNotification': true}};
+        'dashboard': {'status': 'Started'}, 'settings': {'allowBypass': false, 'showDirectSpeed': false}};
       if (call.method == 'settings.set') { edits.add(json(call.arguments)); return reply.future; }
       return null;
     });
@@ -76,13 +77,14 @@ void main() {
     await tester.pump();
     await tester.pump();
     final switches = find.descendant(of: find.byType(ServiceSettingsPage), matching: find.byType(CommonSwitch));
-    expect(switches, findsNWidgets(3));
+    // The page has more switches than fit a test viewport, so assert on the ones that are built.
+    expect(switches, findsWidgets);
     expect(box.serviceSettingsChanging, true);
     expect(tester.widgetList<CommonSwitch>(switches).every((widget) => widget.onChanged == null), true);
-    await tester.tap(find.text('Auto redirect'));
+    await tester.tap(find.text('Show direct speed'));
     await tester.pump();
     expect(edits.length, 1);
-    reply.complete({'allowBypass': true, 'autoRedirect': false, 'dynamicNotification': true});
+    reply.complete({'allowBypass': true, 'showDirectSpeed': false});
     await tester.pumpAndSettle();
     expect(box.serviceSettingsChanging, false);
     expect(tester.widgetList<CommonSwitch>(switches).every((widget) => widget.onChanged != null), true);

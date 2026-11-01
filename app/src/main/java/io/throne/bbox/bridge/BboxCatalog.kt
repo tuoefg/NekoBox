@@ -101,6 +101,9 @@ object BboxCatalog {
             expiry = if (group.isSubscription) expiryOf(info) else null,
             selected = containsSelected,
             url = group.url.orEmpty(),
+            updatedAt = group.subLastUpdate * 1000L,
+            autoUpdate = !group.skipAutoUpdate,
+            interval = group.subOptions.updateInterval,
         )
     }
 

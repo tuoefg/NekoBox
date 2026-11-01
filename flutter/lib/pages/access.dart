@@ -15,7 +15,7 @@ class _AccessPageState extends State<AccessPage> {
   Set<String>? _displaySelection;
   Set<String> _pinned = {};
   String _query = '', _sort = 'Default';
-  bool _system = false, _nonInternet = false, _selectedOnly = false, _saving = false, _scanning = false;
+  bool _system = false, _nonInternet = false, _selectedOnly = false, _saving = false;
   bool get _enabled => _draft?['perAppEnabled'] == true;
   bool get _managed => _draft?['perAppManaged'] == true;
   Set<String> get _selected => ((_managed ? context.box.settings['perAppManagedList'] : _draft?['perAppList']) as List? ?? []).cast<String>().toSet();
@@ -77,19 +77,6 @@ class _AccessPageState extends State<AccessPage> {
     return _displayApps = apps;
   }
 
-  Future<void> _rescan() async {
-    if (_scanning || _saving || _hasChanges) return;
-    final box = context.box;
-    setState(() => _scanning = true);
-    try {
-      final settings = json(await box.call('apps.rescan'));
-      if (mounted) setState(() => box.settings = settings);
-    } catch (error) {
-      box.report(error);
-    } finally {
-      if (mounted) setState(() => _scanning = false);
-    }
-  }
   @override void dispose() { _scroll.dispose(); super.dispose(); }
 
   void _set(String key, dynamic value) { if (!_saving) setState(() => _draft![key] = value); }
@@ -168,7 +155,7 @@ class _AccessPageState extends State<AccessPage> {
       return CommonPopScope(
         onPop: _hasChanges || _saving ? _back : null,
         child: CommonScaffold(
-          title: context.tr('Access control'), isLoading: _saving || _scanning,
+          title: context.tr('Access control'), isLoading: _saving,
           searchInBar: true,
           searchState: AppBarSearchState(onSearch: (query) => _filter(() { _query = query; _pinned = _selected; })),
           searchActions: [if (selectAll != null) selectAll],
@@ -188,15 +175,11 @@ class _AccessPageState extends State<AccessPage> {
                   section: CommonPopupMenuSection(title: context.tr('Source'))),
                 _option('Show apps without Internet permission', '', () => _filter(() => _nonInternet = !_nonInternet, sourceChanged: true), checked: _nonInternet),
                 _option('Selected apps', '', () => _filter(() => _selectedOnly = !_selectedOnly), checked: _selectedOnly),
-                _option('Managed app list', '', () => _set('perAppManaged', !_managed), checked: _managed),
               ]),
             CommonPopupMenuItem(glyph: AppGlyphs.moreCircle, label: context.tr('Action'), subItems: [
               CommonPopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Clipboard export'), onPressed: () => Clipboard.setData(ClipboardData(text: selected.join('\n')))),
               if (!_managed) CommonPopupMenuItem(glyph: AppGlyphs.paste, label: context.tr('Clipboard import'), onPressed: _import),
               CommonPopupMenuItem(glyph: AppGlyphs.refresh, label: context.tr('Refresh'), onPressed: _reload),
-              if (_managed) CommonPopupMenuItem(glyph: AppGlyphs.appsList, label: context.tr('Rescan managed apps'),
-                onPressed: _scanning || _saving || _hasChanges ? null : _rescan),
-              CommonPopupMenuItem(glyph: AppGlyphs.lockOpen, label: context.tr('Application query'), onPressed: _querySettings),
             ]),
           ],
           body: FloatingFootBar(

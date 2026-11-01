@@ -3,6 +3,7 @@ import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'capabilities.dart';
 import 'common/ip_quality_cache.dart';
 
 typedef Json = Map<String, dynamic>;
@@ -31,6 +32,7 @@ class BoxController extends ChangeNotifier {
   final _dataOwners = <BoxData, Set<Object>>{};
   Listenable get stateChanges => _stateChanges;
   Json dashboard = {}, settings = {}, preferences = {}, rates = {};
+  BoxCapabilities capabilities = BoxCapabilities.empty;
   Json toolState = {}, stun = {}, quality = {}, inbox = {}, ping = {};
   Json terminal = {};
   Json memory = {}, lan = {};
@@ -165,6 +167,7 @@ class BoxController extends ChangeNotifier {
       dashboard = json(result['dashboard']);
       profiles = rows(result['profiles']);
       settings = json(result['settings']);
+      capabilities = BoxCapabilities.parse(result['capabilities']);
       preferences = json(result['preferences']);
       if (result['lan'] is Map) lan = json(result['lan']);
       toolState = json(result['tools']);

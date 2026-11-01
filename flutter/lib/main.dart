@@ -14,7 +14,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   LicenseRegistry.addLicense(() async* {
-    for (final entry in const {'FlClash': 'LICENSE', 'JetBrains Mono': 'JetBrainsMono-OFL.txt', 'Twemoji / Mozilla': 'Twemoji-LICENSE.md'}.entries) {
+    for (final entry in const {'FlClash': 'LICENSE', 'cilium/ebpf': 'cilium-ebpf-LICENSE', 'ulikunitz/xz': 'xz-LICENSE', 'JetBrains Mono': 'JetBrainsMono-OFL.txt', 'Twemoji / Mozilla': 'Twemoji-LICENSE.md'}.entries) {
       yield LicenseEntryWithLineBreaks([entry.key], await rootBundle.loadString('assets/licenses/${entry.value}'));
     }
   });
@@ -133,11 +133,6 @@ class _HomePageState extends State<HomePage> {
   StreamSubscription<String>? _intents;
   BoxController? _box;
   bool _handlingIntent = false;
-  static const _items = <(String, Glyph)>[
-    ('Dashboard', AppGlyphs.dashboard), ('Proxies', AppGlyphs.proxies),
-    ('Profiles', AppGlyphs.profiles), ('Tools', AppGlyphs.tools),
-  ];
-  static const _pages = [DashboardPage(), ProxiesPage(), ProfilesPage(), ToolsPage()];
 
   @override void didChangeDependencies() {
     super.didChangeDependencies();
@@ -173,21 +168,37 @@ class _HomePageState extends State<HomePage> {
   @override Widget build(BuildContext context) {
     final mobile = context.isMobileView;
     final floating = context.box.preferences['floatingNavigation'] != false;
+    // A tab exists only when the host answers for it; the Proxies tab needs selector groups.
+    final caps = context.box.capabilities;
+    final items = <(String, Glyph)>[
+      ('Dashboard', AppGlyphs.dashboard),
+      if (caps.of('proxyGroups')) ('Proxies', AppGlyphs.proxies),
+      ('Profiles', AppGlyphs.profiles),
+      ('Tools', AppGlyphs.tools),
+    ];
+    final pages = <Widget>[
+      const DashboardPage(),
+      if (caps.of('proxyGroups')) const ProxiesPage(),
+      const ProfilesPage(),
+      const ToolsPage(),
+    ];
+    // Pruning a tab that the user was standing on must not leave the index past the end.
+    final index = _index.clamp(0, pages.length - 1);
     final content = PageSwitcher(
-      index: _index,
+      index: index,
       animation: tabAnimationOf(context.box.preferences),
       onSelected: (index) => setState(() => _index = index),
-      children: [for (var i = 0; i < _pages.length; i++)
-        TickerMode(enabled: i == _index, child: PageActivityScope(isActive: i == _index, child: _pages[i])),
+      children: [for (var i = 0; i < pages.length; i++)
+        TickerMode(enabled: i == index, child: PageActivityScope(isActive: i == index, child: pages[i])),
       ],
     );
     return Scaffold(
         body: Row(children: [
           if (!mobile) NavigationRail(
-            selectedIndex: _index,
+            selectedIndex: index,
             onDestinationSelected: (index) => setState(() => _index = index),
             labelType: NavigationRailLabelType.all,
-            destinations: [for (final item in _items) NavigationRailDestination(
+            destinations: [for (final item in items) NavigationRailDestination(
               icon: GlyphIcon(item.$2), label: Text(context.tr(item.$1)),
             )],
           ),
@@ -200,17 +211,17 @@ class _HomePageState extends State<HomePage> {
               if (mobile && floating) PositionedDirectional(
                 start: 0, end: 0, bottom: 0,
                 child: NavigationDock(
-                  selectedIndex: _index,
+                  selectedIndex: index,
                   onSelected: (index) => setState(() => _index = index),
-                  destinations: [for (final item in _items) NavigationDockDestination(glyph: item.$2, label: context.tr(item.$1))],
+                  destinations: [for (final item in items) NavigationDockDestination(glyph: item.$2, label: context.tr(item.$1))],
                 ),
               ),
             ])),
             if (mobile && !floating) NavigationBar(
-              selectedIndex: _index,
+              selectedIndex: index,
               onDestinationSelected: (index) => setState(() => _index = index),
-              destinations: [for (final (i, item) in _items.indexed)
-                NavigationDestination(icon: AnimatedGlyph(glyph: item.$2, filled: i == _index), label: context.tr(item.$1)),
+              destinations: [for (final (i, item) in items.indexed)
+                NavigationDestination(icon: AnimatedGlyph(glyph: item.$2, filled: i == index), label: context.tr(item.$1)),
               ],
             ),
           ])),

@@ -19,7 +19,7 @@ import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.ui.json.engine.JsonTree
 import io.nekohasekai.sagernet.ui.json.engine.SchemaStore
-import io.nekohasekai.sagernet.ui.json.JsonFormatter
+import io.nekohasekai.sagernet.ui.json.engine.JsonFormatter
 import io.nekohasekai.sagernet.update.UpdateChecker
 import io.throne.bbox.bridge.BboxApi
 import io.throne.bbox.bridge.BboxApps
@@ -29,6 +29,10 @@ import io.throne.bbox.bridge.BboxCommands
 import io.throne.bbox.bridge.BboxEgress
 import io.throne.bbox.bridge.BboxLogs
 import io.throne.bbox.bridge.BboxProfiles
+import io.throne.bbox.bridge.Capabilities
+import io.throne.bbox.bridge.Apply
+// Aliased: this file also uses android.provider.Settings for the battery-optimisation intents.
+import io.throne.bbox.bridge.Settings as ThroneSettings
 import io.throne.bbox.model.BboxUiState
 import io.throne.bbox.model.ProxyGroup
 import kotlinx.coroutines.Job
@@ -101,6 +105,10 @@ class ThroneBoxBridge(
 
     @Volatile
     private var lanBusy = false
+
+    /** Set when a write only takes effect on a process restart, cleared once the UI was told. */
+    @Volatile
+    private var restartPending = false
 
     fun attach() {
         channel.setMethodCallHandler(this)
@@ -663,7 +671,13 @@ class ThroneBoxBridge(
             name.endsWith(".log", ignoreCase = true) -> "text/plain"
             else -> "application/octet-stream"
         }
-        return host.saveDocument(name, mime, content)
+        val uri = host.pickSaveTarget(name, mime) ?: return false
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                host.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray(Charsets.UTF_8)) }
+                true
+            }.onFailure { Logs.w(it) }.getOrDefault(false)
+        }
     }
 
     private suspend fun shareText(content: String): Boolean {
@@ -682,7 +696,7 @@ class ThroneBoxBridge(
     /** A picked file becomes the same draft a pasted link becomes, so both open the same editor. */
     private suspend fun importFile(): Map<String, Any?>? {
         val host = activity as? BboxFlutterActivity ?: return null
-        val uri = host.openDocument() ?: return null
+        val uri = host.pickDocument() ?: return null
         val text = withContext(Dispatchers.IO) {
             runCatching {
                 host.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
@@ -825,6 +839,7 @@ class ThroneBoxBridge(
         "profiles" to profilesWire(BboxBridge.state.value),
         "groups" to groupsWire(BboxBridge.state.value),
         "settings" to settingsWire(),
+        "capabilities" to Capabilities.map(),
         "preferences" to readPreferences(),
         "lan" to lanWire(),
         "tools" to emptyMap<String, Any?>(),
@@ -897,46 +912,35 @@ class ThroneBoxBridge(
             )
         }
 
+    /**
+     * The settings map the UI reads, in three layers: keys only this shell has (appearance, sorting,
+     * card layout) live in a local JSON document, then real Throne storage from [Settings] wins over
+     * anything stale in that document, then the derived and read-only keys settle last.
+     */
     private fun settingsWire(): Map<String, Any?> {
         val result = LinkedHashMap<String, Any?>()
-        result["fontSize"] = 0
+        result.putAll(readJsonMap(SETTINGS_KEY))
+        result.putAll(ThroneSettings.read())
+        result["fontSize"] = (result["fontSize"] as? Number)?.toInt() ?: 0
         result["perAppManaged"] = false
         result["perAppManagedList"] = emptyList<String>()
         result["queryMode"] = "ROOT"
-        result.putAll(readJsonMap(SETTINGS_KEY))
-        result["perAppEnabled"] = DataStore.proxyApps
-        result["perAppMode"] = if (DataStore.bypass) 1 else 2
-        result["allowBypass"] = DataStore.bypass
         result["batteryExempt"] = batteryExempt()
-        result["perAppList"] = DataStore.individual
-            .lineSequence()
-            .map(String::trim)
-            .filter(String::isNotEmpty)
-            .toList()
-        result["queryMode"] = (result["queryMode"] as? String)?.uppercase() ?: "ROOT"
         return result
     }
 
+    /**
+     * Writes go to real Throne storage when [ThroneSettings] knows the key, and to the shell's own document
+     * otherwise. A key the host recognises but only applies on a process restart is remembered in
+     * [restartPending] so `ready` can tell the UI to show the badge.
+     */
     private fun applySettings(values: Map<String, Any?>) {
         val overlay = readJsonMap(SETTINGS_KEY).toMutableMap()
         values.forEach { (key, value) ->
-            when (key) {
-                "perAppEnabled" -> DataStore.proxyApps = value == true
-                "perAppMode" -> DataStore.bypass = when (value) {
-                    is Number -> value.toInt() == 1
-                    is String -> value.equals("bypass", ignoreCase = true) || value == "1"
-                    else -> DataStore.bypass
-                }
-                "allowBypass" -> DataStore.bypass = value == true
-                "perAppList" -> DataStore.individual = when (value) {
-                    is List<*> -> value.filterIsInstance<String>().distinct().joinToString("\n")
-                    is String -> value.lineSequence().map(String::trim).filter(String::isNotEmpty).distinct()
-                        .joinToString("\n")
-                    else -> DataStore.individual
-                }
-                // Throne reads the installed packages itself, so there is no privileged mode to choose.
-                "queryMode" -> overlay[key] = "ROOT"
-                else -> if (value == null) overlay.remove(key) else overlay[key] = value
+            if (ThroneSettings.has(key)) {
+                if (ThroneSettings.set(key, value) == Apply.AppRestart) restartPending = true
+            } else {
+                if (value == null) overlay.remove(key) else overlay[key] = value
             }
         }
         writeJsonMap(SETTINGS_KEY, overlay)

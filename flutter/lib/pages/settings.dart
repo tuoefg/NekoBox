@@ -5,6 +5,7 @@ export 'access.dart';
 export 'about.dart';
 export 'backup.dart';
 
+/// A host setting rendered as a switch, as every service setting upstream is.
 class NativeToggle extends StatelessWidget {
   const NativeToggle(this.title, this.setting, {super.key, this.restart = true, this.autoRestart = false});
   final String title, setting;
@@ -19,46 +20,64 @@ class NativeToggle extends StatelessWidget {
   }
 }
 
+/// The Throne settings groups: what upstream plus a group B-box never had.
+///
+/// Inbound, TUN, DNS, routing, core, testing and subscriptions are taken from Throne's own
+/// settings tree; they replace nothing because the UI had no equivalent pages.
 class GeneralSettingsPage extends StatelessWidget {
   const GeneralSettingsPage({super.key});
-  @override Widget build(BuildContext context) => BoxPage(title: 'General', children: [
-    generateSection(items: [
-      ListItem.open(leading: const GlyphIcon(AppGlyphs.vpn), title: Text(context.tr('Service')), widget: const ServiceSettingsPage()),
-      ListItem.open(leading: const GlyphIcon(AppGlyphs.cpu), title: Text(context.tr('Core')), widget: const CoreSettingsPage()),
-    ]),
-  ]);
+  @override Widget build(BuildContext context) {
+    final caps = context.box.capabilities;
+    return BoxPage(title: 'General', children: [
+      generateSection(items: [
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.vpn), title: Text(context.tr('Service')), widget: const ServiceSettingsPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.devices), title: Text(context.tr('Inbound')), widget: const InboundPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.split), title: Text(context.tr('TUN')), widget: const TunPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.dns), title: Text(context.tr('DNS')), widget: const DnsPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.rules), title: Text(context.tr('Routing')), widget: const RoutingPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.cpu), title: Text(context.tr('Core')), widget: const CorePage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.speed), title: Text(context.tr('Testing')), widget: const TestingPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.profiles), title: Text(context.tr('Subscriptions')), widget: const SubscriptionPage()),
+        if (caps.of('update'))
+          ListItem.open(leading: const GlyphIcon(AppGlyphs.info), title: Text(context.tr('Updates')), widget: const UpdatePage()),
+      ]),
+    ]);
+  }
 }
 
+/// Lifecycle plus the handful of Android-side behaviours that Throne reads on its own.
+///
+/// Removed here, because Throne has no equivalent: auto redirect, dynamic notification, deprecation
+/// warnings, the core memory killer and its limit, and power reports.
 class ServiceSettingsPage extends StatelessWidget {
   const ServiceSettingsPage({super.key});
   @override Widget build(BuildContext context) => BoxPage(title: 'Service', loading: context.box.serviceSettingsChanging, children: [
     generateSection(items: [
+      ListItem<String>.options(
+        title: Text(context.tr('Service mode')), options: const ['vpn', 'proxy'],
+        value: context.box.settings['serviceMode'] == 'proxy' ? 'proxy' : 'vpn',
+        textBuilder: (value) => context.tr(value == 'vpn' ? 'VPN' : 'Proxy only'),
+        onChanged: (value) => context.box.setSetting('serviceMode', value, autoRestart: true),
+      ),
       const NativeToggle('Allow VPN bypass', 'allowBypass', autoRestart: true),
-      const NativeToggle('Auto redirect', 'autoRedirect', autoRestart: true),
-      const NativeToggle('Dynamic notification', 'dynamicNotification', autoRestart: true),
+      // Both are read by the host on its next update, so they need no core restart.
+      const NativeToggle('Show group name in the notification', 'showGroupInNotification', restart: false),
+      const NativeToggle('Show direct speed', 'showDirectSpeed', restart: false),
+    ]),
+    generateSection(title: context.tr('Connections'), items: [
+      const NativeToggle('Reset connections on network change', 'networkChangeResetConnections', restart: false),
+      const NativeToggle('Reset connections when waking up', 'wakeResetConnections', restart: false),
+    ]),
+    generateSection(title: context.tr('Behaviour'), items: [
+      const NativeToggle('Connect after reboot', 'rememberEnable', restart: false),
+      const NativeToggle('Hide from recent apps', 'hideFromRecentApps', restart: false),
+      const NativeToggle('Treat the VPN as metered', 'meteredNetwork', autoRestart: true),
+      const NativeToggle('Skip delete confirmation', 'skipDeleteConfirmation', restart: false),
+    ]),
+    generateSection(items: [
       ListItem(title: Text(context.tr('Battery optimization')),
         subtitle: Text(context.tr(context.box.settings['batteryExempt'] == true ? 'Unrestricted' : 'Allow background operation')),
         onTap: () => context.box.act('battery.open')),
-    ]),
-  ]);
-}
-
-class CoreSettingsPage extends StatelessWidget {
-  const CoreSettingsPage({super.key});
-  @override Widget build(BuildContext context) => BoxPage(title: 'Core', children: [
-    generateSection(items: [
-      ListItem(title: Text(context.tr('Core version')), subtitle: Text(context.box.coreVersion)),
-      const NativeToggle('Disable deprecation warnings', 'disableDeprecatedWarnings', restart: false),
-      const NativeToggle('Enable memory protection', 'oomKillerEnabled'),
-      const NativeToggle('Disable core memory killer', 'oomKillerDisabled'),
-      ListItem.input(title: Text(context.tr('Memory limit')), dialogTitle: context.tr('Memory limit'),
-        value: (context.box.settings['oomMemoryLimitMB'] ?? 50).toString(), suffixText: 'MiB',
-        keyboardType: TextInputType.number, validator: (value) {
-          final number = int.tryParse(value ?? '') ?? 0;
-          return number >= 10 && number <= 4096 ? null : '10–4096 MiB';
-        },
-        onChanged: (value) { if (value != null) context.box.setSetting('oomMemoryLimitMB', int.parse(value)); }),
-      const NativeToggle('Power reports', 'powerReportEnabled'),
     ]),
   ]);
 }

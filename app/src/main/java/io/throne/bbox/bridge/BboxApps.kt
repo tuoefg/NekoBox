@@ -29,7 +29,16 @@ object BboxApps {
         val internet: Boolean,
         val system: Boolean,
         val updatedAt: Long,
-    )
+    ) {
+        /** `apps.list`'s row shape; `package` is the key the UI filters and stores by. */
+        fun wire(): Map<String, Any?> = mapOf(
+            "package" to packageName,
+            "name" to name,
+            "internet" to internet,
+            "system" to system,
+            "updatedAt" to updatedAt,
+        )
+    }
 
     /** Install broadcasting is a process-wide registration; doing it here keeps reads cheap wherever they come from. */
     private fun ensureRegistered() = runCatching { PackageCache.register() }.onFailure { Logs.w(it) }

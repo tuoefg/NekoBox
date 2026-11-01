@@ -129,7 +129,9 @@ void main() {
     dashboard.events.add({'type': 'dashboard', 'value': {'status': 'Stopped', 'selectedProfileId': 1}});
     await tester.pumpAndSettle();
     expect(dashboard.ids, hasLength(1));
-    await tester.tap(toggle);
+    final start = find.bySemanticsLabel('Start');
+    expect(start, findsOneWidget);
+    await tester.tap(start);
     await tester.pumpAndSettle();
     expect(dashboard.calls.where((call) => call.method == 'service.start'), hasLength(1));
     expect(tester.takeException(), isNull);

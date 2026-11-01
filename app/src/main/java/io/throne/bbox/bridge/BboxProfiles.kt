@@ -23,7 +23,15 @@ import org.json.JSONObject
  */
 object BboxProfiles {
 
-    data class Config(val content: String, val formatted: String, val revision: String, val stats: Map<String, Any?>)
+    data class Config(val content: String, val formatted: String, val revision: String, val stats: Map<String, Any?>) {
+        /** The four keys `profiles.config` and `profiles.write` must answer with; `config.dart` reads all of them. */
+        fun wire(): Map<String, Any?> = mapOf(
+            "content" to content,
+            "formatted" to formatted,
+            "revision" to revision,
+            "stats" to stats,
+        )
+    }
 
     /** Profile counts for the dashboard card: the group's own membership, and the routing rules in force. */
     suspend fun stats(id: Long): Map<String, Any?> = withContext(Dispatchers.IO) {

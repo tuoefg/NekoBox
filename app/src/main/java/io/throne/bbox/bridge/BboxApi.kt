@@ -142,6 +142,19 @@ object BboxApi {
         return runCatching { call(server, "/connections", "DELETE"); true }.getOrDefault(false)
     }
 
+    /**
+     * The core's own memory use in bytes, for the dashboard card. Null unless the API is on and answered, so the card
+     * shows zero rather than a stale figure. `inuse` is what sing-box reports; `rss` is the fallback for a build that
+     * names it differently.
+     */
+    fun memory(): Long? {
+        val server = configured() ?: return null
+        if (!enabled()) return null
+        val body = runCatching { call(server, "/memory") }.getOrNull() ?: return null
+        val json = runCatching { JSONObject(body) }.getOrNull() ?: return null
+        return json.optLong("inuse").takeIf { it > 0 } ?: json.optLong("rss").takeIf { it > 0 }
+    }
+
     private val stampFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("UTC")
     }

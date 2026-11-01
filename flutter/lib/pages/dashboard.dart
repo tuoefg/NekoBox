@@ -40,12 +40,13 @@ class _DashboardPageState extends State<DashboardPage> {
     final box = context.box;
     return <String, Widget>{
       'Status': const StatusPanel(),
-      'Intranet IP': const IntranetPanel(),
+      if (box.capabilities.of('lanProxy')) 'Intranet IP': const IntranetPanel(),
       'Network speed': const _SpeedPanel(),
       if ((box.dashboard['modes'] as List? ?? []).isNotEmpty) 'Outbound mode': const _ModePanel(),
       'Current profile': const ProfilePanel(),
-      'Proxy groups': const ProxyGroupsPanel(),
-      'Memory': const MemoryPanel(),
+      // Throne keeps groups in its own list, there is no Clash-mode selector to render here.
+      if (box.capabilities.of('proxyGroups')) 'Proxy groups': const ProxyGroupsPanel(),
+      if (box.capabilities.of('memory')) 'Memory': const MemoryPanel(),
       if (box.dashboard['systemProxyAvailable'] == true) 'System HTTP proxy': const SystemProxyPanel(),
     };
   }
