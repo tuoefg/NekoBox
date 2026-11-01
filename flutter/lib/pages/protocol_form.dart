@@ -125,6 +125,18 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
     _Field('multiplex.brutal.down_mbps', 'Brutal down (Mbps)', 'int', showIf: ('multiplex.__brutal', 'true')),
   ];
 
+  /// The dial fields every outbound carries, flat at the document root (DialFields export).
+  List<_Field> _dialBlock() => [
+    _Field('bind_interface', 'Bind interface', 'text'),
+    _Field('inet4_bind_address', 'IPv4 bind address', 'text'),
+    _Field('inet6_bind_address', 'IPv6 bind address', 'text'),
+    _Field('connect_timeout', 'Connect timeout', 'text'),
+    _Field('tcp_fast_open', 'TCP fast open', 'bool'),
+    _Field('tcp_multi_path', 'Multipath TCP', 'bool'),
+    _Field('udp_fragment', 'UDP fragment', 'bool'),
+    _Field('reuse_addr', 'Reuse address', 'bool'),
+  ];
+
   List<_Field> _quicBlock() => [
     _Field('quic.idle_timeout', 'Idle timeout', 'text'),
     _Field('quic.keep_alive_period', 'Keep alive period', 'text'),
@@ -160,7 +172,11 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
 
   // ------------------------------------------------------------------------------------------------ schemas
 
-  bool get _supported => const ['shadowsocks', 'vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'wireguard'].contains(_type);
+  bool get _supported => const [
+    'shadowsocks', 'vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'wireguard',
+    'direct', 'socks', 'http', 'anytls', 'shadowtls', 'snell', 'naive', 'juicity',
+    'mieru', 'masque', 'ssh', 'trusttunnel', 'openconnect', 'openvpn',
+  ].contains(_type);
 
   List<_Section> _schemas() => switch (_type) {
     'shadowsocks' => [
@@ -264,6 +280,167 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
         _Field('peer.persistent_keepalive', 'Persistent keepalive', 'int'),
         _Field('mtu', 'MTU', 'int'),
         _Field('system', 'System interface', 'bool'),
+      ]),
+    ],
+    'direct' => [
+      ..._basic(),
+      _Section('Dial', _dialBlock()),
+    ],
+    'socks' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('username', 'Username', 'text'),
+        _Field('password', 'Password', 'password'),
+        _Field('uot', 'UDP over TCP', 'bool'),
+      ]),
+    ],
+    'http' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('username', 'Username', 'text'),
+        _Field('password', 'Password', 'password'),
+        _Field('path', 'Path', 'text'),
+        _Field('headers', 'Headers', 'headers'),
+      ]),
+    ],
+    'anytls' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('password', 'Password', 'password'),
+        _Field('idle_session_check_interval', 'Idle session check interval', 'text'),
+        _Field('idle_session_timeout', 'Idle session timeout', 'text'),
+        _Field('min_idle_session', 'Min idle session', 'int'),
+      ]),
+    ],
+    'shadowtls' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('version', 'Version', 'int'),
+        _Field('password', 'Password', 'password'),
+      ]),
+    ],
+    'snell' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('version', 'Version', 'int'),
+        _Field('psk', 'PSK', 'password'),
+        _Field('userkey', 'User key', 'password'),
+        _Field('network', 'Network', 'text'),
+        _Field('obfs_mode', 'Obfuscation mode', 'text'),
+        _Field('obfs_host', 'Obfuscation host', 'text'),
+        _Field('mode', 'Mode', 'text'),
+        _Field('reuse', 'Reuse connections', 'bool'),
+      ]),
+    ],
+    'naive' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('username', 'Username', 'text'),
+        _Field('password', 'Password', 'password'),
+        _Field('quic', 'QUIC', 'bool'),
+        _Field('congestion_control', 'Congestion control', 'choice',
+            choices: const [('', 'Default'), ('cubic', 'cubic'), ('new_reno', 'new_reno'), ('bbr', 'bbr')]),
+        _Field('insecure_concurrency', 'Insecure concurrency', 'int'),
+        _Field('uot', 'UDP over TCP', 'bool'),
+      ]),
+      _Section('TLS', [
+        _Field('tls.server_name', 'Server name', 'text'),
+        _Field('tls.certificate', 'Certificate', 'lines'),
+        _Field('tls.fragment', 'TLS fragment', 'muxState'),
+        _Field('tls.ech.enabled', 'ECH', 'bool'),
+        _Field('tls.ech.config', 'ECH config', 'lines', showIf: ('tls.ech.enabled', 'true')),
+      ]),
+    ],
+    'juicity' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('uuid', 'UUID', 'text', required: true),
+        _Field('password', 'Password', 'password'),
+      ]),
+      _Section('TLS', _tlsBlock(mustTls: true)),
+    ],
+    'mieru' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('server_ports', 'Server ports', 'lines'),
+        _Field('transport', 'Transport', 'choice', choices: const [('', 'Default'), ('TCP', 'TCP'), ('UDP', 'UDP')]),
+        _Field('username', 'Username', 'text'),
+        _Field('password', 'Password', 'password'),
+        _Field('multiplexing', 'Multiplexing', 'choice', choices: const [
+          ('', 'Default'), ('MULTIPLEXING_OFF', 'Off'), ('MULTIPLEXING_LOW', 'Low'),
+          ('MULTIPLEXING_MIDDLE', 'Middle'), ('MULTIPLEXING_HIGH', 'High'),
+        ]),
+        _Field('traffic_pattern', 'Traffic pattern', 'text'),
+      ]),
+    ],
+    'masque' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('private_key', 'Private key', 'password', required: true),
+        _Field('peer_public_key', 'Peer public key', 'text', required: true),
+        _Field('address', 'Local addresses', 'list'),
+        _Field('mtu', 'MTU', 'int'),
+        _Field('http_version', 'HTTP version', 'int'),
+        _Field('disable_version_fallback', 'Disable version fallback', 'bool'),
+      ]),
+    ],
+    'ssh' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('user', 'User', 'text'),
+        _Field('password', 'Password', 'password'),
+        _Field('private_key', 'Private key', 'password'),
+        _Field('private_key_passphrase', 'Private key passphrase', 'password'),
+        _Field('host_key', 'Host key', 'text'),
+        _Field('host_key_algorithms', 'Host key algorithms', 'text'),
+        _Field('client_version', 'Client version', 'text'),
+      ]),
+    ],
+    'trusttunnel' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('username', 'Username', 'text'),
+        _Field('password', 'Password', 'password'),
+        _Field('quic', 'QUIC', 'bool'),
+        _Field('congestion_control', 'Congestion control', 'choice',
+            choices: const [('', 'Default'), ('cubic', 'cubic'), ('new_reno', 'new_reno'), ('bbr', 'bbr')]),
+        _Field('custom_sni', 'Custom SNI', 'text'),
+        _Field('client_random', 'Client random', 'text'),
+        _Field('health_check', 'Health check', 'bool'),
+      ]),
+    ],
+    'openconnect' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('server_path', 'Server path', 'text'),
+        _Field('flavor', 'Flavor', 'text'),
+        _Field('username', 'Username', 'text'),
+        _Field('password', 'Password', 'password'),
+        _Field('auth_group', 'Auth group', 'text'),
+        _Field('mtu', 'MTU', 'int'),
+      ]),
+      _Section('TLS', [
+        _Field('tls.server_name', 'Server name', 'text'),
+        _Field('tls.insecure', 'Allow insecure', 'bool'),
+        _Field('tls.certificate_authority', 'Certificate authority', 'lines'),
+        _Field('tls.client_certificate', 'Client certificate', 'lines'),
+        _Field('tls.client_key', 'Client key', 'password'),
+      ]),
+    ],
+    'openvpn' => [
+      ..._basic(),
+      _Section(null, [
+        _Field('network', 'Network', 'text'),
+        _Field('username', 'Username', 'text'),
+        _Field('password', 'Password', 'password'),
+        _Field('static_challenge', 'Static challenge', 'text'),
+        _Field('mtu', 'MTU', 'int'),
+      ]),
+      _Section('TLS', [
+        _Field('tls.server_name', 'Server name', 'text'),
+        _Field('tls.certificate', 'Certificate', 'lines'),
+        _Field('tls.client_certificate', 'Client certificate', 'lines'),
+        _Field('tls.client_key', 'Client key', 'password'),
       ]),
     ],
     _ => [],

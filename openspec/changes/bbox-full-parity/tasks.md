@@ -47,7 +47,9 @@
   - 新页 `pages/protocol_form.dart`（代理卡片菜单「参数设置」入口）：schema 驱动的通用引擎 + 7 协议字段表（路径 = sing-box JSON 路径）。共享块对齐原生绑定：TLS（enabled/server_name/insecure/alpn/uTLS 指纹菜单联动 enabled/Reality/ECH；trojan/tuic/hysteria mustTls 保存时强制开启）、Transport（type 五选 + 按类型显隐，对齐 TransportBlock.setup）、Multiplex（状态菜单 keep/off/on/custom 派生自 JSON 对象形态 + mode 菜单 + brutal 子字段显隐，对齐 MuxBlock）、QUIC（tuic/hysteria）。专有字段：ss method 18 选项 + plugin/uot；vmess security/alter_id/packet_encoding/global_padding/authenticated_length；vless flow；tuic congestion_control(ccAlgorithms)/udp_relay_mode/udp_over_stream/zero_rtt/heartbeat；hysteria 版本菜单门控 v1(auth)/v2(password/obfs/带宽/ports/hop)；wireguard peer.* + address/private_key/mtu/system。
   - 校验等价：Dart 侧必填（server/port/各协议凭据）+ 端口范围 + 行内标红（FormIssue 流）；保存时 Kotlin 模型校验兜底；headers 按 Name: value 解析为 map。覆盖说明：长尾字段（tls 证书路径/fragment/伪装、xray-vless 流设置、wireguard amnezia）不在表单内，走既有原始 JSON 编辑器，台账如实记录。
 - [ ] 5.2 CI/真机验证：`ci.yml` 全绿；真机逐协议 新建→保存→重开 回读一致，回传 workflow 链接 + 截图
-- [ ] 5.3 二批长尾 22 协议 typed 表单（AnyTLS/Binding/Chain/Custom/Direct/Http/Juicity/Masque/Mieru/Naive/OpenConnect/OpenVpn/Snell/ShadowTLS/Socks/SSH/TrustTunnel 等，清单见规划 §7.2）；E1 落地后长尾可先用其校验兜底
+- [x] 5.3 二批长尾 22 协议 typed 表单（AnyTLS/Binding/Chain/Custom/Direct/Http/Juicity/Masque/Mieru/Naive/OpenConnect/OpenVpn/Snell/ShadowTLS/Socks/SSH/TrustTunnel 等，清单见规划 §7.2）；E1 落地后长尾可先用其校验兜底
+  - 新增 14 协议 schema（dial 块为扁平根键，DialFields 导出核实）：direct（dial 8 字段）、socks、http（headers map）、anytls、shadowtls、snell（version 6 分支的 mode/obfs_* 由核心严格校验）、naive（部分 TLS：server_name/certificate/fragment tri/ech）、juicity（mustTls 全块）、mieru（transport/multiplexing 选项对齐 mieruMultiplexing）、masque、ssh、trusttunnel、openconnect/openvpn（部分 TLS 块）。
+  - 缓做两项并记录：**chain**（编辑器是跳板列表 UI，需 profile 选择器列表形态，非字段表单）、**custom**（其本体就是 raw 配置文本，NodeJsonPage/raw 编辑器即其表单）。累计 21 协议 typed 表单 + autoselector 专页 + chain/custom 缓做理由在案。
 - [x] 5.4 规范同步：`outbound-protocols` 的 typed 表单覆盖要求 delta 合入主规范（Typed settings forms in the ported UI Requirement）
 - [ ] 5.5 CI/真机验证：同上，抽查长尾协议各 2 个
 
