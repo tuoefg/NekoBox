@@ -6,6 +6,7 @@ import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyEntity
 import io.nekohasekai.sagernet.database.ProxyGroup
 import io.nekohasekai.sagernet.database.SubUserInfo
+import io.nekohasekai.sagernet.bg.autoselector.AutoSelectorProfiles
 import io.throne.bbox.model.ProfileInfo
 import io.throne.bbox.model.ProxyGroup as UiGroup
 import io.throne.bbox.model.ProxyNode
@@ -89,6 +90,7 @@ object BboxCatalog {
         type = profile.displayType(),
         delay = profile.latency,
         testedAt = profile.latencyAt * 1000L,
+        isSelector = profile.type == AutoSelectorProfiles.TYPE,
     )
 
     private fun profileOf(group: ProxyGroup, members: List<ProxyEntity>, selected: Long): ProfileInfo {

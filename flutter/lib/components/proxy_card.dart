@@ -74,6 +74,10 @@ class ProxyNodeCard extends StatelessWidget {
         }),
         CommonPopupMenuItem(glyph: AppGlyphs.edit, label: context.tr('Edit'), onPressed: () async {
           final box = context.box;
+          if (node['isSelector'] == true) {
+            await openPage(context, AutoSelectorPage(id: (node['id'] as num?)?.toInt() ?? 0));
+            return;
+          }
           try {
             final info = json(await box.call('profiles.nodeInfo', {'id': node['id']}));
             if (!context.mounted) return;

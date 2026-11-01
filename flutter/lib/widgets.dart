@@ -9,6 +9,7 @@ export 'box.dart';
 export 'l10n.dart';
 export 'pages/throne.dart';
 export 'pages/routes.dart';
+export 'pages/auto_selector.dart';
 export 'ui/ui.dart';
 export 'ui/icons/icons.dart';
 

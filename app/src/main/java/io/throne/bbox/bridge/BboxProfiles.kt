@@ -6,9 +6,11 @@ import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyGroup
 import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.database.SettingsMapper
+import io.nekohasekai.sagernet.bg.autoselector.AutoSelectorProfiles
 import io.nekohasekai.sagernet.group.SubscriptionQueue
 import io.nekohasekai.sagernet.outbound.Outbound
 import io.nekohasekai.sagernet.outbound.import.ProfileImport
+import io.nekohasekai.sagernet.outbound.types.AutoSelector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -196,6 +198,83 @@ object BboxProfiles {
         val profile = ProfileManager.getProfile(id) ?: error("No proxy with id $id")
         ProfileManager.deleteProfile(profile.groupId, id)
         BboxBridge.scheduleRefresh(immediate = true)
+    }
+
+    // ------------------------------------------------------------------------------------- auto selector
+
+    /** Creates a fresh auto-selector node in [groupId], or the first group when it is omitted. */
+    suspend fun createAutoSelector(groupId: Long?): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val gid = groupId?.takeIf { it > 0L } ?: GroupRepo.all().firstOrNull()?.id ?: error("No proxy group")
+        val entity = ProfileManager.addProfile(AutoSelector(), gid)
+        BboxBridge.scheduleRefresh(immediate = true)
+        autoSelectorInfo(entity.id)
+    }
+
+    /** The auto-selector editor's seed: its fields plus the groups the picker can tick. */
+    suspend fun autoSelectorInfo(id: Long): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val selector = AutoSelectorProfiles.load(id) ?: error("No auto selector with id $id")
+        mapOf(
+            "id" to id,
+            "name" to selector.name,
+            "nameFilter" to selector.nameFilter,
+            "countryFilter" to selector.countryFilter,
+            "excludeUnavailable" to selector.excludeUnavailable,
+            "poolCap" to selector.poolCap,
+            "buildLimit" to selector.buildLimit,
+            "resultValidityMins" to selector.resultValidityMins,
+            "testURL" to selector.testURL,
+            "connectivityURL" to selector.connectivityURL,
+            "intervalSec" to selector.intervalSec,
+            "benchIntervalSec" to selector.benchIntervalSec,
+            "watchIntervalSec" to selector.watchIntervalSec,
+            "activeSize" to selector.activeSize,
+            "sampling" to selector.sampling,
+            "toleranceMs" to selector.toleranceMs,
+            "maxRTTms" to selector.maxRTTms,
+            "expected" to selector.expected,
+            "dialRetries" to selector.dialRetries,
+            "interruptOnSwitch" to selector.interruptOnSwitch,
+            "balance" to selector.balance,
+            "balanceMode" to selector.balanceMode,
+            "balanceIntervalSec" to selector.balanceIntervalSec,
+            "gids" to selector.gids.map(Long::toInt),
+            "pinnedId" to selector.pinnedID,
+            "groups" to GroupRepo.all().map { mapOf("id" to it.id.toInt(), "name" to it.displayName()) },
+        )
+    }
+
+    /** Saves the edited fields onto the stored selector; absent keys keep their values. */
+    suspend fun autoSelectorSave(id: Long, values: Map<String, Any?>): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val selector = AutoSelectorProfiles.load(id) ?: error("No auto selector with id $id")
+        (values["name"] as? String)?.let { selector.name = it.trim() }
+        (values["nameFilter"] as? String)?.let { selector.nameFilter = it.trim() }
+        (values["countryFilter"] as? String)?.let { selector.countryFilter = it.trim() }
+        (values["testURL"] as? String)?.let { selector.testURL = it.trim() }
+        (values["connectivityURL"] as? String)?.let { selector.connectivityURL = it.trim() }
+        (values["balanceMode"] as? String)?.let { selector.balanceMode = it.trim() }
+        (values["excludeUnavailable"] as? Boolean)?.let { selector.excludeUnavailable = it }
+        (values["interruptOnSwitch"] as? Boolean)?.let { selector.interruptOnSwitch = it }
+        (values["balance"] as? Boolean)?.let { selector.balance = it }
+        fun intOf(key: String) = (values[key] as? Number)?.toInt() ?: (values[key] as? String)?.toIntOrNull()
+        intOf("poolCap")?.let { selector.poolCap = it.coerceAtLeast(0) }
+        intOf("buildLimit")?.let { selector.buildLimit = it.coerceAtLeast(0) }
+        intOf("resultValidityMins")?.let { selector.resultValidityMins = it.coerceAtLeast(0) }
+        intOf("intervalSec")?.let { selector.intervalSec = it.coerceAtLeast(1) }
+        intOf("benchIntervalSec")?.let { selector.benchIntervalSec = it.coerceAtLeast(1) }
+        intOf("watchIntervalSec")?.let { selector.watchIntervalSec = it.coerceAtLeast(1) }
+        intOf("activeSize")?.let { selector.activeSize = it.coerceAtLeast(1) }
+        intOf("sampling")?.let { selector.sampling = it.coerceAtLeast(1) }
+        intOf("toleranceMs")?.let { selector.toleranceMs = it.coerceAtLeast(0) }
+        intOf("maxRTTms")?.let { selector.maxRTTms = it.coerceAtLeast(0) }
+        intOf("expected")?.let { selector.expected = it.coerceAtLeast(1) }
+        intOf("dialRetries")?.let { selector.dialRetries = it.coerceAtLeast(0) }
+        intOf("balanceIntervalSec")?.let { selector.balanceIntervalSec = it.coerceAtLeast(1) }
+        (values["gids"] as? List<*>)?.let { list ->
+            selector.gids = list.filterIsInstance<Number>().mapTo(ArrayList()) { it.toLong() }
+        }
+        AutoSelectorProfiles.save(id, selector)
+        BboxBridge.scheduleRefresh(immediate = true)
+        autoSelectorInfo(id)
     }
 
     /** The group as the configuration editor's document. */

@@ -33,7 +33,7 @@ object Capabilities {
         "rootQuery" to false,      // packages come from PackageManager only
         "dnsObject" to false,      // no raw DNS object editor
         "routes" to true,          // RouteManager over routes.list/get/save/delete, see BboxRoutes
-        "autoSelector" to false,   // auto selector UI is not ported
+        "autoSelector" to true,    // type=autoselector nodes over profiles.autoSelector*, see BboxProfiles
         "warp" to false,           // WARP is configured through the core, not a dedicated page
 
         // --- Throne has it ------------------------------------------------------------------------

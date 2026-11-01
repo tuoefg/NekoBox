@@ -38,6 +38,8 @@ data class ProxyNode(
     val type: String = "",
     val delay: Int = 0,
     val testedAt: Long = 0L,
+    /** A `type=autoselector` node, which has its own editor instead of the share-link one. */
+    val isSelector: Boolean = false,
 )
 
 data class ProxyGroup(

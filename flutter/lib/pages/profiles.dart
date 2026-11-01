@@ -196,6 +196,15 @@ class _AddProfileMenuState extends State<AddProfileMenu> {
     try { await _importProfile(context, source); }
     finally { if (mounted) setState(() => _busy = false); }
   }
+  Future<void> _createSelector() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      final info = json(await context.box.call('profiles.autoSelectorCreate', {}));
+      if (mounted) await openPage(context, AutoSelectorPage(id: (info['id'] as num?)?.toInt() ?? 0));
+    } catch (error) { if (mounted) context.box.report(error); }
+    finally { if (mounted) setState(() => _busy = false); }
+  }
   @override Widget build(BuildContext context) => AbsorbPointer(absorbing: _busy, child: CommonPopupBox(
     targetBuilder: widget.builder,
     popupBuilder: (_) => CommonPopupMenu(items: [
@@ -206,6 +215,7 @@ class _AddProfileMenuState extends State<AddProfileMenu> {
       CommonPopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Clipboard'), onPressed: () => _import('Clipboard')),
       CommonPopupMenuItem(section: const CommonPopupMenuSection(), glyph: AppGlyphs.customize,
         label: context.tr('New profile'), onPressed: () => openForm(context, const ProfileForm(initial: {'content': '{}'}))),
+      CommonPopupMenuItem(glyph: AppGlyphs.shuffle, label: context.tr('Auto selector'), onPressed: _createSelector),
     ]),
   ));
 }
@@ -222,6 +232,15 @@ class _AddProfilePageState extends State<AddProfilePage> {
     try { await _importProfile(context, source); }
     finally { if (mounted) setState(() => _loading = false); }
   }
+  Future<void> _createSelector() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final info = json(await context.box.call('profiles.autoSelectorCreate', {}));
+      if (mounted) await openPage(context, AutoSelectorPage(id: (info['id'] as num?)?.toInt() ?? 0));
+    } catch (error) { if (mounted) context.box.report(error); }
+    finally { if (mounted) setState(() => _loading = false); }
+  }
   @override Widget build(BuildContext context) => BoxPage(
     title: 'Add profile', loading: _loading,
     children: [
@@ -232,6 +251,8 @@ class _AddProfilePageState extends State<AddProfilePage> {
           ListItem(leading: GlyphIcon(item.$2), title: Text(context.tr(item.$1)), onTap: _loading ? null : () => _import(item.$1)),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.add), title: Text(context.tr('New profile')),
           widget: const ProfileForm(initial: {'content': '{}'}), forceFull: false),
+        ListItem(leading: const GlyphIcon(AppGlyphs.shuffle), title: Text(context.tr('Auto selector')),
+          onTap: _loading ? null : _createSelector),
       ], footer: context.tr('This URL must serve a sing-box JSON configuration.')),
     ],
   );

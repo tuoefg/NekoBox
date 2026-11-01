@@ -317,6 +317,17 @@ class ThroneBoxBridge(
                 "routes.setCurrent" -> result.respond {
                     BboxRoutes.setCurrent(call.argument<Int>("id")?.toLong() ?: -1L)
                 }
+                "profiles.autoSelectorCreate" -> result.respond {
+                    BboxProfiles.createAutoSelector(call.argument<Int>("groupId")?.toLong())
+                }
+                "profiles.autoSelectorInfo" -> result.respond {
+                    BboxProfiles.autoSelectorInfo(call.argument<Int>("id")?.toLong() ?: -1L)
+                }
+                "profiles.autoSelectorSave" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val values = call.argument<Map<String, Any?>>("value") ?: call.arguments as? Map<String, Any?>
+                    result.respond { BboxProfiles.autoSelectorSave(call.argument<Int>("id")?.toLong() ?: -1L, values.orEmpty()) }
+                }
                 "profiles.importFile" -> result.respond { importFile() }
                 "profiles.scan" -> {
                     val session = call.argument<String>("session").orEmpty()
@@ -961,6 +972,7 @@ class ThroneBoxBridge(
                         "type" to node.type,
                         "delay" to node.delay,
                         "testedAt" to node.testedAt,
+                        "isSelector" to node.isSelector,
                     )
                 },
             )
