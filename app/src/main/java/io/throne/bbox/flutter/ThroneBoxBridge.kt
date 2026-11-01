@@ -347,6 +347,14 @@ class ThroneBoxBridge(
                 "profiles.autoSelectorRecheck" -> result.respond {
                     BboxProfiles.autoSelectorRecheck(); null
                 }
+                "profiles.nodeTuningInfo" -> result.respond {
+                    BboxProfiles.nodeTuningInfo(call.argument<Int>("id")?.toLong() ?: -1L)
+                }
+                "profiles.nodeTuningSave" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val values = call.argument<Map<String, Any?>>("value") ?: call.arguments as? Map<String, Any?>
+                    result.respond { BboxProfiles.nodeTuningSave(call.argument<Int>("id")?.toLong() ?: -1L, values.orEmpty()) }
+                }
                 "profiles.importFile" -> result.respond { importFile() }
                 "profiles.scan" -> {
                     val session = call.argument<String>("session").orEmpty()

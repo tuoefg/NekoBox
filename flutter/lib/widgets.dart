@@ -10,6 +10,7 @@ export 'l10n.dart';
 export 'pages/throne.dart';
 export 'pages/routes.dart';
 export 'pages/auto_selector.dart';
+export 'pages/node_tuning.dart';
 export 'ui/ui.dart';
 export 'ui/icons/icons.dart';
 

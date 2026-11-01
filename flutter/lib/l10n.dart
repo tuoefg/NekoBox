@@ -586,6 +586,13 @@ const _zh = <String, String>{
   'Ranking': '排名',
   'Pin': '固定',
   'Use automatic': '使用自动选择',
+  'Node tuning': '节点调优',
+  'This protocol has no tunable options': '该协议没有可调选项',
+  'Keep default': '保持默认',
+  'On': '开启',
+  'Mux max streams': 'Mux 最大流数',
+  'Fragment fallback delay': '分片回退延迟',
+  'Mixed-case SNI and other tricks, applied when the node is dialed.': '大小写混合 SNI 等伪装，在拨号该节点时生效。',
 };
 
 extension BoxLocalization on BuildContext {

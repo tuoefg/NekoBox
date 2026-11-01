@@ -89,6 +89,9 @@ class ProxyNodeCard extends StatelessWidget {
             });
           } catch (error) { box.report(error); }
         }),
+        CommonPopupMenuItem(glyph: AppGlyphs.sliders, label: context.tr('Node tuning'), onPressed: () async {
+          await openPage(context, NodeTuningPage(id: (node['id'] as num?)?.toInt() ?? 0));
+        }),
         CommonPopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Delete'), danger: true, onPressed: () async {
           final box = context.box;
           try {
