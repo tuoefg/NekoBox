@@ -153,4 +153,56 @@ object BboxRoutes {
         BboxBridge.scheduleRefresh(immediate = true)
         mapOf("currentId" to p.id)
     }
+
+    // ------------------------------------------------------------------------------------------------ rules
+
+    private fun str(map: Map<String, Any?>, key: String) = map[key]?.toString().orEmpty()
+
+    /** One rule as the editor's map: the match attributes, the action fields and the metadata. */
+    private fun ruleToMap(rule: RouteRule): Map<String, Any?> {
+        val map = LinkedHashMap<String, Any?>()
+        map["name"] = rule.name
+        map["type"] = RuleType.values().firstOrNull { it.id == rule.type }?.token ?: RuleType.CUSTOM.token
+        map["disabled"] = rule.disabled
+        map["action"] = rule.action
+        map["outbound_id"] = rule.outbound_id
+        for (field in RouteRule.STRING_FIELDS) map[field.name] = field.get(rule)
+        for (field in RouteRule.LIST_FIELDS) map[field.name] = field.get(rule).toList()
+        for (field in RouteRule.BOOL_FIELDS) map[field.name] = field.get(rule)
+        return map
+    }
+
+    private fun ruleFromMap(map: Map<String, Any?>): RouteRule {
+        val rule = RouteRule()
+        rule.name = str(map, "name")
+        rule.type = RuleType.values().firstOrNull { it.token == str(map, "type") }?.id ?: RuleType.CUSTOM.id
+        rule.disabled = map["disabled"] == true
+        rule.action = str(map, "action").ifBlank { "route" }
+        rule.outbound_id = (map["outbound_id"] as? Number)?.toLong() ?: OutboundIds.DIRECT
+        for (field in RouteRule.STRING_FIELDS) field.set(rule, str(map, field.name))
+        for (field in RouteRule.LIST_FIELDS) {
+            field.set(rule, ArrayList((map[field.name] as? List<*>)?.filterIsInstance<String>().orEmpty()))
+        }
+        for (field in RouteRule.BOOL_FIELDS) field.set(rule, map[field.name] == true)
+        return rule
+    }
+
+    /** Every rule of the profile as an editor map, in list order. */
+    suspend fun rules(id: Long): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val p = RouteManager.get(id) ?: error("No route profile with id $id")
+        mapOf("rules" to p.rules.map(::ruleToMap))
+    }
+
+    /**
+     * Replaces the profile's whole rules list — [RouteManager.save] stores rules in list order anyway,
+     * so the editor sends the list it shows and an empty list is a profile with no rules.
+     */
+    suspend fun saveRules(id: Long, rules: List<Map<String, Any?>>): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val p = RouteManager.get(id) ?: error("No route profile with id $id")
+        if (p.is_raw) error("This profile is read-only")
+        p.rules = rules.mapTo(ArrayList()) { ruleFromMap(it) }
+        RouteManager.save(p)
+        BboxBridge.scheduleRefresh(immediate = true)
+        mapOf("rules" to p.rules.map(::ruleToMap))
+    }
 }

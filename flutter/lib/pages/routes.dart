@@ -92,20 +92,19 @@ class RouteEditorPage extends StatefulWidget {
 class _RouteEditorPageState extends State<RouteEditorPage> {
   late final TextEditingController _name;
   late final TextEditingController _url;
-  late final TextEditingController _rules;
   String _defaultOutbound = 'direct';
   bool _isRemote = false;
   bool _autoUpdate = false;
   bool _current = false;
   bool _saving = false;
   String? _error;
+  List<Json> _rules = const [];
 
   @override
   void initState() {
     super.initState();
     _name = TextEditingController();
     _url = TextEditingController();
-    _rules = TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -113,7 +112,6 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
   void dispose() {
     _name.dispose();
     _url.dispose();
-    _rules.dispose();
     super.dispose();
   }
 
@@ -129,12 +127,38 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
         _isRemote = data['isRemote'] == true;
         _url.text = data['remoteUrl']?.toString() ?? '';
         _autoUpdate = data['autoUpdate'] == true;
-        _rules.text = data['rules']?.toString() ?? '';
         _current = (list['currentId'] as num?)?.toInt() == widget.id;
       });
+      await _loadRules();
     } catch (error) {
       if (mounted) setState(() => _error = BoxController.describe(error));
     }
+  }
+
+  Future<void> _loadRules() async {
+    if (widget.id == 0) return;
+    final box = context.box;
+    try {
+      final data = json(await box.call('routes.rules', {'id': widget.id}));
+      if (!mounted) return;
+      setState(() => _rules = (data['rules'] as List? ?? const []).map((e) => json(e)).toList());
+    } catch (error) {
+      if (mounted) context.box.report(error);
+    }
+  }
+
+  Future<void> _editRule(int index) async {
+    if (widget.id == 0) {
+      context.box.report(StateError(context.tr('Save the profile first')));
+      return;
+    }
+    final added = await openPage<bool>(context, RuleEditorPage(
+      profileId: widget.id,
+      index: index,
+      rule: index < 0 ? const {} : _rules[index],
+      rules: _rules,
+    ));
+    if (added == true && mounted) await _loadRules();
   }
 
   Future<void> _save() async {
@@ -147,7 +171,6 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
         'isRemote': _isRemote,
         'remoteUrl': _url.text,
         'autoUpdate': _autoUpdate,
-        'rules': _rules.text,
       }});
       if (mounted) context.safeNestedPop();
     } catch (error) {
@@ -227,19 +250,19 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
             onChanged: (value) => setState(() => _autoUpdate = value),
           ),
         ]),
-        generateSection(title: context.tr('Simple rules'), items: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              controller: _rules, minLines: 4, maxLines: 12, autocorrect: false,
-              keyboardType: TextInputType.multiline,
-              decoration: InputDecoration(
-                labelText: context.tr('Rules'),
-                border: const OutlineInputBorder(),
-              ),
+        generateSection(title: context.tr('Rules'), items: [
+          for (final (index, rule) in _rules.indexed)
+            ListItem(
+              title: Text(_ruleName(rule, index)),
+              subtitle: Text(_ruleSummary(rule)),
+              onTap: () => _editRule(index),
             ),
+          ListItem(
+            leading: const GlyphIcon(AppGlyphs.add),
+            title: Text(context.tr('Add rule')),
+            onTap: () => _editRule(-1),
           ),
-        ], footer: context.tr('One rule per line: suffix:example.com -> proxy. Outbounds are proxy, direct, block and warp-bypass.')),
+        ], footer: context.tr('Rules run top to bottom; the first match wins.')),
         if (widget.id > 0) generateSection(items: [
           ListItem.toggle(
             title: Text(context.tr('Use this profile')),
@@ -266,4 +289,287 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
     'warp-bypass' => 'WARP bypass',
     _ => 'Direct',
   };
+
+  String _ruleName(Json rule, int index) {
+    final name = rule['name']?.toString() ?? '';
+    if (name.isNotEmpty) return name;
+    for (final key in const ['domain', 'domain_suffix', 'ip_cidr', 'port', 'rule_set', 'package_name']) {
+      final list = rule[key];
+      if (list is List && list.isNotEmpty) return '${list.first}';
+    }
+    return '#${index + 1}';
+  }
+
+  String _ruleSummary(Json rule) {
+    final action = rule['action']?.toString() ?? 'route';
+    final conditions = <String>[];
+    for (final key in const [
+      'domain', 'domain_suffix', 'domain_keyword', 'domain_regex', 'ip_cidr', 'source_ip_cidr',
+      'port', 'port_range', 'process_name', 'package_name', 'rule_set',
+    ]) {
+      final list = rule[key];
+      if (list is List && list.isNotEmpty) conditions.add('$key(${list.length})');
+    }
+    if (rule['invert'] == true) conditions.add(context.tr('Inverted'));
+    return conditions.isEmpty ? action : '$action · ${conditions.join(' ')}';
+  }
+}
+
+/// One route rule as a form: the match attributes on top, the action fields below, exactly the
+/// members the stored [RouteRule] carries. Values of list members are comma-separated text here.
+class RuleEditorPage extends StatefulWidget {
+  const RuleEditorPage({super.key, required this.profileId, required this.index, required this.rule, required this.rules});
+  final int profileId, index;
+  final Json rule;
+  final List<Json> rules;
+  @override
+  State<RuleEditorPage> createState() => _RuleEditorPageState();
+}
+
+class _RuleEditorPageState extends State<RuleEditorPage> {
+  late Json _rule;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _rule = {
+      ...widget.rule,
+      if (widget.index < 0) 'name': '',
+      if (widget.index < 0) 'type': 'custom',
+      if (widget.index < 0) 'action': 'route',
+      if (widget.index < 0) 'outbound_id': -2,
+    };
+  }
+
+  void _set(String key, Object? value) => setState(() => _rule = {..._rule, key: value});
+
+  List<String> _listOf(String key) =>
+      (_rule[key] as List? ?? const []).map((e) => '$e').toList();
+
+  void _setList(String key, String text) => _set(key, text
+      .split(',')
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList());
+
+  Future<void> _save() async {
+    setState(() { _saving = true; _error = null; });
+    final box = context.box;
+    try {
+      final rules = [...widget.rules];
+      if (widget.index < 0) {
+        rules.add(_rule);
+      } else {
+        rules[widget.index] = _rule;
+      }
+      await box.call('routes.saveRules', {'id': widget.profileId, 'rules': rules});
+      if (mounted) context.safeNestedPop(true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() { _saving = false; _error = BoxController.describe(error); });
+    }
+  }
+
+  Future<void> _delete() async {
+    if (widget.index < 0) { context.safeNestedPop(false); return; }
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: Text(context.tr('Delete rule?')),
+      content: Text(_rule['name']?.toString() ?? '#${widget.index + 1}'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        TextButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Delete'))),
+      ],
+    ));
+    if (confirmed != true || !mounted) return;
+    final box = context.box;
+    try {
+      final rules = [...widget.rules]..removeAt(widget.index);
+      await box.call('routes.saveRules', {'id': widget.profileId, 'rules': rules});
+      if (mounted) context.safeNestedPop(true);
+    } catch (error) {
+      if (mounted) box.report(error);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final outboundId = (_rule['outbound_id'] as num?)?.toInt() ?? -2;
+    return FormPage(
+      title: widget.index < 0 ? 'Add rule' : 'Edit rule',
+      saving: _saving,
+      onSave: _save,
+      error: _error,
+      actions: [
+        IconButtonData(glyph: AppGlyphs.delete, tooltip: 'Delete', onPressed: _delete),
+      ],
+      children: [
+        generateSection(title: context.tr('Rule'), items: [
+          FormRow(title: context.tr('Name'), trailing: FormRowTextField(
+            initialValue: '${_rule['name'] ?? ''}', hintText: context.tr('Optional'),
+            autocorrect: false, enableSuggestions: false,
+            onChanged: (value) => _set('name', value),
+          )),
+          ListItem.toggle(
+            title: Text(context.tr('Disabled')),
+            value: _rule['disabled'] == true,
+            onChanged: (value) => _set('disabled', value),
+          ),
+          ListItem(
+            title: Text(context.tr('Outbound')),
+            trailing: Text(_outboundName(outboundId)),
+            onTap: () async {
+              final picked = await showDialog<int>(context: context, builder: _outboundDialog);
+              if (picked != null) _set('outbound_id', picked);
+            },
+          ),
+        ]),
+        generateSection(title: context.tr('Domains'), items: [
+          _csvRow('Domain', 'domain'),
+          _csvRow('Domain suffix', 'domain_suffix'),
+          _csvRow('Domain keyword', 'domain_keyword'),
+          _csvRow('Domain regex', 'domain_regex'),
+        ]),
+        generateSection(title: context.tr('IP and ports'), items: [
+          _csvRow('IP CIDR', 'ip_cidr'),
+          _csvRow('Source IP CIDR', 'source_ip_cidr'),
+          _csvRow('Rule set', 'rule_set'),
+          _csvRow('Port', 'port'),
+          _csvRow('Port range', 'port_range'),
+          _csvRow('Source port', 'source_port'),
+          _csvRow('Source port range', 'source_port_range'),
+          ListItem.toggle(
+            title: Text(context.tr('Source IP is private')),
+            value: _rule['source_ip_is_private'] == true,
+            onChanged: (value) => _set('source_ip_is_private', value),
+          ),
+          ListItem.toggle(
+            title: Text(context.tr('IP is private')),
+            value: _rule['ip_is_private'] == true,
+            onChanged: (value) => _set('ip_is_private', value),
+          ),
+        ]),
+        generateSection(title: context.tr('Processes and apps'), items: [
+          _csvRow('Process name', 'process_name'),
+          _csvRow('Process path', 'process_path'),
+          _csvRow('Process path regex', 'process_path_regex'),
+          _csvRow('Package name', 'package_name'),
+          _csvRow('Package name regex', 'package_name_regex'),
+        ]),
+        generateSection(title: context.tr('Network'), items: [
+          _csvRow('Inbound', 'inbound'),
+          _csvRow('Network type', 'network_type'),
+          _csvRow('Wi-Fi SSID', 'wifi_ssid'),
+          _csvRow('Wi-Fi BSSID', 'wifi_bssid'),
+          _textRow('IP version', 'ip_version', hint: 'ipv4 / ipv6'),
+          _textRow('Network', 'network', hint: 'tcp / udp'),
+          _textRow('Protocol', 'protocol'),
+          ListItem.toggle(
+            title: Text(context.tr('Network is expensive')),
+            value: _rule['network_is_expensive'] == true,
+            onChanged: (value) => _set('network_is_expensive', value),
+          ),
+          ListItem.toggle(
+            title: Text(context.tr('Invert the match')),
+            value: _rule['invert'] == true,
+            onChanged: (value) => _set('invert', value),
+          ),
+        ]),
+        generateSection(title: context.tr('Action'), items: [
+          ListItem(
+            title: Text(context.tr('Action')),
+            trailing: Text(_rule['action']?.toString() ?? 'route'),
+            onTap: () async {
+              final picked = await showDialog<String>(context: context, builder: (context) => SimpleDialog(
+                title: Text(context.tr('Action')),
+                children: [
+                  for (final value in const ['route', 'reject', 'sniff', 'resolve', 'route-options', 'bypass'])
+                    SimpleDialogOption(onPressed: () => Navigator.pop(context, value), child: Text(value)),
+                ],
+              ));
+              if (picked != null) _set('action', picked);
+            },
+          ),
+          _csvRow('Reject method', 'reject_method', hint: 'default / drop / reply'),
+          ListItem.toggle(
+            title: Text(context.tr('No drop')),
+            value: _rule['no_drop'] == true,
+            onChanged: (value) => _set('no_drop', value),
+          ),
+          _textRow('Override address', 'override_address'),
+          _textRow('Override port', 'override_port'),
+          ListItem.toggle(
+            title: Text(context.tr('TLS fragment')),
+            value: _rule['tls_fragment'] == true,
+            onChanged: (value) => _set('tls_fragment', value),
+          ),
+          _textRow('TLS fragment fallback delay', 'tls_fragment_fallback_delay'),
+          ListItem.toggle(
+            title: Text(context.tr('TLS record fragment')),
+            value: _rule['tls_record_fragment'] == true,
+            onChanged: (value) => _set('tls_record_fragment', value),
+          ),
+          _textRow('TLS spoof', 'tls_spoof'),
+          _textRow('TLS spoof method', 'tls_spoof_method'),
+          _csvRow('Sniffers', 'sniffers'),
+          ListItem.toggle(
+            title: Text(context.tr('Sniff override destination')),
+            value: _rule['sniff_override_dest'] == true,
+            onChanged: (value) => _set('sniff_override_dest', value),
+          ),
+          _textRow('Strategy', 'strategy', hint: 'prefer_ipv4 / prefer_ipv6 / …'),
+        ]),
+      ],
+    );
+  }
+
+  Widget _csvRow(String title, String key, {String? hint}) => FormRow(
+    title: context.tr(title),
+    trailing: FormRowTextField(
+      initialValue: _listOf(key).join(', '),
+      hintText: hint ?? context.tr('Comma-separated'),
+      autocorrect: false, enableSuggestions: false,
+      onChanged: (value) => _setList(key, value),
+    ),
+  );
+
+  Widget _textRow(String title, String key, {String? hint}) => FormRow(
+    title: context.tr(title),
+    trailing: FormRowTextField(
+      initialValue: '${_rule[key] ?? ''}',
+      hintText: hint,
+      autocorrect: false, enableSuggestions: false,
+      onChanged: (value) => _set(key, value),
+    ),
+  );
+
+  String _outboundName(int id) => switch (id) {
+    -1 => 'Proxy',
+    -3 => 'Block',
+    -5 => 'WARP bypass',
+    -2 => 'Direct',
+    > 0 => '#$id',
+    _ => '$id',
+  };
+
+  Widget _outboundDialog(BuildContext context) {
+    final nodes = <Json>[];
+    for (final group in context.box.groups) {
+      final items = group['items'];
+      if (items is List) nodes.addAll(items.map(json));
+    }
+    return SimpleDialog(
+      title: Text(context.tr('Outbound')),
+      children: [
+        for (final (id, label) in [(-1, 'Proxy'), (-2, 'Direct'), (-3, 'Block'), (-5, 'WARP bypass')])
+          SimpleDialogOption(onPressed: () => Navigator.pop(context, id), child: Text(context.tr(label))),
+        for (final node in nodes)
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context, (node['id'] as num?)?.toInt()),
+            child: Text('${node['tag']}'),
+          ),
+      ],
+    );
+  }
 }

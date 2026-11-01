@@ -317,6 +317,15 @@ class ThroneBoxBridge(
                 "routes.setCurrent" -> result.respond {
                     BboxRoutes.setCurrent(call.argument<Int>("id")?.toLong() ?: -1L)
                 }
+                "routes.rules" -> result.respond {
+                    BboxRoutes.rules(call.argument<Int>("id")?.toLong() ?: -1L)
+                }
+                "routes.saveRules" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val rules = call.argument<List<Any>>("rules").orEmpty()
+                        .mapNotNull { it as? Map<String, Any?> }
+                    result.respond { BboxRoutes.saveRules(call.argument<Int>("id")?.toLong() ?: -1L, rules) }
+                }
                 "profiles.autoSelectorCreate" -> result.respond {
                     BboxProfiles.createAutoSelector(call.argument<Int>("groupId")?.toLong())
                 }
