@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import '../widgets.dart';
 
 // Metrics and card presentation from FlClash v0.9.2 proxies/common.dart and card.dart.
@@ -30,6 +31,9 @@ class ProxyNodeCard extends StatelessWidget {
   final bool testing;
   final VoidCallback onSelect, onTest;
 
+  Future<String> _link(BuildContext context, {bool json = false}) async =>
+      (await context.box.call('profiles.nodeLink', {'group': group['tag'], 'tag': node['tag'], 'json': json})).toString();
+
   @override Widget build(BuildContext context) {
     final metrics = ProxyCardMetrics.of(context, context.box.preferences);
     final selected = group['selected'] == node['tag'];
@@ -46,6 +50,28 @@ class ProxyNodeCard extends StatelessWidget {
             onPressed: context.box.running ? onSelect : null),
         CommonPopupMenuItem(glyph: AppGlyphs.bolt, label: context.tr('Test latency'),
           onPressed: context.box.running && !testing ? onTest : null),
+        CommonPopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Copy link'), onPressed: () async {
+          final box = context.box;
+          try {
+            final link = await _link(context);
+            await Clipboard.setData(ClipboardData(text: link));
+            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Copied'))));
+          } catch (error) { box.report(error); }
+        }),
+        CommonPopupMenuItem(glyph: AppGlyphs.qrCode, label: context.tr('QR code'), onPressed: () async {
+          final box = context.box;
+          try {
+            final link = await _link(context);
+            if (context.mounted) openForm(context, BoxPage(title: 'QR code', children: [
+              Center(child: QrCodeView(data: link)),
+            ]));
+          } catch (error) { box.report(error); }
+        }),
+        CommonPopupMenuItem(glyph: AppGlyphs.upload, label: context.tr('Share'), onPressed: () async {
+          final box = context.box;
+          try { await box.call('share.text', {'content': await _link(context)}); }
+          catch (error) { box.report(error); }
+        }),
         CommonPopupMenuItem(glyph: AppGlyphs.info, label: context.tr('Details'), onPressed: () => openForm(context, BoxPage(title: 'Details', children: [
           DetailRows({'Name': node['tag'], 'Protocol': node['type'], 'Latency': delayText, 'Proxy groups': group['tag']}),
         ]))),

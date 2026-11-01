@@ -434,6 +434,8 @@ const _zh = <String, String>{
   'HTTP/3 only': '仅 HTTP/3',
   'HTTP/3 with fallback': 'HTTP/3 优先并回退',
   'HTTP/2 only': '仅 HTTP/2',
+  'One node will be imported.': '将导入 1 个节点。',
+  'nodes will be imported.': '个节点将被导入。',
 };
 
 extension BoxLocalization on BuildContext {

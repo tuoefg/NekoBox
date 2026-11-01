@@ -124,18 +124,10 @@ object Settings {
             set = { DataStore.startWithoutRuleSets = if (it == true) 1L else 0L },
         ),
         boolEntry("showDirectSpeed", get = { DataStore.showDirectSpeed }, set = { DataStore.showDirectSpeed = it }),
-        boolEntry("alwaysShowAddress", get = { DataStore.alwaysShowAddress }, set = { DataStore.alwaysShowAddress = it }),
         boolEntry(
             "showGroupInNotification",
             get = { DataStore.showGroupInNotification },
             set = { DataStore.showGroupInNotification = it },
-        ),
-        boolEntry("appendHttpProxy", Apply.Reload, true, { DataStore.appendHttpProxy }, { DataStore.appendHttpProxy = it }),
-        textEntry(
-            "httpProxyBypass",
-            Apply.Reload,
-            { DataStore.httpProxyBypass },
-            { DataStore.httpProxyBypass = it },
         ),
         boolEntry("allowBetaUpdate", get = { DataStore.allowBetaUpdate }, set = { DataStore.allowBetaUpdate = it }),
 
@@ -157,7 +149,13 @@ object Settings {
         // The system HTTP proxy Throne hands to apps: only the VPN service can do this, and only
         // from API 29, which is why the UI gates the switch on `systemProxy`.
         boolEntry("appendHttpProxy", Apply.Reload, true, { DataStore.appendHttpProxy }, { DataStore.appendHttpProxy = it }),
-        textEntry("httpProxyBypass", Apply.Reload, { DataStore.httpProxyBypass }, { DataStore.httpProxyBypass = it }),
+        // Stored upstream as one newline-separated string, but edited here as the list of lines it is.
+        listEntry(
+            "httpProxyBypass",
+            Apply.Reload,
+            { DataStore.httpProxyBypass.lineSequence().filter(String::isNotBlank).toList() },
+            { DataStore.httpProxyBypass = it.joinToString("\n") },
+        ),
         textEntry("customInbound", Apply.Reload, { DataStore.customInbound }, { DataStore.customInbound = it }),
 
         // --- TUN ----------------------------------------------------------------------------------

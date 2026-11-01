@@ -5,7 +5,10 @@ import io.nekohasekai.sagernet.database.GroupRepo
 import io.nekohasekai.sagernet.database.ProfileManager
 import io.nekohasekai.sagernet.database.ProxyGroup
 import io.nekohasekai.sagernet.database.SagerDatabase
+import io.nekohasekai.sagernet.database.SettingsMapper
 import io.nekohasekai.sagernet.group.SubscriptionQueue
+import io.nekohasekai.sagernet.outbound.Outbound
+import io.nekohasekai.sagernet.outbound.import.ProfileImport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -51,6 +54,10 @@ object BboxProfiles {
     /**
      * Creates or renames a group. [url] empty means a local list; otherwise it is a subscription, which immediately
      * fetches so the card is not empty in front of the user.
+     *
+     * A new local group may also carry `content`: one share link, a base64 subscription, or a whole JSON/YAML
+     * document. It is parsed with Throne's own importer *before* the group is created, so an invalid import leaves
+     * nothing behind, and its outbounds become the group's nodes.
      */
     suspend fun save(values: Map<String, Any?>): Long = withContext(Dispatchers.IO) {
         val id = (values["id"] as? Number)?.toLong() ?: 0L
@@ -58,18 +65,34 @@ object BboxProfiles {
         val url = values["url"] as? String
         val autoUpdate = values["autoUpdate"] as? Boolean
         val interval = (values["interval"] as? Number)?.toInt()
+        val content = values["content"] as? String
 
         val group = (if (id > 0L) GroupRepo.get(id) else null) ?: ProxyGroup()
-        if (name != null) group.name = name
+        if (name != null) group.name = name.trim()
         if (url != null) group.url = url.trim()
         if (autoUpdate != null) group.skipAutoUpdate = !autoUpdate
         if (interval != null) group.subOptions.updateInterval = interval.coerceAtLeast(0)
+
+        // `{}` is the editor's own "new empty group" seed, not an import to parse.
+        val import = if (id <= 0L && !group.isSubscription) {
+            val text = content?.trim().orEmpty()
+            if (text.isEmpty() || text == "{}") emptyList() else parseOutbounds(text)
+        } else {
+            emptyList()
+        }
+        if (group.name.isNullOrBlank() && import.size == 1) group.name = import.single().displayName()
 
         val saved = if (group.id > 0L) {
             GroupRepo.save(group)
             group.id
         } else {
             GroupRepo.add(group).id
+        }
+        if (import.isNotEmpty()) {
+            val added = ProfileManager.addProfileBatch(import, saved)
+            GroupRepo.setCurrent(saved)
+            // A single imported node is what the user asked to use; a whole subscription stays unselected until chosen.
+            added.singleOrNull()?.let { BboxCommands.select(it.id) }
         }
         if (group.isSubscription) {
             runCatching { SubscriptionQueue.refreshGroup(saved, showDiff = false) }
@@ -79,11 +102,12 @@ object BboxProfiles {
     }
 
     /**
-     * Turns a URI into something the editor can open. Subscriptions arrive either as a plain link or wrapped by the
-     * core's own `sing-box://import-remote-profile`, and a QR payload can also be a whole configuration, which becomes
-     * a local profile rather than a subscription.
+     * Turns imported text into something the editor can open. Subscriptions arrive either as a plain link or wrapped
+     * by the core's own `sing-box://import-remote-profile`; anything else — a share link, a base64 subscription, a
+     * JSON or YAML document — goes through Throne's importer, so a single `ss://`/`vmess://`/`vless://` node opens
+     * with its own name instead of failing the sing-box JSON check.
      */
-    fun decodeIntent(uri: String): Map<String, Any?> {
+    suspend fun decodeIntent(uri: String): Map<String, Any?> = withContext(Dispatchers.IO) {
         val raw = uri.trim()
         val wrapped = if (raw.startsWith("sing-box://import-remote-profile", ignoreCase = true)) {
             val query = raw.substringAfter('?')
@@ -94,16 +118,44 @@ object BboxProfiles {
         } else null
         val target = wrapped ?: raw
         val remote = target.startsWith("http://", ignoreCase = true) || target.startsWith("https://", ignoreCase = true)
-        val name = if (remote) runCatching { java.net.URI(target).host }.getOrNull().orEmpty() else ""
-        return mapOf(
-            "name" to name,
-            "url" to if (remote) target else "",
-            "remote" to remote,
-            "autoUpdate" to remote,
+        if (remote) {
+            val name = runCatching { java.net.URI(target).host }.getOrNull().orEmpty()
+            return@withContext mapOf(
+                "name" to name,
+                "url" to target,
+                "remote" to true,
+                "autoUpdate" to true,
+                "interval" to 0,
+                "content" to "",
+            )
+        }
+        val outbounds = parseOutbounds(target)
+        mapOf(
+            "name" to outbounds.first().displayName(),
+            "url" to "",
+            "remote" to false,
+            "autoUpdate" to false,
             "interval" to 0,
-            "content" to if (remote) "" else target,
+            "content" to target,
+            "nodeCount" to outbounds.size,
         )
     }
+
+    /** The share link of one node, falling back to Throne's loss-less JSON link when the protocol has no standard URI. */
+    suspend fun nodeLink(groupTag: String, nodeTag: String, jsonLink: Boolean = false): String =
+        withContext(Dispatchers.IO) {
+            val group = GroupRepo.all().firstOrNull { it.displayName() == groupTag }
+                ?: error("No proxy group named $groupTag")
+            val profile = ProfileManager.members(group.id).firstOrNull { it.displayName() == nodeTag }
+                ?: error("No proxy named $nodeTag in ${group.displayName()}")
+            val link = if (jsonLink) {
+                profile.exportJsonLink()
+            } else {
+                profile.exportLink().ifBlank { profile.exportJsonLink() }
+            }
+            if (link.isBlank()) error("${profile.displayName()} cannot be shared as a link")
+            link
+        }
 
     /** The group as the configuration editor's document. */
     suspend fun config(id: Long): Config = withContext(Dispatchers.IO) {
@@ -143,6 +195,19 @@ object BboxProfiles {
         GroupRepo.save(group)
         BboxBridge.scheduleRefresh(immediate = true)
         config(id)
+    }
+
+    /** Throne's own clipboard/file/QR parser, with the same global settings the native importer reads. */
+    private fun parseOutbounds(text: String): List<Outbound> {
+        val parsed = ProfileImport.parse(
+            text,
+            SettingsMapper.xrayVlessPreference(),
+            SettingsMapper.buildContext(),
+        )
+        if (parsed.outbounds.isEmpty()) {
+            error(parsed.messages.joinToString("\n").ifBlank { "No supported proxy node found" })
+        }
+        return parsed.outbounds
     }
 
     private suspend fun document(group: ProxyGroup): String {

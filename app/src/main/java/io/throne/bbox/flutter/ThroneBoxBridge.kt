@@ -19,6 +19,7 @@ import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.SettingsRegistry
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
+import io.nekohasekai.sagernet.outbound.OutboundFactory
 import io.nekohasekai.sagernet.ui.json.engine.JsonTree
 import io.nekohasekai.sagernet.ui.json.engine.SchemaStore
 import io.nekohasekai.sagernet.ui.json.engine.JsonFormatter
@@ -281,13 +282,19 @@ class ThroneBoxBridge(
                 }
                 "profiles.decodeIntent" -> {
                     val uri = call.argument<String>("uri").orEmpty()
-                    result.success(BboxProfiles.decodeIntent(uri))
+                    result.respond { BboxProfiles.decodeIntent(uri) }
+                }
+                "profiles.nodeLink" -> {
+                    val group = call.argument<String>("group").orEmpty()
+                    val tag = call.argument<String>("tag").orEmpty()
+                    val jsonLink = call.argument<Boolean>("json") == true
+                    result.respond { BboxProfiles.nodeLink(group, tag, jsonLink) }
                 }
                 "profiles.importFile" -> result.respond { importFile() }
                 "profiles.scan" -> {
                     val session = call.argument<String>("session").orEmpty()
                     val text = call.argument<String>("text").orEmpty()
-                    result.success(scanChunk(session, text))
+                    result.respond { scanChunk(session, text) }
                 }
                 "profiles.scan.close" -> {
                     scans.remove(call.argument<String>("session").orEmpty())
@@ -719,14 +726,19 @@ class ThroneBoxBridge(
      * Multi-frame QR payloads: the frames are concatenated until the result is something worth opening, and the
      * progress is reported so the screen can show a bar.
      */
-    private fun scanChunk(session: String, text: String): Map<String, Any?> {
+    private suspend fun scanChunk(session: String, text: String): Map<String, Any?> {
         val buffer = scans.getOrPut(session) { StringBuilder() }
         if (text.isNotBlank()) buffer.append(text)
         val assembled = buffer.toString().trim()
+        val firstLine = assembled.lineSequence().firstOrNull().orEmpty()
+        // Besides the subscription/JSON payloads, any node link the importer knows is complete on its own.
         val complete = assembled.startsWith("http://", true) ||
             assembled.startsWith("https://", true) ||
             assembled.startsWith("sing-box://", true) ||
-            assembled.startsWith("{")
+            assembled.startsWith("{") ||
+            firstLine.startsWith("throne://add/", true) ||
+            firstLine.startsWith("json://", true) ||
+            OutboundFactory.typeForScheme(firstLine) != null
         return if (complete) {
             scans.remove(session)
             mapOf(

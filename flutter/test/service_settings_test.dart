@@ -95,4 +95,53 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await events.close();
   });
+
+  testWidgets('the HTTP proxy bypass list renders the native newline string and saves lines', (tester) async {
+    // The default test window is wide enough for the side-sheet layout, where the page
+    // scrolls inside its own panel; a phone window keeps one full-page scrollable.
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
+    addTearDown(tester.binding.platformDispatcher.clearLocalesTestValue);
+    const channel = MethodChannel('test.http-proxy-settings');
+    final events = StreamController<dynamic>.broadcast();
+    final settings = <String, dynamic>{
+      'serviceMode': 'vpn',
+      'appendHttpProxy': false,
+      // The setting is a newline string in Throne's store; the list editor must not choke on it.
+      'httpProxyBypass': 'localhost\n*.example.com',
+    };
+    final edits = <Json>[];
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'ready') return {'version': 'test', 'coreVersion': 'test',
+        'dashboard': {'status': 'Stopped'}, 'settings': settings};
+      if (call.method == 'settings.set') {
+        final args = json(call.arguments);
+        edits.add(args);
+        settings[args['key'] as String] = args['value'];
+        return settings;
+      }
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    final box = BoxController(channel: channel, events: events.stream);
+    await tester.pumpWidget(BoxApp(controller: box));
+    await tester.pumpAndSettle();
+    openPage(tester.element(find.byType(HomePage)), const InboundPage());
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Proxy bypass'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('localhost, *.example.com'), findsOneWidget);
+    await tester.tap(find.text('Proxy bypass'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'localhost\n10.0.0.0/8');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(edits.last, {'key': 'httpProxyBypass', 'value': ['localhost', '10.0.0.0/8']});
+    expect(find.text('localhost, 10.0.0.0/8'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await events.close();
+  });
 }

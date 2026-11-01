@@ -78,7 +78,13 @@ class SettingLines extends StatelessWidget {
   final bool autoRestart;
 
   @override Widget build(BuildContext context) {
-    final lines = ((context.box.settings[setting] as List?) ?? const []).cast<String>();
+    // Hosts have kept this setting as a newline string at times, so both shapes are accepted here.
+    final raw = context.box.settings[setting];
+    final lines = raw is List
+        ? raw.whereType<String>().toList()
+        : raw is String
+            ? raw.split('\n').map((line) => line.trim()).where((line) => line.isNotEmpty).toList()
+            : const <String>[];
     return ListItem(
       title: Text(context.tr(title)),
       subtitle: lines.isEmpty
@@ -90,38 +96,63 @@ class SettingLines extends StatelessWidget {
 
   Future<void> _edit(BuildContext context, List<String> lines) async {
     final box = context.box;
-    final controller = TextEditingController(text: lines.join('\n'));
-    final saved = await showDialog<bool>(
+    final saved = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(context.tr(title)),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (hint != null) Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(context.tr(hint!), style: Theme.of(context).textTheme.bodySmall),
-          ),
-          TextField(
-            controller: controller, minLines: 3, maxLines: 10, autocorrect: false,
-            keyboardType: TextInputType.multiline,
-            decoration: const InputDecoration(border: OutlineInputBorder()),
-          ),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
-        ],
+      builder: (context) => _LinesEditor(
+        title: context.tr(title),
+        hint: hint == null ? null : context.tr(hint!),
+        initial: lines.join('\n'),
       ),
     );
-    if (saved == true) {
-      final value = controller.text
+    if (saved != null) {
+      final value = saved
           .split('\n')
           .map((line) => line.trim())
           .where((line) => line.isNotEmpty)
           .toList();
       box.setSetting(setting, value, autoRestart: autoRestart);
     }
-    controller.dispose();
   }
+}
+
+/// The editor body owns its controller so the dialog's closing animation can still
+/// touch the [TextField] after the pop future completes.
+class _LinesEditor extends StatefulWidget {
+  const _LinesEditor({required this.title, required this.initial, this.hint});
+  final String title;
+  final String initial;
+  final String? hint;
+  @override
+  State<_LinesEditor> createState() => _LinesEditorState();
+}
+
+class _LinesEditorState extends State<_LinesEditor> {
+  late final TextEditingController _controller = TextEditingController(text: widget.initial);
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (widget.hint != null) Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Text(widget.hint!, style: Theme.of(context).textTheme.bodySmall),
+      ),
+      TextField(
+        controller: _controller, minLines: 3, maxLines: 10, autocorrect: false,
+        keyboardType: TextInputType.multiline,
+        decoration: const InputDecoration(border: OutlineInputBorder()),
+      ),
+    ]),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
+      TextButton(onPressed: () => Navigator.pop(context, _controller.text), child: Text(context.tr('Save'))),
+    ],
+  );
 }
 
 // --------------------------------------------------------------------------------------------- inbound

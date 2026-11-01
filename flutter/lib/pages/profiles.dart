@@ -238,11 +238,9 @@ class _AddProfilePageState extends State<AddProfilePage> {
 }
 
 Future<Json> decodeImport(BoxController box, String text) async {
-  if (text.startsWith('https://') || text.startsWith('http://') || text.startsWith('sing-box://')) {
-    return json(await box.call('profiles.decodeIntent', {'uri': text}));
-  }
-  await box.call('config.check', {'content': text});
-  return {'name': 'Imported profile', 'content': text};
+  // The host runs Throne's own importer: share links, base64 subscriptions and JSON/YAML documents
+  // all come back as the same editor draft, and invalid text reports the importer's own reason.
+  return json(await box.call('profiles.decodeIntent', {'uri': text.trim()}));
 }
 
 class ProfileForm extends StatefulWidget {
@@ -292,6 +290,7 @@ class _ProfileFormState extends State<ProfileForm> {
   }
   @override Widget build(BuildContext context) {
     final issue = _attempted ? _issue : null;
+    final imported = (widget.initial['nodeCount'] as num?)?.toInt();
     return FormPage(
       title: widget.initial['id'] == null ? 'Add profile' : 'Edit',
       saving: _saving, onSave: _save, error: issue?.message,
@@ -306,7 +305,11 @@ class _ProfileFormState extends State<ProfileForm> {
             trailing: FormRowTextField(controller: _url, hintText: context.tr('Required'),
               keyboardType: TextInputType.url, textInputAction: TextInputAction.next,
               autocorrect: false, enableSuggestions: false, onChanged: _changed)),
-        ], footer: _remote ? context.tr('This URL must serve a sing-box JSON configuration.') : null),
+        ], footer: _remote
+            ? context.tr('This URL must serve a sing-box JSON configuration.')
+            : imported == null ? null : imported == 1
+                ? context.tr('One node will be imported.')
+                : '$imported ${context.tr('nodes will be imported.')}'),
         if (_remote) generateSection(items: [
           FormRow(title: context.tr('Auto update'), onPressed: () => setState(() => _auto = !_auto),
             trailing: CommonSwitch(value: _auto, onChanged: (value) => setState(() => _auto = value))),
