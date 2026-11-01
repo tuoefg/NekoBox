@@ -1,3 +1,13 @@
+#### 2.1.0
+
+* Add the B-box Flutter interface as the primary UI (FlClash 0.9.2 presentation over Throne's core); the old Fragment UI stays for one more series
+* Route profiles: a rules editor (custom and simple address rules, endpoint preferred-by), the routeprofiles rule-set picker, official preset profiles by country, restore-default rules, and read-only built-in profiles
+* Settings: the full Throne surface (inbound, TUN, DNS, routing, WARP, core, testing, presets, subscriptions, updates) with restore-defaults on every page and a restart only when a change needs one
+* DNS fields offer the preset servers and the typed history; selecting a configuration now drives the proxies screen and hot-switches the running service
+* The configuration document is the group's node list; DNS, routing rules and log settings are app settings, as in Throne
+* Close the audited review leftovers: package-name validation on clipboard imports, redacted log exports, off-main-thread app scans and connection closing, safe file pickers, single-delivery intents, and repository-wide LF line endings
+* Establish the parity gap audit (openspec/changes/bbox-full-parity) with two diagnostics: the settings three-column diff and the AAR API reference scanner
+
 #### 2.0.4
 
 * Add DNS settings to routing profiles **1**
