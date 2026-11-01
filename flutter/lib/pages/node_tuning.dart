@@ -1,9 +1,9 @@
 import '../widgets.dart';
 import '../components/form.dart';
 
-/// The per-node overrides for mux, TLS fragment and TLS tricks — the same three the native editor
-/// keeps under the profile's own settings. Mux is Keep Default / On / Off / Custom; the other two
-/// are Keep Default / On / Off. Anything the protocol has no field for is left out.
+/// The per-node overrides for mux, Xray multiplex, TLS fragment and TLS tricks — the same ones the
+/// native editor keeps under the profile's own settings. Both muxes are Keep Default / On / Off /
+/// Custom; the other two are Keep Default / On / Off. Anything the protocol has no field for is left out.
 class NodeTuningPage extends StatefulWidget {
   const NodeTuningPage({super.key, required this.id});
   final int id;
@@ -54,15 +54,17 @@ class _NodeTuningPageState extends State<NodeTuningPage> {
       return FormPage(title: 'Node tuning', onSave: () {}, saving: true, children: const []);
     }
     final hasMux = _info['hasMux'] == true;
+    final hasXrayMux = _info['hasXrayMux'] == true;
     final hasTls = _info['hasTls'] == true;
     final muxState = (_info['muxState'] as num?)?.toInt() ?? 0;
+    final xrayMuxState = (_info['xrayMuxState'] as num?)?.toInt() ?? 0;
     return FormPage(
       title: 'Node tuning',
       saving: _saving,
       onSave: _save,
       error: _error,
       children: [
-        if (!hasMux && !hasTls)
+        if (!hasMux && !hasXrayMux && !hasTls)
           generateSection(items: [
             ListItem(title: Text(context.tr('This protocol has no tunable options'))),
           ]),
@@ -115,6 +117,41 @@ class _NodeTuningPageState extends State<NodeTuningPage> {
             ],
           ],
         ]),
+        if (hasXrayMux) generateSection(title: context.tr('Xray multiplex'), items: [
+          ListItem(
+            title: Text(context.tr('Xray multiplex')),
+            trailing: Text(context.tr(_muxStateName(xrayMuxState))),
+            onTap: () async {
+              final picked = await showDialog<int>(context: context, builder: (context) => SimpleDialog(
+                title: Text(context.tr('Xray multiplex')),
+                children: [
+                  for (final (value, label) in [(0, 'Keep default'), (1, 'On'), (2, 'Off'), (3, 'Custom')])
+                    SimpleDialogOption(onPressed: () => Navigator.pop(context, value), child: Text(context.tr(label))),
+                ],
+              ));
+              if (picked != null) _set('xrayMuxState', picked);
+            },
+          ),
+          if (xrayMuxState == 3) ...[
+            _number('Concurrency', 'xrayMuxConcurrency', unit: '0 = Xray default 8'),
+            _number('Max connections', 'xrayMuxMaxConnections', unit: '0 = unbounded'),
+            _number('XUDP concurrency', 'xrayMuxXudpConcurrency'),
+            ListItem(
+              title: Text(context.tr('XUDP proxy UDP/443')),
+              trailing: Text(_info['xrayMuxXudpProxyUDP443']?.toString().isNotEmpty == true ? '${_info['xrayMuxXudpProxyUDP443']}' : 'reject'),
+              onTap: () async {
+                final picked = await showDialog<String>(context: context, builder: (context) => SimpleDialog(
+                  title: Text(context.tr('XUDP proxy UDP/443')),
+                  children: [
+                    for (final value in const ['reject', 'allow', 'skip'])
+                      SimpleDialogOption(onPressed: () => Navigator.pop(context, value), child: Text(value)),
+                  ],
+                ));
+                if (picked != null) _set('xrayMuxXudpProxyUDP443', picked);
+              },
+            ),
+          ],
+        ], footer: context.tr('Xray-core multiplex (smux over Xray transports). Counts are -1 to 32767.')),
         if (hasTls) generateSection(title: context.tr('Fragment'), items: [
           ListItem(
             title: Text(context.tr('Fragment')),

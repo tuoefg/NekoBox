@@ -593,6 +593,9 @@ const _zh = <String, String>{
   'Mux max streams': 'Mux 最大流数',
   'Fragment fallback delay': '分片回退延迟',
   'Mixed-case SNI and other tricks, applied when the node is dialed.': '大小写混合 SNI 等伪装，在拨号该节点时生效。',
+  '0 = Xray default 8': '0 = Xray 默认 8',
+  '0 = unbounded': '0 = 不限',
+  'Xray-core multiplex (smux over Xray transports). Counts are -1 to 32767.': 'Xray-core 复用（Xray 传输上的 smux）。计数范围 -1 到 32767。',
 };
 
 extension BoxLocalization on BuildContext {

@@ -13,6 +13,9 @@ import io.nekohasekai.sagernet.outbound.Outbound
 import io.nekohasekai.sagernet.outbound.common.MUX_CUSTOM
 import io.nekohasekai.sagernet.outbound.common.Multiplex
 import io.nekohasekai.sagernet.outbound.common.Tls
+import io.nekohasekai.sagernet.outbound.common.XRAY_MUX_MAX_COUNT
+import io.nekohasekai.sagernet.outbound.common.XrayMultiplex
+import io.nekohasekai.sagernet.outbound.common.xrayXudpProxyUDP443Modes
 import io.nekohasekai.sagernet.outbound.import.ProfileImport
 import io.nekohasekai.sagernet.outbound.types.AutoSelector
 import kotlinx.coroutines.Dispatchers
@@ -325,12 +328,15 @@ object BboxProfiles {
         val muxField = outbound.javaClass.fields.firstOrNull { it.name == "multiplex" }
         val tlsField = outbound.javaClass.fields.firstOrNull { it.name == "tls" }
         val hasMux = muxField?.type == Multiplex::class.java
+        val hasXrayMux = muxField?.type == XrayMultiplex::class.java
         val hasTls = tlsField?.type == Tls::class.java
         val mux = outbound.getMux()
+        val xmux = outbound.getXrayMultiplex()
         val tls = outbound.getTls()
         mapOf(
             "id" to id,
             "hasMux" to hasMux,
+            "hasXrayMux" to hasXrayMux,
             "hasTls" to hasTls,
             "muxState" to mux.getMuxState(),
             "muxProtocol" to mux.protocol,
@@ -341,6 +347,11 @@ object BboxProfiles {
             "muxBrutal" to mux.brutal.enabled,
             "muxBrutalUp" to mux.brutal.up_mbps,
             "muxBrutalDown" to mux.brutal.down_mbps,
+            "xrayMuxState" to xmux.getMuxState(),
+            "xrayMuxConcurrency" to xmux.concurrency,
+            "xrayMuxMaxConnections" to xmux.maxConnections,
+            "xrayMuxXudpConcurrency" to xmux.xudpConcurrency,
+            "xrayMuxXudpProxyUDP443" to xmux.xudpProxyUDP443,
             "fragmentState" to when {
                 tls.fragment_unspecified -> 0
                 tls.fragment -> 1
@@ -360,7 +371,9 @@ object BboxProfiles {
     suspend fun nodeTuningSave(id: Long, values: Map<String, Any?>): Map<String, Any?> = withContext(Dispatchers.IO) {
         val profile = ProfileManager.getProfile(id) ?: error("No proxy with id $id")
         val outbound = profile.outbound
+        val muxField = outbound.javaClass.fields.firstOrNull { it.name == "multiplex" }
         val mux = outbound.getMux()
+        val xmux = outbound.getXrayMultiplex()
         val tls = outbound.getTls()
         intOf(values, "muxState")?.let { state ->
             mux.saveMuxState(state)
@@ -373,6 +386,18 @@ object BboxProfiles {
                 (values["muxBrutal"] as? Boolean)?.let { mux.brutal.enabled = it }
                 intOf(values, "muxBrutalUp")?.let { mux.brutal.up_mbps = it.coerceAtLeast(0) }
                 intOf(values, "muxBrutalDown")?.let { mux.brutal.down_mbps = it.coerceAtLeast(0) }
+            }
+        }
+        if (muxField?.type == XrayMultiplex::class.java) intOf(values, "xrayMuxState")?.let { state ->
+            xmux.saveMuxState(state)
+            if (state == MUX_CUSTOM) {
+                intOf(values, "xrayMuxConcurrency")?.let { xmux.concurrency = it.coerceIn(-1, XRAY_MUX_MAX_COUNT) }
+                intOf(values, "xrayMuxMaxConnections")?.let { xmux.maxConnections = it.coerceIn(-1, XRAY_MUX_MAX_COUNT) }
+                intOf(values, "xrayMuxXudpConcurrency")?.let { xmux.xudpConcurrency = it.coerceIn(-1, XRAY_MUX_MAX_COUNT) }
+                (values["xrayMuxXudpProxyUDP443"] as? String)?.let { value ->
+                    val mode = value.trim()
+                    if (mode.isEmpty() || mode in xrayXudpProxyUDP443Modes) xmux.xudpProxyUDP443 = mode
+                }
             }
         }
         intOf(values, "fragmentState")?.let { state ->
