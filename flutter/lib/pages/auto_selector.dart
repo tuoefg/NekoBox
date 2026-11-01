@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../widgets.dart';
 import '../components/form.dart';
 
@@ -17,11 +19,20 @@ class _AutoSelectorPageState extends State<AutoSelectorPage> {
   bool _saving = false;
   String? _error;
   final Set<int> _gids = {};
+  Timer? _statusTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    // The status is a live read: while the page is open it keeps itself current.
+    _statusTimer = Timer.periodic(const Duration(seconds: 3), (_) => _loadStatus());
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -220,11 +231,12 @@ class _AutoSelectorPageState extends State<AutoSelectorPage> {
   /// The live view of the running selector: its phase and selection, then the ranked members,
   /// each one pin-able. A stopped service has no members to show.
   List<Widget> _statusSection(BuildContext context) {
+    final autoNote = context.tr('Refreshes every few seconds while this page is open.');
     final phase = _status['phase']?.toString() ?? 'idle';
     if (phase == 'idle') {
       return [generateSection(items: [
         ListItem(title: Text(context.tr('Status')), subtitle: Text(context.tr('Not running'))),
-      ])];
+      ], footer: autoNote)];
     }
     final members = (_status['members'] as List? ?? const []).map((e) => json(e)).toList();
     final pinnedId = (_status['pinned_id'] as num?)?.toInt() ?? -1;
@@ -240,7 +252,7 @@ class _AutoSelectorPageState extends State<AutoSelectorPage> {
           '${_status['members_alive'] ?? 0} alive · ${_status['members_qualified'] ?? 0} qualified · ${_status['members_cooldown'] ?? 0} cooldown')),
         ListItem(leading: const GlyphIcon(AppGlyphs.bolt), title: Text(context.tr('Recheck now')),
           onTap: _recheck),
-      ]),
+      ], footer: autoNote),
       if (members.isNotEmpty)
         generateSection(title: context.tr('Ranking'), items: [
           for (final member in members)
