@@ -36,7 +36,7 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
       final data = json(await context.box.call('profiles.nodeConfig', {'id': widget.id}));
       if (!mounted) return;
       _name.text = data['name']?.toString() ?? '';
-      final decoded = convert.jsonDecode(data['json']?.toString() ?: '{}');
+      final decoded = convert.jsonDecode(data['json']?.toString() ?? '{}');
       setState(() { _root = json(decoded); _loading = false; });
     } catch (error) {
       if (mounted) setState(() { _error = BoxController.describe(error); _loading = false; });
@@ -163,7 +163,9 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
   bool get _supported => const ['shadowsocks', 'vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'wireguard'].contains(_type);
 
   List<_Section> _schemas() => switch (_type) {
-    'shadowsocks' => [(_basic() + _Section(null, [
+    'shadowsocks' => [
+      ..._basic(),
+      _Section(null, [
         _Field('method', 'Method', 'choice', choices: [
           for (final method in const [
             'none', '2022-blake3-aes-128-gcm', '2022-blake3-aes-256-gcm', '2022-blake3-chacha20-poly1305',
@@ -176,8 +178,11 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
         _Field('plugin', 'Plugin', 'text'),
         _Field('plugin_opts', 'Plugin options', 'text'),
         _Field('uot', 'UDP over TCP', 'bool'),
-      ]))],
-    'vmess' => [(_basic() + _Section(null, [
+      ]),
+    ],
+    'vmess' => [
+      ..._basic(),
+      _Section(null, [
         _Field('uuid', 'UUID', 'text', required: true),
         _Field('security', 'Encryption', 'choice', choices: const [
           ('auto', 'auto'), ('none', 'none'), ('zero', 'zero'),
@@ -188,15 +193,33 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
             choices: const [('', 'Default'), ('packetaddr', 'packetaddr'), ('xudp', 'xudp')]),
         _Field('global_padding', 'Global padding', 'bool'),
         _Field('authenticated_length', 'Authenticated length', 'bool'),
-      ]) + _Section('Transport', _transportBlock()) + _Section('TLS', _tlsBlock(mustTls: false)) + _Section('Multiplex', _muxBlock()))],
-    'vless' => [(_basic() + _Section(null, [
+      ]),
+      _Section('Transport', _transportBlock()),
+      _Section('TLS', _tlsBlock(mustTls: false)),
+      _Section('Multiplex', _muxBlock()),
+    ],
+    'vless' => [
+      ..._basic(),
+      _Section(null, [
         _Field('uuid', 'UUID', 'text', required: true),
         _Field('flow', 'Flow', 'choice', choices: const [('none', 'none'), ('xtls-rprx-vision', 'xtls-rprx-vision')]),
-      ]) + _Section('Transport', _transportBlock()) + _Section('TLS', _tlsBlock(mustTls: false)) + _Section('Multiplex', _muxBlock()))],
-    'trojan' => [(_basic() + _Section(null, [
+      ]),
+      _Section('Transport', _transportBlock()),
+      _Section('TLS', _tlsBlock(mustTls: false)),
+      _Section('Multiplex', _muxBlock()),
+    ],
+    'trojan' => [
+      ..._basic(),
+      _Section(null, [
         _Field('password', 'Password', 'password', required: true),
-      ]) + _Section('Transport', _transportBlock()) + _Section('TLS', _tlsBlock(mustTls: true)) + _Section('Multiplex', _muxBlock()))],
-    'tuic' => [(_basic() + _Section(null, [
+      ]),
+      _Section('Transport', _transportBlock()),
+      _Section('TLS', _tlsBlock(mustTls: true)),
+      _Section('Multiplex', _muxBlock()),
+    ],
+    'tuic' => [
+      ..._basic(),
+      _Section(null, [
         _Field('uuid', 'UUID', 'text', required: true),
         _Field('password', 'Password', 'password'),
         _Field('congestion_control', 'Congestion control', 'choice',
@@ -206,8 +229,13 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
         _Field('udp_over_stream', 'UDP over stream', 'bool'),
         _Field('zero_rtt_handshake', 'Zero RTT handshake', 'bool'),
         _Field('heartbeat', 'Heartbeat', 'text'),
-      ]) + _Section('TLS', _tlsBlock(mustTls: true)) + _Section('QUIC', _quicBlock()))],
-    'hysteria' => [(_basic() + _Section(null, [
+      ]),
+      _Section('TLS', _tlsBlock(mustTls: true)),
+      _Section('QUIC', _quicBlock()),
+    ],
+    'hysteria' => [
+      ..._basic(),
+      _Section(null, [
         _Field('protocol_version', 'Protocol version', 'choice', choices: const [('1', 'Hysteria 1'), ('2', 'Hysteria 2')]),
         _Field('auth_type', 'Auth type', 'choice', choices: const [('', 'Default'), ('base64', 'base64'), ('string', 'string')], showIf: ('protocol_version', '1')),
         _Field('auth', 'Auth', 'password', showIf: ('protocol_version', '1')),
@@ -219,8 +247,12 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
         _Field('down_mbps', 'Down (Mbps)', 'int', showIf: ('protocol_version', '2')),
         _Field('server_ports', 'Server ports', 'lines', showIf: ('protocol_version', '2')),
         _Field('hop_interval', 'Hop interval', 'text', showIf: ('protocol_version', '2')),
-      ]) + _Section('TLS', _tlsBlock(mustTls: true)) + _Section('QUIC', _quicBlock()))],
-    'wireguard' => [(_Section(null, [
+      ]),
+      _Section('TLS', _tlsBlock(mustTls: true)),
+      _Section('QUIC', _quicBlock()),
+    ],
+    'wireguard' => [
+      _Section(null, [
         _Field('name', 'Name', 'name'),
         _Field('peer.address', 'Endpoint address', 'text', required: true),
         _Field('peer.port', 'Endpoint port', 'int', required: true),
@@ -232,7 +264,8 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
         _Field('peer.persistent_keepalive', 'Persistent keepalive', 'int'),
         _Field('mtu', 'MTU', 'int'),
         _Field('system', 'System interface', 'bool'),
-      ]))],
+      ]),
+    ],
     _ => [],
   };
 
@@ -417,14 +450,14 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
   /// rest cleared, custom = enabled with the fields as shown.
   void _applyMuxState(String state) {
     switch (state) {
-      case '', 'on':
+      case '' || 'on':
         _set('multiplex', state == 'on' ? <String, dynamic>{'enabled': true} : null);
       case 'off':
         _set('multiplex', <String, dynamic>{'enabled': false});
       case 'custom':
         _set('multiplex', {
           'enabled': true,
-          'protocol': _text('multiplex.protocol').ifEmpty { 'h2mux' },
+          'protocol': _text('multiplex.protocol').isEmpty ? 'h2mux' : _text('multiplex.protocol'),
           if (_muxMode == 'connections') 'max_connections': _int('multiplex.max_connections'),
           'min_streams': _int('multiplex.min_streams'),
           'padding': _bool('multiplex.padding'),

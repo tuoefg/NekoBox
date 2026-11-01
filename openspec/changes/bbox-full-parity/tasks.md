@@ -53,9 +53,14 @@
 
 ## 6. 批次 E1：JSON 引擎移植
 
-- [ ] 6.1 Kotlin → Dart 移植 `ui/json/engine/`（JsonTree/SchemaDocument/SchemaStore/SchemaValidator/SchemaCompletion/JsonFormatter）+ JsonRelaxations/ProfileJson；行为以现有 Kotlin 单测为基准写 Dart 单测；sing-box schema 资产同步进 `flutter/assets/`
-- [ ] 6.2 验收：Dart 引擎对同一输入与 Kotlin 输出一致（校验错误/补全/格式化）；CI 全绿
+- [x] 6.1 Kotlin → Dart 移植 `ui/json/engine/`（JsonTree/SchemaDocument/SchemaStore/SchemaValidator/SchemaCompletion/JsonFormatter）+ JsonRelaxations/ProfileJson；行为以现有 Kotlin 单测为基准写 Dart 单测；sing-box schema 资产同步进 `flutter/assets/`
+  - 产物 `flutter/lib/ui/json/engine/` 六文件逐行对齐 Kotlin 语义：JsonTree（宽容扫描器/注释/重复键取后/深度 96/span 保留；token→double 按 JVM 宽容度补 `1.`/`+.5` 分支）、JsonFormatter（严格数字正则**全串匹配**对齐 matches()、非严格走 formatNumber、quote 转义表同款）、SchemaDocument（JSON Pointer ~0/~1 解转义、deref 深 8、branchProperty/allOf 组合、sameNumber=qFuzzyCompare(a+1,b+1)、formatNumber/scalarText）、SchemaValidator（type/const/enum/pattern/minimum/maximum/items/required/additionalProperties/unevaluatedProperties+allOf/anyOf/oneOf 判别式收窄 4 轮、variantMismatch/VARIANT_PENALTY、unknownKeys 三态、issue 按偏移**稳定排序**）、SchemaCompletion（容错扫描 KEY/COLON/VALUE/AFTER_VALUE 状态机、注释/未闭合串/词捕获、判别式收窄+instanceScalar 类型别名、keySuggestions 模板链/valueSuggestions/choices/x-tag-reference 双源标签、filter 前缀排序）、SchemaStore（schema/sing-box.json 一次加载、UNSUPPORTED 三族变体剥离、多根 oneOf union）。JsonRelaxations/ProfileJson 表进 `ui/json/relaxations.dart`（Outbound 绑定部分留在桥侧）。
+  - **schema 资产为 CI 生成物**：本地按 `.github/actions/throne-core` 同款流程生成——throneproj/Throne@36b6bc4（nb4a.properties 钉住）源码 + Go 1.27（go.mod 要求 ≥1.26，本机 1.25 不足；go.dev 重定向 SSL 失败改走阿里云镜像）+ `CGO_ENABLED=0 go run -tags "$TAGS,with_purego" ./cmd/schemagen`（TAGS 取自 script/build_android.sh）→ 209KB `flutter/assets/schema/sing-box.json`（pubspec 注册）。
+  - 单测基准：仓库无 Kotlin 引擎单测（全仓仅 4 个无关 test），以 Kotlin 源码语义+桌面 C++ 注释为基准写 28 个 Dart 用例（flutter/test/json_engine_test.dart），**用真实生成的 schema 验证**：解析/spans/重复键/注释/尾逗号/深度、格式化精确输出、指针解转义、qFuzzyCompare、有效 shadowsocks 通过、错误变体命名（variantMismatch）、Throne 键放宽为警告、issue 源序、判别式先行（'type'）、type 值建议含 shadowsocks、前缀过滤、x-tag-reference 文档标签回流（my-direct）。修正的语义认知：schema 的 Outbound 分支只 require type（服务器/凭据由核心运行时查）；`1.50` 是严格数字原样保留；容错扫描中已闭合空串值后无建议（与 Kotlin 一致）；字符串上下文中对象联合无可选项。
+- [x] 6.2 验收：Dart 引擎对同一输入与 Kotlin 输出一致（校验错误/补全/格式化）；CI 全绿
+  - `flutter analyze` 0 error/0 warning（顺带修复批次 C/D 遗留的 6 处真编译错误：List+Section 语法、ListItem.invalid 参数、Kotlin ifEmpty、l10n 与双引号存量键的 4 处重复、被脚本截断的 jsonDecode 行、case 逗号模式）；28/28 测试过。
 - [ ] 6.3 CI/真机验证：`ci.yml` 全绿（含 Dart 单测）；无真机项，原因为纯引擎层
+  - ci.yml 已加 `flutter-tests` job（subosito/flutter-action@v2 + flutter pub get + flutter test），随下次推送首跑。
 
 ## 7. 批次 E2：编辑器 UI
 

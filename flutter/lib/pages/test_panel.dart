@@ -93,7 +93,7 @@ class _TestPanelPageState extends State<TestPanelPage> {
       final list = sample as List;
       return [((list[0] as num).toDouble()), ((list[1] as num).toDouble()), list[2] == true];
     }).toList();
-    final peak = samples.fold<double>(1.0, (peak, sample) => math.max(peak, sample[1]));
+    final peak = samples.fold<double>(1.0, (peak, sample) => math.max(peak, (sample[1] as num).toDouble()));
     final bps = (value) => value > 1e6 ? '${(value / 1e6).toStringAsFixed(1)} Mbps' : '${(value / 1e3).toStringAsFixed(0)} kbps';
     return generateSection(title: context.tr('Testing now'), items: [
       DecorationListItem(contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), title: Column(
@@ -113,7 +113,7 @@ class _TestPanelPageState extends State<TestPanelPage> {
             Text('${speed['server']} (${speed['serverCountry']})', style: context.listCaptionStyle),
           SizedBox(height: 72, child: LineChart(
             key: ValueKey(speed['profileId']),
-            values: [for (final sample in samples) sample[1] / peak],
+            values: [for (final sample in samples) (sample[1] as double) / peak],
             revision: samples.length, capacity: 600, minScale: 0.1, baselineRatio: 1,
             color: context.colorScheme.primary,
           )),

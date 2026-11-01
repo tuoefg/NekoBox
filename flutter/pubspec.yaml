@@ -30,6 +30,7 @@ flutter:
     - assets/images/
     - assets/fonts/
     - assets/licenses/
+    - assets/schema/
   shaders:
     - shaders/liquid_glass.frag
   fonts:

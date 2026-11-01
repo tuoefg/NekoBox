@@ -85,7 +85,6 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
     }
   }
 
-  String _option(String key) => _options[key]?.toString() ?? '';
   int _optionInt(String key) => (_options[key] as num? ?? 0).toInt();
   bool _optionBool(String key) => _options[key] == true;
 
@@ -329,13 +328,13 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               ],
             ));
             if (picked != null) setState(() { _updateInterval.text = picked.trim(); if (_attempted) setState(() {}); });
-          }, invalid: issue?.field == 'updateInterval'),
+          }),
           _menuRow(context.tr('Server interval'), _serverIntervalLabel(), () => _pick(
             context.tr('Server interval'),
             [('0', context.tr('Keep default')), ('1', context.tr('Use server setting')), ('2', context.tr('Ignore server setting'))],
             '${_optionInt('respectServerInterval')}',
             (value) => _setOption('respectServerInterval', int.tryParse(value) ?? 0),
-          ), invalid: issue?.field == 'serverInterval'),
+          )),
         ], footer: context.tr('Empty fields keep the global subscription settings.')),
         if (_subscription) generateSection(title: context.tr('Device identity'), items: [
           _menuRow(context.tr('Send HWID'), switch (_optionInt('sendHwid')) {
