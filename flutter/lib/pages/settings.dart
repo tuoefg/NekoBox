@@ -38,6 +38,7 @@ class GeneralSettingsPage extends StatelessWidget {
         ListItem.open(leading: const GlyphIcon(AppGlyphs.proxies), title: Text(context.tr('WARP')), widget: const WarpPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.cpu), title: Text(context.tr('Core')), widget: const CorePage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.speed), title: Text(context.tr('Testing')), widget: const TestingPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.sliders), title: Text(context.tr('Node presets')), widget: const PresetsPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.profiles), title: Text(context.tr('Subscriptions')), widget: const SubscriptionPage()),
         if (caps.of('update'))
           ListItem.open(leading: const GlyphIcon(AppGlyphs.info), title: Text(context.tr('Updates')), widget: const UpdatePage()),

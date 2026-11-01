@@ -408,6 +408,82 @@ String _speedTestModeName(int value) => switch (value) {
   1 => 'Download', 2 => 'Upload', 3 => 'Simple download', 4 => 'Country', _ => 'Download and upload',
 };
 
+// ------------------------------------------------------------------------------------------ node presets
+
+const muxProtocols = ['h2mux', 'smux', 'yamux'];
+const muxModes = ['max_streams', 'max_connections'];
+const xrayXudpModes = ['reject', 'allow', 'skip'];
+const fragmentImplementations = ['built-in', 'custom'];
+const tlsSpoofMethods = ['', 'wrong-sequence', 'wrong-checksum', 'wrong-ack', 'wrong-md5', 'wrong-timestamp'];
+
+/// The defaults the importer stamps on the nodes it builds — Mux, Xray multiplex, fragment, TLS
+/// tricks, HTTP/2 tuning and the QUIC dialer. A running configuration is never rebuilt from these;
+/// they apply to the next import or creation, exactly as the native preset screen does.
+class PresetsPage extends StatelessWidget {
+  const PresetsPage({super.key});
+  @override Widget build(BuildContext context) {
+    final brutal = context.box.settings['muxBrutal'] == true;
+    return BoxPage(title: 'Node presets', children: [
+      generateSection(title: context.tr('Mux'), items: [
+        SettingChoice<String>('Mux protocol', 'muxProtocol', options: muxProtocols, text: (value) => value),
+        SettingChoice<String>('Mux mode', 'muxMode', options: muxModes, text: _muxModeName),
+        SettingNumber('Mux concurrency', 'muxConcurrency', min: 0),
+        SettingNumber('Mux max connections', 'muxMaxConnections', min: 0),
+        SettingNumber('Mux min streams', 'muxMinStreams', min: 0),
+        SettingToggle('Mux padding', 'muxPadding'),
+        SettingToggle('Brutal congestion', 'muxBrutal'),
+        if (brutal) ...[
+          SettingNumber('Brutal upload', 'muxBrutalUpMbps', min: 0, unit: 'Mbps'),
+          SettingNumber('Brutal download', 'muxBrutalDownMbps', min: 0, unit: 'Mbps'),
+        ],
+        SettingToggle('Enable Mux by default', 'muxDefaultOn'),
+      ], footer: context.tr('Applied when a node is imported, not to nodes already saved.')),
+      generateSection(title: context.tr('Xray multiplex'), items: [
+        SettingNumber('Concurrency', 'xrayMuxConcurrency', min: -1, max: 32767),
+        SettingNumber('Max connections', 'xrayMuxMaxConnections', min: 0, max: 32767),
+        SettingNumber('XUDP concurrency', 'xrayMuxXudpConcurrency', min: -1, max: 32767),
+        SettingChoice<String>('XUDP proxy UDP/443', 'xrayMuxXudpProxyUdp443', options: xrayXudpModes, text: (value) => value),
+        SettingToggle('Enable Xray Mux by default', 'xrayMuxDefaultOn'),
+      ]),
+      generateSection(title: context.tr('Fragment'), items: [
+        SettingToggle('Fragment by default', 'fragmentDefaultOn'),
+        SettingChoice<String>('Fragment implementation', 'fragmentImplementation',
+          options: fragmentImplementations, text: (value) => value),
+        SettingText('Fragment size', 'fragmentSize', hint: 'e.g. 10-100, empty uses the built-in range'),
+        SettingText('Fragment sleep', 'fragmentSleep', hint: 'e.g. 2-5, empty uses the built-in range'),
+      ]),
+      generateSection(title: context.tr('TLS tricks'), items: [
+        SettingToggle('TLS tricks by default', 'tlsTricksDefaultOn'),
+        SettingText('uTLS fingerprint', 'utlsFingerprint', hint: 'e.g. chrome, firefox, safari'),
+        SettingText('TLS spoof', 'tlsSpoof', hint: 'a SNI to offer instead of the real one'),
+        SettingChoice<String>('TLS spoof method', 'tlsSpoofMethod', options: tlsSpoofMethods, text: _tlsSpoofName),
+      ]),
+      generateSection(title: context.tr('HTTP/2'), items: [
+        SettingText('Idle timeout', 'h2IdleTimeout', hint: 'e.g. 5m, empty to use the core default'),
+        SettingText('Keep-alive period', 'h2KeepAlivePeriod', hint: 'e.g. 30s, empty to use the core default'),
+        SettingText('Stream receive window', 'h2StreamReceiveWindow'),
+        SettingText('Connection receive window', 'h2ConnectionReceiveWindow'),
+        SettingNumber('Max concurrent streams', 'h2MaxConcurrentStreams', min: 0),
+      ]),
+      generateSection(title: context.tr('QUIC'), items: [
+        SettingNumber('Initial packet size', 'quicInitialPacketSize', min: 0, unit: 'B'),
+        SettingToggle('Disable path MTU discovery', 'quicDisablePathMtuDiscovery'),
+      ]),
+    ]);
+  }
+}
+
+String _muxModeName(String value) => value == 'max_connections' ? 'Max connections' : 'Max streams';
+
+String _tlsSpoofName(String value) => switch (value) {
+  'wrong-sequence' => 'Wrong sequence',
+  'wrong-checksum' => 'Wrong checksum',
+  'wrong-ack' => 'Wrong acknowledgement',
+  'wrong-md5' => 'Wrong MD5',
+  'wrong-timestamp' => 'Wrong timestamp',
+  _ => 'Off',
+};
+
 // ---------------------------------------------------------------------------------------- subscriptions
 
 const subscriptionTlsVersions = [0, 1, 2];
