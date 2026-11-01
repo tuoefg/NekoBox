@@ -515,7 +515,8 @@ class WarpPage extends StatelessWidget {
         // Asked once at registration time upstream; accepting it here spares the prompt later.
         SettingToggle('Accept the Cloudflare license', 'warpTosAccepted'),
         SettingLines('API hosts', 'warpApiHosts', hint: 'Empty uses api.cloudflareclient.com'),
-      ]),
+        const _WarpRegisterRow(),
+      ], footer: context.tr('A generated identity fills the fields of the mode above. Enable WARP to route traffic through it.')),
     ]);
   }
 }
@@ -527,6 +528,62 @@ String _warpModeName(String value) => switch (value) {
 String _masqueHttpModeName(int value) => switch (value) {
   1 => 'HTTP/3 only', 2 => 'HTTP/2 only', _ => 'HTTP/3 with fallback',
 };
+
+/// The native "Generate" row (WarpSettingsScreen's KEY_GENERATE): registers an identity for the
+/// mode's tunnel type, saves the keys that mode uses and reloads the service when WARP is on.
+///
+/// The Cloudflare terms are asked once, as upstream's confirmTerms does — a second visit with the
+/// license already accepted goes straight to the registration.
+class _WarpRegisterRow extends StatefulWidget {
+  const _WarpRegisterRow();
+  @override
+  State<_WarpRegisterRow> createState() => _WarpRegisterRowState();
+}
+
+class _WarpRegisterRowState extends State<_WarpRegisterRow> {
+  bool _busy = false;
+
+  Future<void> _register() async {
+    final box = context.box;
+    if (box.settings['warpTosAccepted'] != true) {
+      final accepted = await confirm(
+        context,
+        'Cloudflare WARP',
+        message: 'Generating a WARP identity registers a new device with Cloudflare.\n\n'
+          'Do you accept the Cloudflare WARP terms of service?\n\n'
+          'https://www.cloudflare.com/application/terms/',
+        action: 'Accept',
+      );
+      if (!accepted || !mounted) return;
+      await box.setSetting('warpTosAccepted', true, restart: false);
+    }
+    if (!mounted) return;
+    setState(() => _busy = true);
+    try {
+      // MASQUE registers a MASQUE identity; the other two modes run WireGuard key material.
+      final masque = box.settings['warpMode']?.toString() == 'masque';
+      final answer = json(await box.call('warp.register', {'tunnelType': masque ? 'masque' : 'wireguard'}));
+      if (!mounted) return;
+      if (answer['reload'] == true) box.act('service.reload');
+      final packetsError = answer['packetsError']?.toString() ?? '';
+      final message = packetsError.isEmpty
+        ? 'Identity generated'
+        : 'Identity generated, the AmneziaWG packets failed: {error}'.replaceAll('{error}', packetsError);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr(message))));
+    } catch (error) {
+      box.report(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ListItem(
+    title: Text(context.tr('Generate identity')),
+    subtitle: Text(context.tr(_busy ? 'Generating…' : 'Registers a new identity and fills the fields above')),
+    onTap: _busy ? null : _register,
+  );
+}
 
 // ------------------------------------------------------------------------------------------------ core
 

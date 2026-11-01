@@ -629,6 +629,15 @@ const _zh = <String, String>{
   'Throne preset rules': 'Throne 预设规则',
   'Not a valid package name: {names}': '不是有效包名：{names}',
   'Failed to import.': '导入失败。',
+  'A generated identity fills the fields of the mode above. Enable WARP to route traffic through it.': '生成的身份凭证会填入上方所选模式的字段，开启 WARP 后即可使用。',
+  'Cloudflare WARP': 'Cloudflare WARP',
+  'Generating a WARP identity registers a new device with Cloudflare.\n\nDo you accept the Cloudflare WARP terms of service?\n\nhttps://www.cloudflare.com/application/terms/': '生成 WARP 身份凭证会向 Cloudflare 注册一台新设备。\n\n是否接受 Cloudflare WARP 服务条款？\n\nhttps://www.cloudflare.com/application/terms/',
+  'Accept': '接受',
+  'Generate identity': '生成身份凭证',
+  'Generating…': '正在生成…',
+  'Registers a new identity and fills the fields above': '注册新的身份凭证并填入上方字段',
+  'Identity generated': '身份凭证已生成',
+  'Identity generated, the AmneziaWG packets failed: {error}': '身份凭证已生成，但 AmneziaWG 数据包生成失败：{error}',
 };
 
 extension BoxLocalization on BuildContext {

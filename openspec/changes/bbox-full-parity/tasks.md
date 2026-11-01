@@ -65,8 +65,10 @@
 
 ## 9. 批次 G：WARP 管理
 
-- [ ] 9.1 桥接 `WarpRegistration.register(tunnelType, proxy, apiHosts)` + 注销 + 状态查询（读 `WarpRegistration.kt` 全 API）；Dart WARP 注册表单与流程
-- [ ] 9.2 完成后 `Capabilities.kt` `"warp" to true`；路由层 `OutboundIds.WARP_BYPASS` 已映射无需改
+- [x] 9.1 桥接 `WarpRegistration.register(tunnelType, proxy, apiHosts)` + 注销 + 状态查询（读 `WarpRegistration.kt` 全 API）；Dart WARP 注册表单与流程
+  - 落地形式与旧 UI 的差异甄别：旧 UI 注册流 = `WarpGenerate.confirmTerms`（ToS 一次确认持久化 `warp_tos_accepted`）→ `WarpClient.register(tunnelType)`（经 `CoreServiceClient` BIND_AUTO_CREATE，服务未运行也可注册）→ amnezia 模式追加 `generateCamouflage()` → `WarpSettingsScreen.fill()` 按模式写字段 → `reloadIfEnabled()`。注销与状态查询上游不存在（身份只存密钥材料，`isGenerated()` 即状态），不做发明。本批新增 `BboxWarp.register(tunnelType)`（IO 线程 register + amnezia packets + fill + reload 标志），`ThroneBoxBridge` 加 `warp.register` dispatch（respond 模式，注册后 emit settings 事件供 UI 回读），Dart WarpPage Registration 分区加 `_WarpRegisterRow`（ToS 确认框走房屋 `confirm` 助手，tunnelType 由 warpMode 推导：masque→masque 其余→wireguard，返回 `reload` 为真且运行中时 `service.reload`，`packetsError` 非空时提示，异常走 `box.report`）。
+- [x] 9.2 完成后 `Capabilities.kt` `"warp" to true`；路由层 `OutboundIds.WARP_BYPASS` 已映射无需改
+  - `Capabilities.kt` `"warp" to true` 已改（注释同步：warp.register 填字段、字段仍可编辑）；`OutboundIds.WARP_BYPASS` 批次 B/H 已映射，无需改动。
 - [ ] 9.3 CI/真机验证：`ci.yml` 全绿；真机完成一次注册并以 warp-bypass 规则路由，回传截图
 
 ## 10. 批次 H：路由收口

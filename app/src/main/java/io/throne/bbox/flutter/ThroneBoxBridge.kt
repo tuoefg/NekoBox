@@ -36,6 +36,7 @@ import io.throne.bbox.bridge.BboxEgress
 import io.throne.bbox.bridge.BboxLogs
 import io.throne.bbox.bridge.BboxProfiles
 import io.throne.bbox.bridge.BboxRoutes
+import io.throne.bbox.bridge.BboxWarp
 import io.throne.bbox.bridge.Capabilities
 import io.throne.bbox.bridge.Apply
 // Aliased: this file also uses android.provider.Settings for the battery-optimisation intents.
@@ -445,6 +446,18 @@ class ThroneBoxBridge(
                         need == Apply.Reload && DataStore.serviceState.canStop -> SagerNet.reloadService()
                     }
                     result.success(settingsWire())
+                }
+                // WARP registration: the identity is made in the core process and the keys of the
+                // chosen mode are saved by the bridge; the answer tells the UI whether a running
+                // service has to reload the configuration it just changed. The keys went straight
+                // to storage, so the settings event refreshes what the screen shows.
+                "warp.register" -> {
+                    val tunnelType = call.argument<String>("tunnelType") ?: error("Missing tunnel type")
+                    result.respond {
+                        val answer = BboxWarp.register(tunnelType)
+                        emit("settings", settingsWire())
+                        answer
+                    }
                 }
                 // The DNS server fields offer presets plus the servers typed before (DnsServerHistory::Fill).
                 "dns.suggestions" -> result.success(

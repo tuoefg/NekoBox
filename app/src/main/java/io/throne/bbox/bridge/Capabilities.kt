@@ -34,7 +34,7 @@ object Capabilities {
         "dnsObject" to false,      // no raw DNS object editor
         "routes" to true,          // RouteManager over routes.list/get/save/delete, see BboxRoutes
         "autoSelector" to true,    // type=autoselector nodes over profiles.autoSelector*, see BboxProfiles
-        "warp" to false,           // WARP is configured through the core, not a dedicated page
+        "warp" to true,            // warp.register fills the mode's keys; the fields stay editable, see BboxWarp
 
         // --- Throne has it ------------------------------------------------------------------------
         "connections" to true,     // core's own clash-api /connections, see BboxApi
