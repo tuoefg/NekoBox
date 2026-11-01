@@ -118,7 +118,7 @@
 | C | 组设置与订阅报告（profile-management / settings-storage 覆盖）；已完成：`groupSettings.get/set` 桥（旧编辑器同款校验与 save 语义，restart 即时 reload）+ `GroupSettingsPage` 全字段表单 + 订阅报告事件流（弹层/snackbar/Apply 提示） |
 | D | 协议 typed 表单 ×29（outbound-protocols） |
 | E1/E2 | JSON 引擎与编辑器（outbound-protocols custom/raw） |
-| F | 批量测速面板（connectivity-testing） |
+| F | 批量测速面板（connectivity-testing）；已完成：`BboxTestSession` 薄包装（start/stop/dismiss/sort/remove + TestUiState 全量 wire）+ 400ms 可见性 feed + `TestPanelPage`（进度/直方图/排行/速度曲线/排序/移除/一键连最快） |
 | G | WARP 注册（已完成：`warp.register` 桥 + ToS 一次确认 + WarpPage 生成行，capabilities warp=true；注销/状态查询上游不存在，`isGenerated()` 即状态） |
 | H | 路由规则条件收口 + 拖拽排序（routing-rules） |
 | I | logcat 页签 + 状态即时推送（diagnostics-logging / auto-selector）；已完成：BboxLogcat 流进程（-T 500 + threadtime 级别映射 + logcat -c 清空）+ 日志页 核心日志/Logcat 页签；首启引导与 WifiPermissionFlow 已入 BboxFlutterActivity；LiveGraphs 确认由 B-box 仪表盘曲线承载、随批次 L 退役 |

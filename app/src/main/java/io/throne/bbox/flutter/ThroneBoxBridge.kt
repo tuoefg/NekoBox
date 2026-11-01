@@ -39,6 +39,7 @@ import io.throne.bbox.bridge.BboxLogcat
 import io.throne.bbox.bridge.BboxLogs
 import io.throne.bbox.bridge.BboxProfiles
 import io.throne.bbox.bridge.BboxRoutes
+import io.throne.bbox.bridge.BboxTestSession
 import io.throne.bbox.bridge.BboxWarp
 import io.throne.bbox.bridge.Capabilities
 import io.throne.bbox.bridge.Apply
@@ -108,6 +109,12 @@ class ThroneBoxBridge(
     /** The update queue's change reports, for as long as the host lives. */
     private var reportsJob: Job? = null
 
+    /** The batch test panel's state feed, polled only while the panel shows it. */
+    private var testSessionJob: Job? = null
+
+    @Volatile
+    private var lastTestSession: Map<String, Any?>? = null
+
     /** QR scans that span several frames: what has arrived so far, per session. */
     private val scans = ConcurrentHashMap<String, StringBuilder>()
 
@@ -146,6 +153,7 @@ class ThroneBoxBridge(
         connectionsJob?.cancel()
         memoryJob?.cancel()
         reportsJob?.cancel()
+        testSessionJob?.cancel()
         BboxLogs.stop()
         BboxLogcat.stop()
         probes.values.forEach { runCatching { it.dispatcher.executorService.shutdown() } }
@@ -269,6 +277,39 @@ class ThroneBoxBridge(
                 "groups.test" -> {
                     val tag = call.argument<String>("tag") ?: error("Missing tag")
                     testNode(tag)
+                    result.success(null)
+                }
+                // The batch test panel over TestSessionClient: one session at a time, state pushed
+                // while the panel is visible (groups.testSession.visible opens the feed).
+                "groups.testSession.start" -> {
+                    val kind = call.argument<Int>("kind") ?: error("Missing kind")
+                    val groupId = call.argument<Int>("groupId")?.toLong() ?: 0L
+                    val ids = call.argument<List<Any>>("profileIds").orEmpty().mapNotNull { (it as? Number)?.toLong() }
+                    val testCurrent = call.argument<Boolean>("testCurrent") == true
+                    result.respond {
+                        if (groupId > 0) BboxTestSession.startGroup(kind, groupId)
+                        else BboxTestSession.startProfiles(kind, ids, testCurrent)
+                    }
+                }
+                "groups.testSession.stop" -> {
+                    BboxTestSession.stop()
+                    result.success(null)
+                }
+                "groups.testSession.dismiss" -> {
+                    BboxTestSession.dismiss()
+                    result.success(null)
+                }
+                "groups.testSession.sort" -> result.respond {
+                    val sorted = BboxTestSession.sort(call.argument<Int>("groupId")?.toLong() ?: 0L)
+                    if (!sorted) error("The group is gone or the sort did not run")
+                    null
+                }
+                "groups.testSession.remove" -> result.respond {
+                    val ids = call.argument<List<Any>>("ids").orEmpty().mapNotNull { (it as? Number)?.toLong() }
+                    mapOf("removed" to BboxTestSession.remove(ids))
+                }
+                "groups.testSession.visible" -> {
+                    setTestSessionVisible(call.argument<Boolean>("visible") == true)
                     result.success(null)
                 }
                 "profiles.list" -> result.success(profilesWire(BboxBridge.state.value))
@@ -736,6 +777,29 @@ class ThroneBoxBridge(
             return
         }
         BboxLogs.start(scope) { emit("logs", BboxLogs.wire(it)) }
+    }
+
+    /**
+     * The client publishes its model every 100 ms; the panel's feed relays at 400 ms and only what
+     * changed, which is what the native panel's diffing achieved on a slower path.
+     */
+    private fun setTestSessionVisible(visible: Boolean) {
+        testSessionJob?.cancel()
+        testSessionJob = null
+        if (!visible) {
+            lastTestSession = null
+            return
+        }
+        testSessionJob = scope.launch {
+            while (isActive) {
+                val wire = withContext(Dispatchers.IO) { BboxTestSession.wire() }
+                if (wire != lastTestSession) {
+                    lastTestSession = wire
+                    emit("testSession", wire)
+                }
+                delay(400)
+            }
+        }
     }
 
     /**

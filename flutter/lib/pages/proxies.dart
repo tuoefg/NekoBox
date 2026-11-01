@@ -2,6 +2,7 @@ import '../widgets.dart';
 import '../components/group_tabs.dart';
 import '../components/proxy_card.dart';
 import '../components/proxy_list.dart';
+import 'test_panel.dart';
 
 class ProxiesPage extends StatefulWidget {
   const ProxiesPage({super.key});
@@ -133,6 +134,7 @@ class _ProxiesPageState extends State<ProxiesPage> {
           if (!box.running) return;
           for (final group in groups) { await _test(group['tag'] as String); }
         }),
+        CommonPopupMenuItem(glyph: AppGlyphs.dashboard, label: context.tr('Test panel'), onPressed: () => openForm(context, const TestPanelPage())),
         CommonPopupMenuItem(glyph: AppGlyphs.connections, label: context.tr('Close connections after switching'), checked: box.preferences['closeConnectionsOnSelect'] == true,
           onPressed: () => box.setPreference('closeConnectionsOnSelect', box.preferences['closeConnectionsOnSelect'] != true)),
       ],

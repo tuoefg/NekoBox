@@ -24,6 +24,13 @@ The user SHALL be able to trigger URL tests for all profiles in a group; results
 - **WHEN** the user runs a group test
 - **THEN** each profile in the group shows its own result as it arrives
 
+### Requirement: Batch test panel
+The ported UI SHALL offer a batch test panel over one session at a time: it SHALL show live progress (done, ok, failed, aborted counts and the testing slot), a latency histogram, the ranked best results, and the speed test's live curve while a speed session runs — and, once a session finishes, the actions the native panel offers: sort the tested group by the session's metric, remove the unavailable profiles, and connect through a ranked result. Stopping a session reports the remaining profiles as aborted.
+
+#### Scenario: Review and act on a finished group test
+- **WHEN** the user runs a group test in the panel and waits for it to finish
+- **THEN** the panel lists the fastest results and offers the sort, remove-unavailable and connect actions
+
 ### Requirement: TCP ping testing
 The app SHALL support TCP ping tests measuring connection setup time to a target, as an alternative to URL tests, with results stored and displayed the same way.
 

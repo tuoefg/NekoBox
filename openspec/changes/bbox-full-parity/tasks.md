@@ -62,9 +62,13 @@
 
 ## 8. 批次 F：批量测速面板
 
-- [ ] 8.1 桥包装 Kotlin `TestSessionModel`（勿重写）：`groups.testSession.start/stop/poll` + 事件流（rows/ranked/removed、LatencyHistogram bins、Live 速度样本）
-- [ ] 8.2 Dart 面板（复用 `ui/line_chart.dart`）：实时进度/最快服务器/排序/移除不可用/一键连最快
-- [ ] 8.3 规范同步：`connectivity-testing` 的批量测速等价要求 delta 合入主规范
+- [x] 8.1 桥包装 Kotlin `TestSessionModel`（勿重写）：`groups.testSession.start/stop/poll` + 事件流（rows/ranked/removed、LatencyHistogram bins、Live 速度样本）
+  - 新增 `BboxTestSession.kt`：对 `TestSessionClient` 的薄包装（模型零重写）——startGroup/startProfiles/startCurrent、stop、dismiss、sort（对齐 TestPanelController.sort：测速会话按 metric 记 testSortBy 后 BY_TEST_RESULT 降序，URL 按 BY_LATENCY）、remove（对齐 removeUnavailable：`batchDeleteProfiles(stopRunning=false)` + markRemoved，返回删除数）。`wire()` 把 `TestUiState` 全量整形给 Dart：rows（phase/latency/error/速度文本/country/ip/ok/failed/aborted）、histogram（EDGES+bins+failed+connectOnly）、ranking 前 10、speed live（stage/字节/延迟/服务器/样本曲线）、testingProgress、removed、失败原因枚举。
+  - `ThroneBoxBridge`：start/stop/dismiss/sort/remove dispatch + `groups.testSession.visible` 打开 400ms 轮询 feed（等值去重，close 取消）——客户端模型 100ms 自发布，桥按面板可见性中继。
+- [x] 8.2 Dart 面板（复用 `ui/line_chart.dart`）：实时进度/最快服务器/排序/移除不可用/一键连最快
+  - 新页 `pages/test_panel.dart`（代理页菜单「批量测速」入口）：类型（延迟/IP 查询/测速）+ 范围（分组）选择、开始/停止；进度区（done/total、ok/failed/aborted、preparing/stopping、失败原因文案、线性进度条）；URL 会话显示延迟分布直方图（三色带 + 失败/仅连接计数）；测速会话实时卡（阶段/上下行速率/ping/服务器 + LineChart 样本曲线，ValueKey(profileId) 隔离换档）；排行区前 10（第一行「连接」按钮，全部行点击即 profiles.select 连接）；完成后菜单：排序 / 移除不可用（confirm 后批量删除 + snackbar）/ 收起。数据走 BoxData.testSession 订阅（可见性驱动的组测试会话 feed）。
+  - 范围选择仅分组（旧面板的选中集/当前连接入口桥层已备 startProfiles/testCurrent，Dart 侧后续按需暴露）。
+- [x] 8.3 规范同步：`connectivity-testing` 的批量测速等价要求 delta 合入主规范（Batch test panel Requirement）
 - [ ] 8.4 CI/真机验证：`ci.yml` 全绿；真机跑一次 20+ 节点批量测速与旧面板逐项对照，回传录屏/截图
 
 ## 9. 批次 G：WARP 管理

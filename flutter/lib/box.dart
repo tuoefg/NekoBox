@@ -13,8 +13,8 @@ Json json(Object? value) => value is Map
     : <String, dynamic>{};
 List<Json> rows(Object? value) => value is List ? value.map(json).toList() : [];
 
-enum BoxAspect { state, appearance, traffic, memory, connections, logs, logcat }
-enum BoxData { memory, logs, logcat }
+enum BoxAspect { state, appearance, traffic, memory, connections, logs, logcat, testSession }
+enum BoxData { memory, logs, logcat, testSession }
 
 class BoxController extends ChangeNotifier {
   BoxController({MethodChannel? channel, Stream<dynamic>? events})
@@ -40,6 +40,7 @@ class BoxController extends ChangeNotifier {
   List<Json> transfers = [], usbDevices = [];
   List<Json> outbounds = [];
   List<Json> profiles = [], groups = [], connections = [], logs = [], logcat = [];
+  Json testSession = {};
   String? defaultLogLevel;
   final uploadHistory = <double>[];
   final downloadHistory = <double>[];
@@ -84,6 +85,7 @@ class BoxController extends ChangeNotifier {
     unawaited(act(switch (data) {
       BoxData.memory => 'dashboard.memory.visible',
       BoxData.logcat => 'logs.logcat.visible',
+      BoxData.testSession => 'groups.testSession.visible',
       _ => 'logs.visible',
     }, {'visible': _dataOwners[data]?.isNotEmpty == true}));
   }
@@ -327,6 +329,7 @@ class BoxController extends ChangeNotifier {
           logcat = entries;
         }
         aspects = const [BoxAspect.logcat];
+      case 'testSession': testSession = json(value); aspects = const [BoxAspect.testSession];
       case 'settings': settings = json(value);
       case 'preferences':
         final nextPreferences = json(value);
