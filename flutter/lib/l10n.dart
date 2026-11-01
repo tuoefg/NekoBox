@@ -611,6 +611,7 @@ const _zh = <String, String>{
   'Preferred endpoint': '优选端点',
   'This rule names one endpoint as preferred; it has no match conditions.': '此规则指定一个优选端点；没有匹配条件。',
   'A remote profile downloads its rules from the URL.': '远程配置从 URL 下载规则。',
+  'Batch add simple rules': '批量添加简单规则',
 };
 
 extension BoxLocalization on BuildContext {

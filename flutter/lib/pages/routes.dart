@@ -167,6 +167,22 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
     if (added == true && mounted) await _loadRules();
   }
 
+  Future<void> _batchAdd() async {
+    if (widget.id == 0) {
+      context.box.report(StateError(context.tr('Save the profile first')));
+      return;
+    }
+    final text = await showDialog<String>(context: context, builder: (context) => const _BatchAddDialog());
+    if (text == null || text.trim().isEmpty || !mounted) return;
+    final box = context.box;
+    try {
+      await box.call('routes.batchAddRules', {'id': widget.id, 'text': text});
+      if (mounted) await _loadRules();
+    } catch (error) {
+      if (mounted) box.report(error);
+    }
+  }
+
   Future<void> _save() async {
     setState(() { _saving = true; _error = null; });
     try {
@@ -284,6 +300,11 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
             leading: const GlyphIcon(AppGlyphs.add),
             title: Text(context.tr('Add rule')),
             onTap: () => _editRule(-1),
+          ),
+          if (!_isRaw) ListItem(
+            leading: const GlyphIcon(AppGlyphs.importFile),
+            title: Text(context.tr('Batch add simple rules')),
+            onTap: _batchAdd,
           ),
         ], footer: _isRaw
             ? context.tr('This profile is built in and cannot be changed here.')
@@ -694,4 +715,43 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
       ],
     );
   }
+}
+
+/// The batch-add dialog: one simple rule per line, `prefix:value` with an optional `-> target`.
+/// The controller lives here so the closing animation is safe (the same rule as the other editors).
+class _BatchAddDialog extends StatefulWidget {
+  const _BatchAddDialog();
+  @override
+  State<_BatchAddDialog> createState() => _BatchAddDialogState();
+}
+
+class _BatchAddDialogState extends State<_BatchAddDialog> {
+  late final TextEditingController _text = TextEditingController();
+
+  @override
+  void dispose() {
+    _text.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(context.tr('Batch add simple rules')),
+    content: SizedBox(
+      width: 360,
+      child: TextField(
+        controller: _text, minLines: 5, maxLines: 10, autocorrect: false,
+        keyboardType: TextInputType.multiline,
+        decoration: InputDecoration(
+          labelText: context.tr('Rules'),
+          helperText: context.tr('One rule per line: suffix:example.com -> proxy. Outbounds are proxy, direct, block and warp-bypass.'),
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
+      TextButton(onPressed: () => Navigator.pop(context, _text.text), child: Text(context.tr('Add'))),
+    ],
+  );
 }

@@ -326,6 +326,12 @@ class ThroneBoxBridge(
                         .mapNotNull { it as? Map<String, Any?> }
                     result.respond { BboxRoutes.saveRules(call.argument<Int>("id")?.toLong() ?: -1L, rules) }
                 }
+                "routes.batchAddRules" -> result.respond {
+                    BboxRoutes.batchAddRules(
+                        call.argument<Int>("id")?.toLong() ?: -1L,
+                        call.argument<String>("text").orEmpty(),
+                    )
+                }
                 "profiles.autoSelectorCreate" -> result.respond {
                     BboxProfiles.createAutoSelector(call.argument<Int>("groupId")?.toLong())
                 }

@@ -149,6 +149,56 @@ object BboxRoutes {
         saved
     }
 
+    /**
+     * Appends one simple rule per non-empty line — `prefix:value` optionally `-> target` — unlike
+     * [save]'s `rules` text which folds every value into one rule per type. Each line lands as its
+     * own rule so the list can edit and delete it alone. An unparsable line rejects the batch.
+     */
+    suspend fun batchAddRules(id: Long, text: String): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val p = RouteManager.get(id)?.takeIf { !it.is_raw } ?: error("No usable route profile with id $id")
+        val added = ArrayList<RouteRule>()
+        for (line in text.lineSequence()) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) continue
+            val arrow = trimmed.lastIndexOf("->")
+            val rawLine = (if (arrow > 0) trimmed.substring(0, arrow) else trimmed).trim()
+            val target = (if (arrow > 0) trimmed.substring(arrow + 2) else "direct").trim()
+            val outbound = outboundId(target)
+            val colon = rawLine.indexOf(':')
+            if (colon < 0) error("Bad rule line: $trimmed")
+            val prefix = rawLine.substring(0, colon).trim()
+            if (prefix !in addressPrefixes) error("Bad rule line: $trimmed")
+            val value = rawLine.substring(colon + 1).trim()
+            if (value.isEmpty()) error("Bad rule line: $trimmed")
+            val type = when (outbound) {
+                OutboundIds.PROXY -> RuleType.SIMPLE_ADDRESS_PROXY
+                OutboundIds.DIRECT -> RuleType.SIMPLE_ADDRESS_BYPASS
+                OutboundIds.WARP_BYPASS -> RuleType.SIMPLE_ADDRESS_WARP_BYPASS
+                else -> RuleType.SIMPLE_ADDRESS_BLOCK
+            }
+            val rule = RouteRule().apply {
+                this.type = type.id
+                name = type.token.replace('_', ' ').replaceFirstChar { it.uppercase() }
+                if (type == RuleType.SIMPLE_ADDRESS_BLOCK) action = "reject" else outbound_id = outbound
+                val stored = if (prefix == "domain" || prefix == "suffix" || prefix == "keyword") value.lowercase() else value
+                when (prefix) {
+                    "domain" -> domain.add(stored)
+                    "suffix" -> domain_suffix.add(stored)
+                    "keyword" -> domain_keyword.add(stored)
+                    "regex" -> domain_regex.add(stored)
+                    "ruleset" -> rule_set.add(stored)
+                    else -> ip_cidr.add(stored)
+                }
+            }
+            added.add(rule)
+        }
+        if (added.isEmpty()) error("No rule lines to add")
+        p.rules.addAll(added)
+        RouteManager.save(p)
+        BboxBridge.scheduleRefresh(immediate = true)
+        mapOf("added" to added.size, "rules" to p.rules.map(::ruleToMap))
+    }
+
     /** Refuses the last profile and raw ones; the current profile moves to the first remaining. */
     suspend fun delete(id: Long): Unit = withContext(Dispatchers.IO) {
         if (!RouteManager.delete(id)) error("Cannot delete this route profile")
