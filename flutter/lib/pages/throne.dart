@@ -51,6 +51,79 @@ class SettingText extends StatelessWidget {
   );
 }
 
+/// A DNS server row whose dialog offers the presets and the servers typed before, as the native
+/// editable combo box does (DnsServerSuggestions over DnsServerHistory::Fill). A picked server
+/// saves and joins the history; the field itself takes anything.
+class SettingDnsServer extends StatelessWidget {
+  const SettingDnsServer(this.title, this.setting, {super.key, this.hint, required this.kind});
+  final String title, setting, kind;
+  final String? hint;
+
+  @override Widget build(BuildContext context) {
+    final value = (context.box.settings[setting] ?? '').toString();
+    return ListItem(
+      title: Text(context.tr(title)),
+      subtitle: hint == null || value.isNotEmpty ? null : Text(context.tr(hint!)),
+      trailing: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 180),
+        child: Text(value, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end),
+      ),
+      onTap: () async {
+        // A missing suggestion list (the API is off) only leaves the field freehand.
+        var suggestions = const <String>[];
+        try {
+          final wire = json(await context.box.call('dns.suggestions'));
+          suggestions = (wire[kind] as List? ?? const []).whereType<String>().toList();
+        } catch (_) {}
+        if (!context.mounted) return;
+        final picked = await showDialog<String>(context: context, builder: (context) => _DnsServerDialog(
+          title: context.tr(title), initial: value, suggestions: suggestions,
+        ));
+        if (picked != null && context.mounted) context.box.setSetting(setting, picked);
+      },
+    );
+  }
+}
+
+class _DnsServerDialog extends StatefulWidget {
+  const _DnsServerDialog({required this.title, required this.initial, required this.suggestions});
+  final String title, initial;
+  final List<String> suggestions;
+  @override State<_DnsServerDialog> createState() => _DnsServerDialogState();
+}
+
+class _DnsServerDialogState extends State<_DnsServerDialog> {
+  late final TextEditingController _controller = TextEditingController(text: widget.initial);
+  @override void dispose() { _controller.dispose(); super.dispose(); }
+
+  @override Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    content: SizedBox(
+      width: 360,
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        TextField(
+          controller: _controller, autocorrect: false, enableSuggestions: false,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+        ),
+        if (widget.suggestions.isNotEmpty) Flexible(
+          child: ListView(shrinkWrap: true, children: [
+            for (final server in widget.suggestions)
+              ListTile(
+                dense: true, title: Text(server),
+                onTap: () => Navigator.pop(context, server),
+              ),
+          ]),
+        ),
+      ]),
+    ),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
+      TextButton(onPressed: () => Navigator.pop(context, _controller.text), child: Text(context.tr('Save'))),
+    ],
+  );
+}
+
 class SettingChoice<T> extends StatelessWidget {
   const SettingChoice(this.title, this.setting, {super.key, required this.options, required this.text, this.autoRestart = false});
   final String title, setting;
@@ -242,11 +315,11 @@ class DnsPage extends StatelessWidget {
     ]),
   ], children: [
     generateSection(title: context.tr('Remote DNS'), items: [
-      SettingText('Remote DNS', 'remoteDns', hint: 'https://1.1.1.1/dns-query'),
+      SettingDnsServer('Remote DNS', 'remoteDns', hint: 'https://1.1.1.1/dns-query', kind: 'remote'),
       SettingToggle('Disable IPv6 answers', 'remoteDnsDisableIpv6'),
     ]),
     generateSection(title: context.tr('Direct DNS'), items: [
-      SettingText('Direct DNS', 'directDns'),
+      SettingDnsServer('Direct DNS', 'directDns', kind: 'direct'),
       SettingToggle('Disable IPv6 answers', 'directDnsDisableIpv6'),
     ]),
     generateSection(items: [

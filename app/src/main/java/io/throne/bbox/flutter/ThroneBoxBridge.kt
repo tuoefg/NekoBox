@@ -16,6 +16,7 @@ import io.nekohasekai.sagernet.SagerNet
 import android.os.Build
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.database.DnsServerHistory
 import io.nekohasekai.sagernet.database.SettingsRegistry
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
@@ -339,6 +340,9 @@ class ThroneBoxBridge(
                         call.argument<String>("text").orEmpty(),
                     )
                 }
+                "routes.resetRules" -> result.respond {
+                    BboxRoutes.resetRules(call.argument<Int>("id")?.toLong() ?: -1L)
+                }
                 "profiles.autoSelectorCreate" -> result.respond {
                     BboxProfiles.createAutoSelector(call.argument<Int>("groupId")?.toLong())
                 }
@@ -400,16 +404,30 @@ class ThroneBoxBridge(
                 }
                 "settings.reset" -> {
                     val keys = call.argument<List<Any>>("keys").orEmpty().filterIsInstance<String>()
-                    if (keys.isEmpty()) {
+                    val need = if (keys.isEmpty()) {
                         ThroneSettings.resetAll()
                     } else {
-                        keys.forEach { ThroneSettings.reset(it) }
-                    }
-                    if (call.argument<Boolean>("restart") == true && DataStore.serviceState.canStop) {
-                        SagerNet.reloadService()
+                        keys.mapNotNull { ThroneSettings.reset(it) }.maxByOrNull { it.ordinal }
+                    } ?: Apply.None
+                    // On demand only: a reset that changed nothing leaves the running core alone,
+                    // a Reload rebuilds its config now, and AppRestart raises the badge only a
+                    // process restart clears (log level, log buffer).
+                    when {
+                        need == Apply.AppRestart -> {
+                            restartPending = true
+                            emit("applyRequired", "Restart")
+                        }
+                        need == Apply.Reload && DataStore.serviceState.canStop -> SagerNet.reloadService()
                     }
                     result.success(settingsWire())
                 }
+                // The DNS server fields offer presets plus the servers typed before (DnsServerHistory::Fill).
+                "dns.suggestions" -> result.success(
+                    mapOf(
+                        "remote" to DnsServerHistory.remoteSuggestions(),
+                        "direct" to DnsServerHistory.directSuggestions(),
+                    )
+                )
                 "url.open" -> {
                     val url = call.argument<String>("url").orEmpty()
                     BboxCommands.openUrl(url)
@@ -422,11 +440,18 @@ class ThroneBoxBridge(
                     setConnectionsVisible(call.argument<Boolean>("visible") == true)
                     result.success(null)
                 }
+                // OkHttp is synchronous; the channel thread is the main thread, where it throws
+                // NetworkOnMainThreadException. Same for memoryWire below.
                 "connections.close" -> result.respond {
-                    BboxApi.close(call.argument<String>("id").orEmpty())
+                    withContext(Dispatchers.IO) {
+                        BboxApi.close(call.argument<String>("id").orEmpty())
+                    }
                     null
                 }
-                "connections.closeAll" -> result.respond { BboxApi.closeAll(); null }
+                "connections.closeAll" -> result.respond {
+                    withContext(Dispatchers.IO) { BboxApi.closeAll() }
+                    null
+                }
                 "logs.visible" -> {
                     setLogsVisible(call.argument<Boolean>("visible") == true)
                     result.success(null)
@@ -614,7 +639,9 @@ class ThroneBoxBridge(
         if (!visible) return
         memoryJob = scope.launch {
             while (isActive) {
-                emit("memory", memoryWire())
+                // The core's HTTP call inside runs off the main thread, or it throws there and the
+                // runCatching in memoryWire keeps the core figure at zero forever.
+                emit("memory", withContext(Dispatchers.IO) { memoryWire() })
                 delay(2000)
             }
         }
@@ -971,6 +998,9 @@ class ThroneBoxBridge(
             "quality" to emptyMap<String, Any?>(),
         ),
         "intent" to takeIntent(),
+        // The badge an AppRestart-level write or reset raised; it clears only when the restart
+        // gives the process a fresh [restartPending].
+        "applyRequired" to (if (restartPending) "Restart" else null),
     )
 
     private fun dashboardWire(state: BboxUiState): Map<String, Any?> {
@@ -1065,6 +1095,11 @@ class ThroneBoxBridge(
         values.forEach { (key, value) ->
             if (ThroneSettings.has(key)) {
                 if (ThroneSettings.set(key, value) == Apply.AppRestart) restartPending = true
+                // A typed DNS server joins its suggestion list (RouteProfileActivity's save does the same).
+                when (key) {
+                    "remoteDns" -> (value as? String)?.let(DnsServerHistory::rememberRemote)
+                    "directDns" -> (value as? String)?.let(DnsServerHistory::rememberDirect)
+                }
             } else {
                 if (value == null) overlay.remove(key) else overlay[key] = value
             }

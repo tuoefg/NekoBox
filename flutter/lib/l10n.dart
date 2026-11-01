@@ -623,6 +623,9 @@ const _zh = <String, String>{
   'The official profiles are remote route profiles of the routeprofiles repository.': '官方预置为 routeprofiles 仓库的远程路由档。',
   'No official profiles are bundled in this build': '此构建未内置官方预置',
   'route profiles added': '条路由档已添加',
+  'Restore default rules': '恢复默认规则',
+  'Restore default rules?': '恢复默认规则？',
+  'The rules become the Default profile\'s own: one hijack-dns rule that routes DNS.': '规则将替换为 Default 档的默认规则：一条路由 DNS 的 hijack-dns 规则。',
 };
 
 extension BoxLocalization on BuildContext {

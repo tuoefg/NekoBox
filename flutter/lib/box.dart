@@ -176,6 +176,8 @@ class BoxController extends ChangeNotifier {
       quality = json(diagnostics['quality']);
       final intent = result['intent'] as String?;
       if (intent != null) pendingIntents.add(intent);
+      // An AppRestart-level write or reset from before this attach; a reload does not clear it.
+      applyRequired = result['applyRequired'] as String?;
       ready = true;
       for (final data in _dataOwners.keys) { _syncData(data); }
     } catch (error) {
@@ -247,10 +249,11 @@ class BoxController extends ChangeNotifier {
   }
 
   /// Returns the listed settings (every Throne setting when [keys] is empty) to their Throne defaults.
-  Future<bool> resetSettings(List<String> keys, {bool restart = true}) async {
+  /// Restarting stays on demand: the bridge reloads or raises the restart badge only when a key that
+  /// actually changed needs it, and a reset that changed nothing leaves the running core alone.
+  Future<bool> resetSettings(List<String> keys) async {
     try {
-      settings = json(await call('settings.reset', {'keys': keys, if (restart) 'restart': true}));
-      if (restart && running && !remote) applyRequired = 'Restart';
+      settings = json(await call('settings.reset', {'keys': keys}));
       _notify([BoxAspect.state]);
       return true;
     } catch (error) { report(error); return false; }

@@ -232,6 +232,25 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
     }
   }
 
+  /// The Default chain's own rules — one hijack-dns rule that routes DNS. Replaces the list outright.
+  Future<void> _resetRules() async {
+    if (widget.id == 0) {
+      context.box.report(StateError(context.tr('Save the profile first')));
+      return;
+    }
+    final ok = await confirm(context, 'Restore default rules?',
+        message: 'The rules become the Default profile\'s own: one hijack-dns rule that routes DNS.',
+        action: 'Restore');
+    if (!ok || !mounted) return;
+    final box = context.box;
+    try {
+      await box.call('routes.resetRules', {'id': widget.id});
+      if (mounted) await _loadRules();
+    } catch (error) {
+      if (mounted) box.report(error);
+    }
+  }
+
   Future<void> _save() async {
     setState(() { _saving = true; _error = null; });
     try {
@@ -354,6 +373,11 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
             leading: const GlyphIcon(AppGlyphs.importFile),
             title: Text(context.tr('Batch add simple rules')),
             onTap: _batchAdd,
+          ),
+          if (!_isRaw) ListItem(
+            leading: const GlyphIcon(AppGlyphs.reset),
+            title: Text(context.tr('Restore default rules')),
+            onTap: _resetRules,
           ),
         ], footer: _isRaw
             ? context.tr('This profile is built in and cannot be changed here.')

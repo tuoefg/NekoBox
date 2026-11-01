@@ -1,6 +1,7 @@
 name: Android build
 description: >-
-  Shared build steps of ci.yml, preview.yml and release.yml: JDK 17, ThroneCore AAR + sing-box schema, routeprofiles
+  Shared build steps of ci.yml, preview.yml and release.yml: JDK 17, Flutter module AAR (the gitignored
+  flutter/build/host/outputs/repo the app links), ThroneCore AAR + sing-box schema, routeprofiles
   snapshot, sing-box dashboard, Gradle, then ./gradlew <tasks>. With sign=true, release builds are signed with the
   SIGNING_* secrets from the job environment; the build fails without them.
 inputs:
@@ -27,6 +28,20 @@ runs:
       with:
         distribution: temurin
         java-version: '17'
+    # The app links io.ericlee.bbox_ui:flutter_release:1.0 from flutter/build/host/outputs/repo, which the
+    # repository ignores; without this step the Gradle build cannot resolve the B-box interface at all.
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        cache: true
+    - name: Flutter AAR
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd flutter
+        flutter pub get
+        flutter build aar --no-debug --no-profile
     - name: ThroneCore AAR and schema
       uses: ./.github/actions/throne-core
     - name: Fetch routeprofiles snapshot

@@ -456,17 +456,20 @@ object Settings {
 
     /**
      * Drops the key's rows so every read falls back to the Throne default, and returns the entry's
-     * follow-up action; null when the key is unknown. A row that is not there is simply not removed.
+     * follow-up action; null when the key is unknown. [Apply.None] also answers for a reset that
+     * changed nothing — nothing was stored, or the row held the default — so the caller can leave
+     * the running core alone. A row that is not there is simply not removed.
      */
     fun reset(key: String): Apply? {
         val entry = index[key] ?: return null
+        val before = entry.get()
         val store = DataStore.configurationStore
         val rows = LinkedHashSet<String>()
         rows.add(camelToSnake(key))
         rows.add(key)
         RESET_ROW_ALIASES[key]?.let { rows.add(it) }
         rows.forEach { store.remove(it) }
-        return entry.apply
+        return if (before == entry.get()) Apply.None else entry.apply
     }
 
     /** [reset] over every key the schema knows; returns the heaviest follow-up action. */

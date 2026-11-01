@@ -110,7 +110,8 @@ object BboxRoutes {
             "remoteUrl" to p.remote_url,
             "autoUpdate" to p.auto_update,
             "isRaw" to p.is_raw,
-            "endpointIds" to ID_RE.findAll(p.endpoint_profile_ids).map { it.value.toLong() },
+            // findAll().map() is a Sequence, which StandardMessageCodec refuses; the codec wants a List.
+            "endpointIds" to ID_RE.findAll(p.endpoint_profile_ids).map { it.value.toLong() }.toList(),
             "rules" to simpleRulesText(p),
             "ruleCount" to p.rules.size,
         )
@@ -199,6 +200,19 @@ object BboxRoutes {
         RouteManager.save(p)
         BboxBridge.scheduleRefresh(immediate = true)
         mapOf("added" to added.size, "rules" to p.rules.map(::ruleToMap))
+    }
+
+    /**
+     * Replaces the profile's rules with the Default chain's own (GetDefaultChain, RouteProfile.cpp:661-670): the one
+     * hijack-dns rule that routes DNS. The screen confirms first, because the replace is not undoable.
+     */
+    suspend fun resetRules(id: Long): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val p = RouteManager.get(id)?.takeIf { !it.is_raw } ?: error("No usable route profile with id $id")
+        p.rules.clear()
+        p.rules.addAll(RouteProfile.defaultProfile().rules)
+        RouteManager.save(p)
+        BboxBridge.scheduleRefresh(immediate = true)
+        mapOf("rules" to p.rules.map(::ruleToMap))
     }
 
     /** Refuses the last profile and raw ones; the current profile moves to the first remaining. */
