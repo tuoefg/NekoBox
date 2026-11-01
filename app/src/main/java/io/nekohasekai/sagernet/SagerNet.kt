@@ -31,6 +31,7 @@ import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.ui.MainActivity
 import io.nekohasekai.sagernet.update.UpdateManager
 import io.nekohasekai.sagernet.utils.*
+import io.throne.bbox.bridge.BboxRuntime
 import kotlinx.coroutines.DEBUG_PROPERTY_NAME
 import kotlinx.coroutines.DEBUG_PROPERTY_VALUE_ON
 import java.io.File
@@ -58,6 +59,8 @@ class SagerNet : Application(),
 
         if (isMainProcess || isBgProcess) {
             SettingsMapper.installOutboundHooks()
+            // The B-box bridge lives in the UI process: one service connection and one state snapshot for every screen.
+            if (isMainProcess) BboxRuntime.install(this)
             if (isBgProcess) {
                 // The tile, shortcuts, widgets and the boot receiver start the foreground service from here.
                 updateNotificationChannels()

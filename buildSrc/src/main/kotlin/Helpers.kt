@@ -49,7 +49,15 @@ fun Project.updateSignerPin(): String {
 fun Project.setupCommon() {
     android.apply {
         buildToolsVersion = "35.0.1"
-        compileSdk = 35
+        // The B-box Flutter module (`flutter build aar`) publishes AARs whose metadata declares
+        // minCompileSdk=36 (flutter_debug/…_release and mobile_scanner_* are compiled against 36),
+        // so the host app has to compile against 36 too while targetSdk stays 35.
+        compileSdk = 36
+        // This app has no C/C++ of its own, but every native library it ships arrives unstripped — including
+        // Flutter's engine, whose debugging symbols are 327 MB of the 377 MB libflutter.so. Without an ndkVersion
+        // the strip task cannot find llvm-strip and reports "Unable to strip the following libraries, packaging
+        // them as they are", so all of that ships inside the APK.
+        ndkVersion = "28.2.13676358"
         defaultConfig {
             minSdk = 24
             targetSdk = 35
@@ -65,6 +73,11 @@ fun Project.setupCommon() {
         }
         (android as ExtensionAware).extensions.getByName<KotlinJvmOptions>("kotlinOptions").apply {
             jvmTarget = JavaVersion.VERSION_17.toString()
+            // The B-box Flutter AARs can only be built with Kotlin >= 2.2.20 (Flutter 3.47 hard-fails below that),
+            // so their metadata is newer than this project's Kotlin 2.0.21 compiler expects. Loading them is safe,
+            // they use nothing newer than plain Kotlin/React-simple APIs, so allow mismatched metadata versions
+            // instead of dragging the whole toolchain onto 2.2.
+            freeCompilerArgs += "-Xskip-metadata-version-check"
         }
         lint {
             showAll = true

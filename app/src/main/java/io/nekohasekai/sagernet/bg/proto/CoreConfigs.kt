@@ -16,6 +16,7 @@ import io.nekohasekai.sagernet.outbound.config.RoutingInput
 import io.nekohasekai.sagernet.outbound.config.TestCandidate
 import io.nekohasekai.sagernet.route.RouteDns
 import io.nekohasekai.sagernet.route.RouteProfile
+import io.throne.bbox.bridge.BboxRuntime
 
 /**
  * The config generator wired to the app: profiles come from the profile table, the settings and the build-time
@@ -51,7 +52,7 @@ object CoreConfigs {
         route: RouteProfile = RouteManager.routeFor(profile.groupId),
     ): GeneratedConfig {
         val (landing, front, groupName) = groupProxies(profile.groupId)
-        val routing = SettingsMapper.routingInput(route)
+        val routing = BboxRuntime.routingInput(SettingsMapper.routingInput(route))
         val dns = routing.profile?.activeDns()
         val settings = SettingsMapper.generatorSettings(dns).copy(deferRuleSets = deferRuleSets)
         val generated = generator(routing, settings, dns).build(profile.id, landing, front, ports, groupName)

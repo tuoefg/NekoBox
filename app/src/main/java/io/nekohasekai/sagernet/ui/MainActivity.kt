@@ -75,6 +75,13 @@ class MainActivity : ThemedActivity(),
     companion object {
         /** Texts to import (the QR scanner): URLs and deep links one by one, the rest as one import. */
         const val EXTRA_IMPORT_TEXTS = "importTexts"
+
+        /** A drawer destination to open on launch, for the B-box shell's tools grid. */
+        const val EXTRA_OPEN_NAV = "bboxOpenNav"
+
+        /** A settings screen class and title to open on launch, for the B-box shell's settings rows. */
+        const val EXTRA_OPEN_SCREEN = "bboxOpenScreen"
+        const val EXTRA_OPEN_SCREEN_TITLE = "bboxOpenScreenTitle"
     }
 
     lateinit var binding: LayoutMainBinding
@@ -163,6 +170,7 @@ class MainActivity : ThemedActivity(),
         DataStore.configurationStore.registerChangeListener(this)
 
         if (savedInstanceState == null) intent?.let(::handleImportIntent)
+        if (savedInstanceState == null) intent?.let(::handleShellIntent)
         SubscriptionReportDialog.observe(this)
 
         refreshNavMenu(DataStore.apiDashboardEnabled)
@@ -238,6 +246,16 @@ class MainActivity : ThemedActivity(),
         }
 
         handleImportIntent(intent)
+    }
+
+    /** Opens the screen the B-box shell asked for, then forgets it so a rotation does not reopen it. */
+    private fun handleShellIntent(intent: Intent) {
+        intent.getIntExtra(EXTRA_OPEN_NAV, 0).takeIf { it != 0 }?.let { displayFragmentWithId(it) }
+        intent.getStringExtra(EXTRA_OPEN_SCREEN)?.let { screen ->
+            openSettingsScreen(screen, intent.getStringExtra(EXTRA_OPEN_SCREEN_TITLE).orEmpty())
+        }
+        intent.removeExtra(EXTRA_OPEN_NAV)
+        intent.removeExtra(EXTRA_OPEN_SCREEN)
     }
 
     /** VIEW links and files, SEND streams and texts, and the texts of the QR scanner ([EXTRA_IMPORT_TEXTS]). */

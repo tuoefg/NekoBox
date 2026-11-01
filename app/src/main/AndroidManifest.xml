@@ -74,22 +74,36 @@
             android:name="io.nekohasekai.sagernet.ui.BlankActivity"
             android:configChanges="uiMode" />
 
+        <!-- B-box's own Flutter interface; the engine keeps running across these changes. -->
         <activity
-            android:name="io.nekohasekai.sagernet.ui.MainActivity"
-            android:configChanges="uiMode"
+            android:name="io.throne.bbox.flutter.BboxFlutterActivity"
+            android:configChanges="uiMode|orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|density|fontScale|layoutDirection|locale|touchscreen|keyboard|navigation"
             android:exported="true"
-            android:launchMode="singleTask">
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.SagerNet"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
+            <!-- Android TV launcher: the same Flutter interface serves both form factors. The activity needs
+                 `touchscreen` declared optional (already done below) or TV devices would filter it out. -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name="io.nekohasekai.sagernet.ui.MainActivity"
+            android:configChanges="uiMode"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <!-- No LEANBACK_LAUNCHER here any more: TV now boots into BboxFlutterActivity like every other screen.
+                 This activity stays reachable for its backup-import and quick-settings-tile intents. -->
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
             </intent-filter>

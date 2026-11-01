@@ -37,6 +37,10 @@ android {
     packaging {
         jniLibs {
             useLegacyPackaging = true
+            // Flutter's *debug* engine ships the Vulkan validation layer: 237 MB uncompressed, ~65 MB inside the APK,
+            // second only to libflutter.so itself. It exists purely for graphics debugging and is absent from the
+            // release engine jar (verified: 0 VkLayer entries there), so nothing can depend on it at runtime.
+            excludes += setOf("**/libVkLayer_khronos_validation.so")
         }
     }
     androidResources {
@@ -52,6 +56,14 @@ tasks.matching { it.name == "preBuild" }.configureEach {
 }
 
 dependencies {
+
+    implementation(project(":bboxmodel"))
+
+    // B-box's own interface, built by `flutter build aar` into flutter/build/host/outputs/repo.
+    // Every variant links the release AAR, not just release builds. The debug one ships the JIT engine plus Dart as
+    // interpreted kernel, which costs ~150 MB of APK and buys hot reload — something this host never exercises,
+    // because the Dart lives in the Flutter module and is developed there on its own.
+    implementation("io.ericlee.bbox_ui:flutter_release:1.0")
 
     implementation(fileTree("libs"))
 
@@ -94,4 +106,29 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
+}
+
+// `mobile_scanner` (pulled in by the B-box Flutter module, used by profiles.dart's QR scanner) asks for
+// androidx.camera 1.6.1, whose aar metadata demands compileSdk 36 and AGP 8.9.1. This project builds with
+// compileSdk 35 and AGP 8.8.1, so pin CameraX to the newest line that still accepts them (1.5.3 declares
+// minCompileSdk=35 / minAndroidGradlePluginVersion=8.6.0). Same pattern as pinning rosemoe editor to 0.23.7.
+configurations.configureEach {
+    resolutionStrategy {
+        // CameraX: see the comment above.
+        force("androidx.camera:camera-core:1.5.3")
+        force("androidx.camera:camera-camera2:1.5.3")
+        force("androidx.camera:camera-lifecycle:1.5.3")
+        force("androidx.camera:camera-view:1.5.3")
+        // The B-box AARs were published alongside libraries whose POMs still ask for newer Kotlin artifacts
+        // (mobile_scanner declares kotlin-stdlib 2.2.10 and kotlinx-coroutines 1.11.0, both metadata 2.2+).
+        // Publishing does not rewrite those declarations, so pin them here to what this project's Kotlin 2.0.21
+        // compiler can actually read — same idea as excluding kotlin-stdlib from rosemoe editor above.
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
+        force("org.jetbrains.kotlin:kotlin-stdlib-common:2.0.21")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.21")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.21")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.6.4")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+    }
 }
