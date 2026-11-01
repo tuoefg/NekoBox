@@ -51,6 +51,71 @@ class SettingText extends StatelessWidget {
   );
 }
 
+/// A setting Throne stores as one raw text: the custom inbound and the DNS object are JSON
+/// documents, edited here as the text they are until the schema-aware editor takes over.
+///
+/// Unlike [SettingLines] this writes the string back unchanged — no line splitting, no trimming —
+/// because the value is a document, not a list.
+class SettingJson extends StatelessWidget {
+  const SettingJson(this.title, this.setting, {super.key, this.hint, this.autoRestart = false});
+  final String title, setting;
+  final String? hint;
+  final bool autoRestart;
+  @override
+  Widget build(BuildContext context) {
+    final value = (context.box.settings[setting] ?? '').toString();
+    return ListItem(
+      title: Text(context.tr(title)),
+      subtitle: Text(value.isEmpty ? context.tr(hint ?? 'Empty') : value,
+        maxLines: 2, overflow: TextOverflow.ellipsis),
+      onTap: () async {
+        final saved = await showDialog<String>(
+          context: context,
+          builder: (context) => _JsonEditor(title: context.tr(title), initial: value, hint: hint),
+        );
+        if (saved != null && context.mounted) {
+          context.box.setSetting(setting, saved, autoRestart: autoRestart);
+        }
+      },
+    );
+  }
+}
+
+class _JsonEditor extends StatefulWidget {
+  const _JsonEditor({required this.title, required this.initial, this.hint});
+  final String title, initial;
+  final String? hint;
+  @override
+  State<_JsonEditor> createState() => _JsonEditorState();
+}
+
+class _JsonEditorState extends State<_JsonEditor> {
+  late final _controller = TextEditingController(text: widget.initial);
+  @override
+  void dispose() { _controller.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (widget.hint != null) Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Text(context.tr(widget.hint!), style: Theme.of(context).textTheme.bodySmall),
+      ),
+      TextField(
+        controller: _controller, minLines: 6, maxLines: 16, autocorrect: false,
+        keyboardType: TextInputType.multiline,
+        style: const TextStyle(fontFamily: 'JetBrainsMono'),
+        decoration: const InputDecoration(border: OutlineInputBorder()),
+      ),
+    ]),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
+      TextButton(onPressed: () => Navigator.pop(context, _controller.text), child: Text(context.tr('Save'))),
+    ],
+  );
+}
+
 /// A DNS server row whose dialog offers the presets and the servers typed before, as the native
 /// editable combo box does (DnsServerSuggestions over DnsServerHistory::Fill). A picked server
 /// saves and joins the history; the field itself takes anything.
@@ -249,7 +314,7 @@ class InboundPage extends StatelessWidget {
     return BoxPage(title: 'Inbound', actions: [
       restoreDefaultsAction(context, const [
         'inboundSocksPort', 'randomInboundPort', 'allowLan', 'coreDnsInPort', 'disableMixedInbound',
-        'inboundAuth', 'inboundUser', 'inboundPass', 'appendHttpProxy', 'httpProxyBypass',
+        'inboundAuth', 'inboundUser', 'inboundPass', 'appendHttpProxy', 'httpProxyBypass', 'customInbound',
       ]),
     ], children: [
       generateSection(items: [
@@ -269,6 +334,10 @@ class InboundPage extends StatelessWidget {
         SettingLines('Proxy bypass', 'httpProxyBypass',
           hint: 'One host or CIDR per line. Empty means the proxy is applied to every connection.'),
       ]),
+      generateSection(title: context.tr('Custom inbound'), items: [
+        SettingJson('Inbound JSON', 'customInbound',
+          hint: 'A JSON object with an "inbounds" array, merged into the generated configuration'),
+      ], footer: context.tr('The listeners above are generated; these inbounds are added as they are written.')),
     ]);
   }
 }
@@ -305,47 +374,60 @@ const dnsFinalOuts = ['remote', 'direct'];
 
 class DnsPage extends StatelessWidget {
   const DnsPage({super.key});
-  @override Widget build(BuildContext context) => BoxPage(title: 'DNS', actions: [
-    restoreDefaultsAction(context, const [
-      'remoteDns', 'remoteDnsDisableIpv6', 'directDns', 'directDnsDisableIpv6', 'dnsFinalOut',
-      'enableDnsRouting', 'fakeDns', 'fakeipDisableIpv6', 'dnsUseHosts', 'dnsPredefinedEnable',
-      'dnsPredefinedRules', 'coreBoxUnderlyingDns', 'dnsReverseMapping', 'dnsDisableCache',
-      'dnsDisableExpire', 'dnsCacheCapacity', 'dnsPersistCache', 'dnsOptimistic', 'dnsOptimisticTimeout',
-      'dnsQueryTimeout',
-    ]),
-  ], children: [
-    generateSection(title: context.tr('Remote DNS'), items: [
-      SettingDnsServer('Remote DNS', 'remoteDns', hint: 'https://1.1.1.1/dns-query', kind: 'remote'),
-      SettingToggle('Disable IPv6 answers', 'remoteDnsDisableIpv6'),
-    ]),
-    generateSection(title: context.tr('Direct DNS'), items: [
-      SettingDnsServer('Direct DNS', 'directDns', kind: 'direct'),
-      SettingToggle('Disable IPv6 answers', 'directDnsDisableIpv6'),
-    ]),
-    generateSection(items: [
-      SettingChoice<String>('Default DNS server', 'dnsFinalOut', options: dnsFinalOuts, text: (value) => value == 'remote' ? 'Remote DNS' : 'Direct DNS'),
-      SettingToggle('DNS routing', 'enableDnsRouting'),
-      SettingToggle('FakeDNS', 'fakeDns', autoRestart: true),
-      SettingToggle('Disable IPv6 for FakeIP', 'fakeipDisableIpv6'),
-      SettingToggle('Use system hosts', 'dnsUseHosts'),
-      SettingToggle('Predefined hosts', 'dnsPredefinedEnable'),
-      if (context.box.settings['dnsPredefinedEnable'] == true)
-        SettingLines('Predefined hosts entries', 'dnsPredefinedRules',
-          hint: 'One entry per line, in hosts format: "address hostname".'),
-      SettingText('Underlying DNS', 'coreBoxUnderlyingDns', hint: 'empty means the system resolver'),
-      SettingToggle('Reverse mapping', 'dnsReverseMapping'),
-    ]),
-    generateSection(title: context.tr('Cache'), items: [
-      SettingToggle('Disable DNS cache', 'dnsDisableCache'),
-      SettingToggle('Disable cache expiration', 'dnsDisableExpire'),
-      SettingNumber('Cache capacity', 'dnsCacheCapacity', min: 0),
-      SettingToggle('Persist the cache', 'dnsPersistCache'),
-      SettingToggle('Optimistic cache', 'dnsOptimistic'),
-      if (context.box.settings['dnsOptimistic'] == true)
-        SettingText('Optimistic cache timeout', 'dnsOptimisticTimeout', hint: 'e.g. 3m'),
-      SettingText('Query timeout', 'dnsQueryTimeout', hint: 'e.g. 5s, empty to use the core default'),
-    ]),
-  ]);
+  @override Widget build(BuildContext context) {
+    // The DNS object replaces every structured setting on this page while it is on, the way the
+    // native DNS screen disables its own categories; the toggle itself stays reachable either way.
+    final useObject = context.box.settings['useDnsObject'] == true;
+    return BoxPage(title: 'DNS', actions: [
+      restoreDefaultsAction(context, const [
+        'remoteDns', 'remoteDnsDisableIpv6', 'directDns', 'directDnsDisableIpv6', 'dnsFinalOut',
+        'enableDnsRouting', 'fakeDns', 'fakeipDisableIpv6', 'dnsUseHosts', 'dnsPredefinedEnable',
+        'dnsPredefinedRules', 'coreBoxUnderlyingDns', 'dnsReverseMapping', 'dnsDisableCache',
+        'dnsDisableExpire', 'dnsCacheCapacity', 'dnsPersistCache', 'dnsOptimistic', 'dnsOptimisticTimeout',
+        'dnsQueryTimeout', 'useDnsObject', 'dnsObject',
+      ]),
+    ], children: [
+      generateSection(items: [
+        SettingToggle('Use the DNS object', 'useDnsObject', autoRestart: true),
+      ], footer: useObject ? context.tr('The structured settings are ignored while the DNS object is in use.') : null),
+      if (useObject)
+        SettingJson('DNS object', 'dnsObject',
+          hint: 'The sing-box DNS object as JSON; it replaces every structured setting on this page')
+      else ...[
+        generateSection(title: context.tr('Remote DNS'), items: [
+          SettingDnsServer('Remote DNS', 'remoteDns', hint: 'https://1.1.1.1/dns-query', kind: 'remote'),
+          SettingToggle('Disable IPv6 answers', 'remoteDnsDisableIpv6'),
+        ]),
+        generateSection(title: context.tr('Direct DNS'), items: [
+          SettingDnsServer('Direct DNS', 'directDns', kind: 'direct'),
+          SettingToggle('Disable IPv6 answers', 'directDnsDisableIpv6'),
+        ]),
+        generateSection(items: [
+          SettingChoice<String>('Default DNS server', 'dnsFinalOut', options: dnsFinalOuts, text: (value) => value == 'remote' ? 'Remote DNS' : 'Direct DNS'),
+          SettingToggle('DNS routing', 'enableDnsRouting'),
+          SettingToggle('FakeDNS', 'fakeDns', autoRestart: true),
+          SettingToggle('Disable IPv6 for FakeIP', 'fakeipDisableIpv6'),
+          SettingToggle('Use system hosts', 'dnsUseHosts'),
+          SettingToggle('Predefined hosts', 'dnsPredefinedEnable'),
+          if (context.box.settings['dnsPredefinedEnable'] == true)
+            SettingLines('Predefined hosts entries', 'dnsPredefinedRules',
+              hint: 'One entry per line, in hosts format: "address hostname".'),
+          SettingText('Underlying DNS', 'coreBoxUnderlyingDns', hint: 'empty means the system resolver'),
+          SettingToggle('Reverse mapping', 'dnsReverseMapping'),
+        ]),
+        generateSection(title: context.tr('Cache'), items: [
+          SettingToggle('Disable DNS cache', 'dnsDisableCache'),
+          SettingToggle('Disable cache expiration', 'dnsDisableExpire'),
+          SettingNumber('Cache capacity', 'dnsCacheCapacity', min: 0),
+          SettingToggle('Persist the cache', 'dnsPersistCache'),
+          SettingToggle('Optimistic cache', 'dnsOptimistic'),
+          if (context.box.settings['dnsOptimistic'] == true)
+            SettingText('Optimistic cache timeout', 'dnsOptimisticTimeout', hint: 'e.g. 3m'),
+          SettingText('Query timeout', 'dnsQueryTimeout', hint: 'e.g. 5s, empty to use the core default'),
+        ]),
+      ],
+    ]);
+  }
 }
 
 // --------------------------------------------------------------------------------------------- routing
@@ -408,7 +490,7 @@ class WarpPage extends StatelessWidget {
       restoreDefaultsAction(context, const [
         'enableWarp', 'warpMode', 'warpEndpoint', 'warpPrivateKey', 'warpPublicKey', 'warpIfcAddrs',
         'warpReserved', 'warpMasqueEndpoint', 'warpMasquePrivateKey', 'warpMasquePeerPublicKey',
-        'warpMasqueSni', 'warpMasqueHttpMode', 'warpApiHosts',
+        'warpMasqueSni', 'warpMasqueHttpMode', 'warpApiHosts', 'warpTosAccepted',
       ]),
     ], children: [
       generateSection(items: [
@@ -430,6 +512,8 @@ class WarpPage extends StatelessWidget {
         SettingChoice<int>('HTTP mode', 'warpMasqueHttpMode', options: const [0, 1, 2], text: _masqueHttpModeName),
       ]),
       generateSection(title: context.tr('Registration'), items: [
+        // Asked once at registration time upstream; accepting it here spares the prompt later.
+        SettingToggle('Accept the Cloudflare license', 'warpTosAccepted'),
         SettingLines('API hosts', 'warpApiHosts', hint: 'Empty uses api.cloudflareclient.com'),
       ]),
     ]);
@@ -557,6 +641,7 @@ class PresetsPage extends StatelessWidget {
         'muxBrutal', 'muxBrutalUpMbps', 'muxBrutalDownMbps', 'muxDefaultOn', 'xrayMuxConcurrency',
         'xrayMuxMaxConnections', 'xrayMuxXudpConcurrency', 'xrayMuxXudpProxyUdp443', 'xrayMuxDefaultOn',
         'fragmentDefaultOn', 'fragmentImplementation', 'fragmentSize', 'fragmentSleep', 'tlsTricksDefaultOn',
+        'tlsSpoofDefaultOn',
         'utlsFingerprint', 'tlsSpoof', 'tlsSpoofMethod', 'h2IdleTimeout', 'h2KeepAlivePeriod',
         'h2StreamReceiveWindow', 'h2ConnectionReceiveWindow', 'h2MaxConcurrentStreams',
         'quicInitialPacketSize', 'quicDisablePathMtuDiscovery',
@@ -592,6 +677,7 @@ class PresetsPage extends StatelessWidget {
       ]),
       generateSection(title: context.tr('TLS tricks'), items: [
         SettingToggle('TLS tricks by default', 'tlsTricksDefaultOn'),
+        SettingToggle('TLS spoof by default', 'tlsSpoofDefaultOn'),
         SettingText('uTLS fingerprint', 'utlsFingerprint', hint: 'e.g. chrome, firefox, safari'),
         SettingText('TLS spoof', 'tlsSpoof', hint: 'a SNI to offer instead of the real one'),
         SettingChoice<String>('TLS spoof method', 'tlsSpoofMethod', options: tlsSpoofMethods, text: _tlsSpoofName),

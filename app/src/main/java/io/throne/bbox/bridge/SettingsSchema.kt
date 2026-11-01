@@ -163,13 +163,8 @@ object Settings {
         boolEntry("vpnIpv6", Apply.Reload, true, { DataStore.vpnIpv6 }, { DataStore.vpnIpv6 = it }),
         textEntry("vpnTunIpv4Cidr", Apply.Reload, { DataStore.vpnTunIpv4Cidr }, { DataStore.vpnTunIpv4Cidr = it }),
         textEntry("vpnTunIpv6Cidr", Apply.Reload, { DataStore.vpnTunIpv6Cidr }, { DataStore.vpnTunIpv6Cidr = it }),
-        boolEntry(
-            "disablePrivateRangeBypass",
-            Apply.Reload,
-            true,
-            { DataStore.disablePrivateRangeBypass },
-            { DataStore.disablePrivateRangeBypass = it },
-        ),
+        // The private-range bypass is edited through `allowBypass` (the inverted twin the access
+        // vocabulary uses); its raw row is only an alias for the reset, so there is no entry here.
         boolEntry("enableTunRouting", Apply.Reload, { DataStore.enableTunRouting }, { DataStore.enableTunRouting = it }),
         listEntry("vpnPrivateRanges", Apply.Reload, { DataStore.vpnPrivateRanges }, { DataStore.vpnPrivateRanges = it }),
 
@@ -232,6 +227,10 @@ object Settings {
         listEntry("dnsPredefinedRules", Apply.Reload, { DataStore.dnsPredefinedRules }, { DataStore.dnsPredefinedRules = it }),
         boolEntry("dnsPersistCache", Apply.Reload, { DataStore.dnsPersistCache }, { DataStore.dnsPersistCache = it }),
         boolEntry("dnsReverseMapping", Apply.Reload, { DataStore.dnsReverseMapping }, { DataStore.dnsReverseMapping = it }),
+        // The raw DNS object replaces the structured servers above it while it is on, exactly as
+        // the native DNS screen disables them; both keys reload like every other DNS setting.
+        boolEntry("useDnsObject", Apply.Reload, { DataStore.useDnsObject }, { DataStore.useDnsObject = it }),
+        textEntry("dnsObject", Apply.Reload, { DataStore.dnsObject }, { DataStore.dnsObject = it }),
         textEntry("dnsQueryTimeout", Apply.Reload, { DataStore.dnsQueryTimeout }, { DataStore.dnsQueryTimeout = it }),
         boolEntry("dnsOptimistic", Apply.Reload, { DataStore.dnsOptimistic }, { DataStore.dnsOptimistic = it }),
         textEntry(
@@ -338,6 +337,7 @@ object Settings {
         textEntry("fragmentSize", { DataStore.fragmentSize }, { DataStore.fragmentSize = it }),
         textEntry("fragmentSleep", { DataStore.fragmentSleep }, { DataStore.fragmentSleep = it }),
         boolEntry("tlsTricksDefaultOn", { DataStore.tlsTricksDefaultOn }, { DataStore.tlsTricksDefaultOn = it }),
+        boolEntry("tlsSpoofDefaultOn", { DataStore.tlsSpoofDefaultOn }, { DataStore.tlsSpoofDefaultOn = it }),
         textEntry("utlsFingerprint", { DataStore.utlsFingerprint }, { DataStore.utlsFingerprint = it }),
         textEntry("tlsSpoof", { DataStore.tlsSpoof }, { DataStore.tlsSpoof = it }),
         textEntry("tlsSpoofMethod", { DataStore.tlsSpoofMethod }, { DataStore.tlsSpoofMethod = it }),
@@ -427,6 +427,7 @@ object Settings {
      * port sharing one signed row) and the keys the Android side names differently from the bridge.
      */
     private val RESET_ROW_ALIASES = mapOf(
+        "allowLan" to "inbound_address",
         "allowBypass" to "disable_private_range_bypass",
         "userAgent" to "user_agent2",
         "fakeDns" to "fakedns",

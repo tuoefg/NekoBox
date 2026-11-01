@@ -12,6 +12,11 @@ A store key is covered when it is the row of some schema entry (camelToSnake(key
 itself, or an alias). A bridge key is covered when a Setting* control edits it. A UI key is
 covered when a schema entry backs it.
 
+The keys no column claims fall in three non-actionable books, kept apart so the diff only names
+what batch work remains: NON_SETTING (runtime state, managed by code), SHELL_OWNED (a user
+setting the B-box shell edits through its own store or flow, not the Throne settings surface) and
+RESTORE_ONLY (a key no settings page on either side ever edits; it travels through restores).
+
 Run from the repository root:
     uv run tools/diagnostics/settings_audit.py [--summary]
 
@@ -40,8 +45,10 @@ BRIDGE_KEY = re.compile(
 )
 ALIAS_ROW = re.compile(r'"([A-Za-z0-9_]+)"\s+to\s+"([A-Za-z0-9_]+)"')
 _Q = r"[\"']"
-UI_KEY = re.compile(r"Setting(?:Toggle|Text|Number|Lines|DnsServer)\(\s*" + _Q + r"[^\"']*" + _Q + r"\s*,\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q)
+UI_KEY = re.compile(r"Setting(?:Toggle|Text|Number|Lines|DnsServer|Json)\(\s*" + _Q + r"[^\"']*" + _Q + r"\s*,\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q)
 UI_CHOICE = re.compile(r"SettingChoice<[^>]*>\(\s*" + _Q + r"[^\"']*" + _Q + r"\s*,\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q)
+# settings.dart's own switch primitive, which reads box.settings and writes box.setSetting.
+UI_NATIVE = re.compile(r"NativeToggle\(\s*" + _Q + r"[^\"']*" + _Q + r"\s*,\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q)
 UI_SET = re.compile(r"setSetting\(\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q)
 UI_READ = re.compile(r"settings\[\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q + r"\s*\]")
 RESTORE_KEYS = re.compile(r"restoreDefaultsAction\(\s*context\s*,\s*const\s*\[([^\]]*)\]")
@@ -79,6 +86,8 @@ NON_SETTING = {
     "subscriptionLink",         # share-sheet scratch
     "groupName",                # group form scratch
     "groupType",
+    "warp_amnezia_packets",     # generated with the WARP identity, never edited
+    "warp_masque_ifc_addrs",    # written by the MASQUE registration, never edited
     "proxy",                    # Key names shared with intents, not settings
     "vpn",
     "serverConfig",
@@ -92,6 +101,45 @@ OVERLAY_SETTING = {
     "fontPath",
     "fontSize",
 }
+
+# User settings the B-box shell edits through its own store or its own flow rather than the
+# Throne settings surface: the appearance page keeps its own theme and language, the B-box list
+# presentation replaces the old layout options, and the backup page owns the WebDAV account
+# through the webdav.* channels.
+SHELL_OWNED = {
+    "appTheme",              # appearance.dart
+    "useSystemTheme",        # appearance.dart
+    "nightTheme",            # appearance.dart
+    "amoledTheme",           # appearance.dart
+    "appLanguage",           # the Flutter l10n picks zh/en from the system locale
+    "groupLayoutMode",       # the B-box group presentation
+    "compactProfileRows",    # the B-box profile list presentation
+    "compactGroupCards",     # the B-box group card presentation
+    "logFontSize",           # the B-box log page keeps its own text size
+    "traffic_graph_hidden",  # the B-box dashboard's sparklines are not configurable
+    "traffic_graph_hidden_dirs",
+    "traffic_graph_range",
+    "traffic_graph_smooth",
+    "traffic_graph_markers",
+    "webdavServer",          # webdav.* channels, edited on the backup page
+    "webdavUsername",
+    "webdavPassword",
+    "webdavPath",
+}
+
+# Keys no settings page on either side ever edits: they travel through .thrbackup restores and
+# desktop sync, and the code reads them where it needs them.
+RESTORE_ONLY = {
+    "appTLSVersion",         # Nets.kt restricts the app's own TLS; no page surfaces it
+    "notificationActions",   # ServiceNotification picks its buttons from it
+    "show_config_security",  # ProfileRowHolder reads it for its display flags
+    "xray_vless_preference", # SettingsMapper reads it when the importer builds a VLESS node
+    "xray_geoip_url",        # XrayGeoAssets reads it when a config needs geoip.dat
+    "xray_geosite_url",      # XrayGeoAssets reads it when a config needs geosite.dat
+}
+
+# Every book the three-way diff consults before it names a store key as a gap.
+NON_ACTIONABLE = NON_SETTING | SHELL_OWNED | RESTORE_ONLY
 
 
 def camel_to_snake(name: str) -> str:
@@ -134,6 +182,7 @@ def parse_ui() -> tuple[set[str], set[str]]:
         text = path.read_text(encoding="utf-8")
         controls |= set(UI_KEY.findall(text))
         controls |= set(UI_CHOICE.findall(text))
+        controls |= set(UI_NATIVE.findall(text))
         controls |= set(UI_SET.findall(text))
         controls |= set(UI_READ.findall(text))
         for block in RESTORE_KEYS.findall(text):
@@ -157,8 +206,8 @@ def main() -> int:
         covered_rows.add(camel_to_snake(key))
         covered_rows |= aliases.get(key, set())
 
-    registry_missing = sorted(key for key in registry if key not in covered_rows and key not in NON_SETTING)
-    constants_missing = sorted(key for key in constants if key not in covered_rows and key not in NON_SETTING)
+    registry_missing = sorted(key for key in registry if key not in covered_rows and key not in NON_ACTIONABLE)
+    constants_missing = sorted(key for key in constants if key not in covered_rows and key not in NON_ACTIONABLE)
     bridge_missing_ui = sorted(key for key in bridge if key not in ui_controls and key not in NON_SETTING)
     ui_missing_bridge = sorted(
         key for key in ui_controls if key not in bridge and key not in NON_SETTING and key not in OVERLAY_SETTING)

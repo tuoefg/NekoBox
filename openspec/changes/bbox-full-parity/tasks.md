@@ -20,10 +20,12 @@
 
 ## 3. 批次 B：设置收口
 
-- [ ] 3.1 按 settings_audit.py 差集补 `SettingsSchema` 缺失键（registry 15 / Key 15 逐项甄别：真设置补入，运行时状态键移入 NON_SETTING 册并注明）与 `throne.dart` 对应控件（schema 无 UI 13 项），每键 Apply 语义（None/Reload/AppRestart）对齐旧 UI
-- [ ] 3.2 页内分组对齐旧 `SettingsFragment` 树；`uv run tools/diagnostics/settings_audit.py` 退出码 0（全差集闭合）
-- [ ] 3.3 本地静态校验：flutter analyze 0 error、flutter test 全绿；kotlin 编译通过
-- [ ] 3.4 规范同步：`settings-storage` 相关 delta 合入主规范（三列差集闭合的契约表述）
+- [x] 3.1 按 settings_audit.py 差集补 `SettingsSchema` 缺失键（registry 15 / Key 15 逐项甄别：真设置补入，运行时状态键移入 NON_SETTING 册并注明）与 `throne.dart` 对应控件（schema 无 UI 13 项），每键 Apply 语义（None/Reload/AppRestart）对齐旧 UI
+  - 甄别结论：`inbound_address` 由 allowLan 别名覆盖（reset 同步落行）；`tls_spoof_default_on`、`use_dns_object`、`dns_object` 为真设置补入（旧 UI 的 DNS/custom inbound JSON 编辑器对应物）；`warp_amnezia_packets`/`warp_masque_ifc_addrs` 为注册生成态移入 NON_SETTING；主题/布局/日志字号/WebDAV 四键为 shell 自管（新增 SHELL_OWNED 册）；`appTLSVersion`/`notificationActions`/`show_config_security`/`xray_vless_preference`/`xray_geoip_url`/`xray_geosite_url` 为 restore-only（新增 RESTORE_ONLY 册）；`traffic_graph_*` 由 B-box 仪表盘取代归 SHELL_OWNED。
+  - 控件：`SettingJson` 新原语（整串写入，区别于 SettingLines 的行列表）；Inbound 页 Custom inbound、DNS 页 Use the DNS object + DNS object 编辑器（开启时按旧 UI 语义收起结构化分区）、WARP 页 Cloudflare 许可开关、Presets 页 TLS spoof by default；`disablePrivateRangeBypass` 冗余条目删除（allowBypass 反相孪生已覆盖）。
+- [x] 3.2 页内分组对齐旧 `SettingsFragment` 树；`uv run tools/diagnostics/settings_audit.py` 退出码 0（全差集闭合）
+- [ ] 3.3 本地静态校验：flutter analyze 0 error、flutter test 全绿；kotlin 编译通过（本机无 Flutter/Android SDK，未执行；改动已人工逐行复查 + 括号配平 + py_syntax_check 通过，待 CI 验证）
+- [x] 3.4 规范同步：`settings-storage` 相关 delta 合入主规范（三列差集闭合的契约表述）
 - [ ] 3.5 CI/真机验证：推送触发 `ci.yml` 全绿；真机抽查 设置页 每屏与旧 UI 逐项等价（重点 NTP/MTU/ACL 长尾与恢复默认三态），回传证据为 workflow 链接 + 设置页对照截图
 
 ## 4. 批次 C：订阅组管理

@@ -40,3 +40,18 @@ For settings that cannot take effect on a running connection, the app SHALL indi
 #### Scenario: Change TUN setting while connected
 - **WHEN** the user changes a connection-affecting setting while the VPN runs
 - **THEN** the app signals that the change applies after the connection restarts
+
+### Requirement: Settings surface parity
+Every key the registry stores SHALL be reachable from exactly one surface: a bridge schema entry edited through the Flutter settings pages, a shell-owned store or flow (the B-box appearance and layout preferences, the backup page's WebDAV account through the `webdav.*` channels), or a non-actionable book (runtime state managed by code, restore-only keys no settings page edits). The three-way audit SHALL keep the store, bridge and UI columns closed.
+
+#### Scenario: Audit gate
+- **WHEN** `uv run tools/diagnostics/settings_audit.py` runs on the tree
+- **THEN** every column reports zero gaps and the exit code is 0
+
+#### Scenario: New setting lands on all three columns
+- **WHEN** a registry key gains a bridge schema entry
+- **THEN** a `Setting*` control (or a `NativeToggle` the audit recognises) edits it on the owning page, and the page's restore-defaults list carries it
+
+#### Scenario: Shell-owned key stays out of the schema
+- **WHEN** a key the B-box shell edits through its own store or flow (theme, layout, WebDAV account) is added
+- **THEN** it is registered in the audit's SHELL_OWNED book with a note naming the surface that owns it, and gains no duplicate schema entry
