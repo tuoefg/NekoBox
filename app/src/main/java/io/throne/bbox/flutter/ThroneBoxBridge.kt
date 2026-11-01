@@ -21,7 +21,7 @@ import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
 import io.nekohasekai.sagernet.outbound.OutboundFactory
 import io.nekohasekai.sagernet.ui.json.engine.JsonTree
-import io.nekohasekai.sagernet.ui.json.engine.SchemaStore
+import io.nekohasekai.sagernet.ui.json.engine.JsonType
 import io.nekohasekai.sagernet.ui.json.engine.JsonFormatter
 import io.nekohasekai.sagernet.update.UpdateChecker
 import io.throne.bbox.bridge.BboxApi
@@ -825,20 +825,28 @@ class ThroneBoxBridge(
 
     // ------------------------------------------------------------------------------------------------ JSON editing
 
-    /** Validates against the same schema Thron's own JSON editors use, then reports the errors as text. */
+    /** The document keys a group's configuration may carry; everything else is an app setting. */
+    private val CONFIG_KEYS = setOf("name", "url", "autoUpdate", "updateIntervalMinutes", "nodes")
+
+    /** "DNS, routing rules and log settings are app settings": the Throne split the document follows. */
+    private fun refuseForeignConfigKey(key: String): Nothing =
+        error("\"$key\" is not part of the configuration; DNS, routing rules and log settings are app settings")
+
+    /**
+     * The configuration is the group's manifest — name, url, autoUpdate, updateIntervalMinutes and its nodes.
+     * DNS and routing live in the app settings as in Throne, so those keys are refused here instead of being
+     * dropped by a save that only reads the manifest.
+     */
     private suspend fun checkConfig(content: String): Any? = withContext(Dispatchers.IO) {
         val parsed = JsonTree.parse(content)
         val root = parsed.root ?: error(parsed.error.ifBlank { "Not valid JSON" })
-        val schema = SchemaStore.get { app.assets.open(SchemaStore.ASSET) }
-            ?: return@withContext null
-        val validator = SchemaStore.validator(schema, listOf(SchemaStore.CONFIG))
-            ?: return@withContext null
-        val errors = validator.validate(root).filter { it.severity.name == "Error" }
-        if (errors.isNotEmpty()) {
-            val first = errors.first()
-            val more = if (errors.size > 1) " (and ${errors.size - 1} more)" else ""
-            error("${first.message}$more")
-        }
+        if (root.type != JsonType.Object) error("The configuration must be a JSON object")
+        for (key in root.keys) if (key !in CONFIG_KEYS) refuseForeignConfigKey(key)
+        root.member("name")?.takeIf { it.type != JsonType.String }?.let { error("\"name\" must be a string") }
+        root.member("url")?.takeIf { it.type != JsonType.String }?.let { error("\"url\" must be a string") }
+        root.member("autoUpdate")?.takeIf { it.type != JsonType.Bool }?.let { error("\"autoUpdate\" must be true or false") }
+        root.member("updateIntervalMinutes")?.takeIf { it.type != JsonType.Number }?.let { error("\"updateIntervalMinutes\" must be a number") }
+        root.member("nodes")?.takeIf { it.type != JsonType.Array }?.let { error("\"nodes\" must be an array") }
         null
     }
 

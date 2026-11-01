@@ -612,6 +612,10 @@ const _zh = <String, String>{
   'This rule names one endpoint as preferred; it has no match conditions.': '此规则指定一个优选端点；没有匹配条件。',
   'A remote profile downloads its rules from the URL.': '远程配置从 URL 下载规则。',
   'Batch add simple rules': '批量添加简单规则',
+  'Nodes': '节点',
+  'App settings': '应用设置',
+  'This configuration carries only its node list; membership is edited on the Proxies screen.': '此配置仅包含节点列表；成员在代理页管理。',
+  'DNS, routing rules and log settings are app settings, as in Throne.': 'DNS、路由规则和日志设置由应用统一控制，与 Throne 一致。',
 };
 
 extension BoxLocalization on BuildContext {

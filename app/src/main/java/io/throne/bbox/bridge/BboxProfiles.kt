@@ -436,6 +436,12 @@ object BboxProfiles {
     suspend fun write(id: Long, revision: String?, content: String): Config = withContext(Dispatchers.IO) {
         val group = GroupRepo.get(id) ?: error("No configuration with id $id")
         val document = JSONObject(content)
+        val allowed = setOf("name", "url", "autoUpdate", "updateIntervalMinutes", "nodes")
+        for (key in document.keys()) {
+            if (key !in allowed) {
+                error("\"$key\" is not part of the configuration; DNS, routing rules and log settings are app settings")
+            }
+        }
         val nodes = document.optJSONArray("nodes")
         val current = ProfileManager.memberIds(id)
         if (nodes != null && nodes.length() != current.size) {
