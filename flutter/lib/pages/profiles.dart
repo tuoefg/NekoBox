@@ -412,11 +412,14 @@ class _ScanPageState extends State<ScanPage> {
     try {
       final result = json(await _box!.call('profiles.scan', {'session': _session, 'text': text}));
       if (!mounted) return;
+      // An incomplete multi-frame payload still carries its partial text (decoded: 0); opening it
+      // would fail on every intermediate frame. Only a payload the bridge marks complete gets parsed.
+      final decoded = (result['decoded'] as num?)?.toInt() ?? 0;
       final profile = result['profile'] is Map ? json(result['profile'])
-          : result['text'] is String ? await decodeImport(_box!, result['text'] as String) : null;
+          : decoded > 0 && result['text'] is String ? await decodeImport(_box!, result['text'] as String) : null;
       if (!mounted) return;
       if (profile != null) { _complete = true; context.safeNestedPop(profile); }
-      else { setState(() { _decoded = (result['decoded'] as num).toInt(); _total = (result['total'] as num).toInt(); _error = null; }); }
+      else { setState(() { _decoded = decoded; _total = (result['total'] as num).toInt(); _error = null; }); }
     } catch (error) { if (mounted) setState(() => _error = BoxController.describe(error)); }
     finally { _busy = false; }
   }

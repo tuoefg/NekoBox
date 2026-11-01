@@ -43,9 +43,17 @@ class BboxFlutterActivity : FlutterFragmentActivity() {
         super.cleanUpFlutterEngine(flutterEngine)
     }
 
-    /** Lets the user pick a file; null when they back out. */
+    /**
+     * Lets the user pick a file; null when they back out. One picker at a time: a concurrent call would
+     * overwrite the single result slot and leave the first caller hanging forever.
+     */
     suspend fun pickDocument(): Uri? = suspendCancellableCoroutine { continuation ->
-        openHandler = { continuation.resume(it) }
+        if (openHandler != null) {
+            continuation.resume(null)
+            return@suspendCancellableCoroutine
+        }
+        openHandler = { uri -> if (continuation.isActive) continuation.resume(uri) }
+        continuation.invokeOnCancellation { openHandler = null }
         runCatching {
             @Suppress("DEPRECATION")
             startActivityForResult(
@@ -57,9 +65,14 @@ class BboxFlutterActivity : FlutterFragmentActivity() {
         }.onFailure { openHandler = null; continuation.resume(null) }
     }
 
-    /** Lets the user choose where [name] is written; null when they back out. */
+    /** Lets the user choose where [name] is written; null when they back out. One picker at a time. */
     suspend fun pickSaveTarget(name: String, mime: String): Uri? = suspendCancellableCoroutine { continuation ->
-        saveHandler = { continuation.resume(it) }
+        if (saveHandler != null) {
+            continuation.resume(null)
+            return@suspendCancellableCoroutine
+        }
+        saveHandler = { uri -> if (continuation.isActive) continuation.resume(uri) }
+        continuation.invokeOnCancellation { saveHandler = null }
         runCatching {
             @Suppress("DEPRECATION")
             startActivityForResult(
@@ -82,6 +95,16 @@ class BboxFlutterActivity : FlutterFragmentActivity() {
         }
         if (requestCode == REQUEST_OPEN) openHandler = null
         if (requestCode == REQUEST_SAVE) saveHandler = null
+    }
+
+    /**
+     * A share / open-with landing while the UI is up: the bridge keeps the single-delivery contract
+     * per intent instance, and the event tells the UI to ask for this one.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        bridge?.notifyIntentAvailable()
     }
 
     /**

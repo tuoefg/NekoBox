@@ -357,5 +357,112 @@
         }
       ]
     }
+  },
+  "ownFiles": {
+    "lib/box.dart": {
+      "changes": "The channel client: BoxController state store, method calls and the event pump."
+    },
+    "lib/capabilities.dart": {
+      "changes": "The capabilities manifest the navigation is pruned from."
+    },
+    "lib/common/http_message.dart": {
+      "changes": "HTTP message model for the request-debugging pages."
+    },
+    "lib/common/ip_probe.dart": {
+      "changes": "IP probe result model."
+    },
+    "lib/common/routed_ip_probe.dart": {
+      "changes": "The routed IP probe over the bridge's dashboard.probe channels."
+    },
+    "lib/components/capture_poll.dart": {
+      "changes": "Request-capture polling for the requests page."
+    },
+    "lib/components/captured_body.dart": {
+      "changes": "Captured request/response body viewer."
+    },
+    "lib/components/code_editor.dart": {
+      "changes": "The manifest/JSON editor surface used by the profile editors."
+    },
+    "lib/components/data_subscription.dart": {
+      "changes": "BoxData subscription wrapper each page sits in."
+    },
+    "lib/components/page_switcher.dart": {
+      "changes": "Section/page switcher used by the settings sheets."
+    },
+    "lib/components/system_proxy_glyph.dart": {
+      "changes": "System-proxy state indicator."
+    },
+    "lib/l10n.dart": {
+      "changes": "The zh/en string table, lookup and interpolation helpers."
+    },
+    "lib/main.dart": {
+      "changes": "App entry, navigation shell and the tab tree."
+    },
+    "lib/pages/access.dart": {
+      "changes": "Per-app proxy rules (PROXY_APPS / BYPASS_MODE / INDIVIDUAL)."
+    },
+    "lib/pages/authentication.dart": {
+      "changes": "Inbound authentication settings."
+    },
+    "lib/pages/auto_selector.dart": {
+      "changes": "Auto-selector nodes and their status."
+    },
+    "lib/pages/capture_domains.dart": {
+      "changes": "Domain capture settings."
+    },
+    "lib/pages/configuration.dart": {
+      "changes": "The group's manifest page: nodes and the app-settings links."
+    },
+    "lib/pages/connections.dart": {
+      "changes": "Live connections over the core's clash API."
+    },
+    "lib/pages/diagnostics.dart": {
+      "changes": "Diagnostics tools page."
+    },
+    "lib/pages/endpoints.dart": {
+      "changes": "Endpoints page (capability-gated; unsupported in Throne)."
+    },
+    "lib/pages/logs.dart": {
+      "changes": "Logs over CoreLog's buffer, with redacted export."
+    },
+    "lib/pages/node_tuning.dart": {
+      "changes": "Per-node tuning (mux/fragment presets application)."
+    },
+    "lib/pages/profile_editor.dart": {
+      "changes": "Profile form and raw editor with the edit guard."
+    },
+    "lib/pages/reports.dart": {
+      "changes": "Reports page (capability-gated; unsupported in Throne)."
+    },
+    "lib/pages/request_settings.dart": {
+      "changes": "Request-debugging settings."
+    },
+    "lib/pages/requests.dart": {
+      "changes": "Requests page (capability-gated; unsupported in Throne)."
+    },
+    "lib/pages/routes.dart": {
+      "changes": "Route profiles, rules and the rule-set picker."
+    },
+    "lib/pages/settings.dart": {
+      "changes": "App settings home."
+    },
+    "lib/pages/taildrop.dart": {
+      "changes": "Taildrop page (capability-gated; unsupported in Throne)."
+    },
+    "lib/pages/terminal.dart": {
+      "changes": "Terminal page (capability-gated; unsupported in Throne)."
+    },
+    "lib/pages/terminal_settings.dart": {
+      "changes": "Terminal settings."
+    },
+    "lib/pages/throne.dart": {
+      "changes": "Throne's settings pages (inbound/TUN/DNS/routing/WARP/core/testing/presets/subscriptions/updates)."
+    },
+    "lib/theme_settings.dart": {
+      "changes": "Appearance and theme settings model."
+    },
+    "lib/widgets.dart": {
+      "changes": "The shared barrel: exports the ui/, box and page surfaces used everywhere."
+    }
   }
 }

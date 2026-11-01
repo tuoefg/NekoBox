@@ -26,6 +26,7 @@ import io.nekohasekai.sagernet.ui.json.engine.JsonTree
 import io.nekohasekai.sagernet.ui.json.engine.JsonType
 import io.nekohasekai.sagernet.ui.json.engine.JsonFormatter
 import io.nekohasekai.sagernet.update.UpdateChecker
+import moe.matsuri.nb4a.utils.LogRedactor
 import io.throne.bbox.bridge.BboxApi
 import io.throne.bbox.bridge.BboxApps
 import io.throne.bbox.bridge.BboxBackup
@@ -108,6 +109,9 @@ class ThroneBoxBridge(
 
     /** The URI the app was opened with, handed to the UI once. */
     private var pendingIntent: String? = null
+
+    /** The intent instance whose payload was already offered to the UI; a repeat take must not re-deliver it. */
+    private var deliveredIntent: Intent? = null
 
     @Volatile
     private var lanBusy = false
@@ -516,9 +520,15 @@ class ThroneBoxBridge(
                     val refresh = call.argument<Boolean>("refresh") == true
                     val system = call.argument<Boolean>("system") == true
                     val nonInternet = call.argument<Boolean>("nonInternet") == true
-                    result.respond { BboxApps.list(refresh, system, nonInternet).map(BboxApps.App::wire) }
+                    // Package-manager scans belong off the main thread (the channel thread is it).
+                    result.respond {
+                        withContext(Dispatchers.IO) { BboxApps.list(refresh, system, nonInternet) }
+                            .map(BboxApps.App::wire)
+                    }
                 }
-                "apps.icon" -> result.respond { BboxApps.icon(call.argument<String>("package").orEmpty()) }
+                "apps.icon" -> result.respond {
+                    withContext(Dispatchers.IO) { BboxApps.icon(call.argument<String>("package").orEmpty()) }
+                }
                 "apps.rescan" -> result.respond { rescanManagedApps() }
                 "apps.permission" -> result.error(
                     "unsupported",
@@ -553,7 +563,16 @@ class ThroneBoxBridge(
                 "document.save" -> {
                     val name = call.argument<String>("name").orEmpty()
                     val content = call.argument<String>("content").orEmpty()
-                    result.respond { saveDocument(name, content) }
+                    // Log exports carry credentials (URLs, keys); the native export always redacts
+                    // (LogExport.build with redact = true), and so must anything that asks for it here.
+                    val redact = call.argument<Boolean>("redact") == true
+                    result.respond {
+                        val text = if (!redact) content else {
+                            val redactor = LogRedactor(hideDestinations = false)
+                            content.lineSequence().joinToString("\n", transform = redactor::redact)
+                        }
+                        saveDocument(name, text)
+                    }
                 }
                 "share.text" -> {
                     val content = call.argument<String>("content").orEmpty()
@@ -970,12 +989,26 @@ class ThroneBoxBridge(
     }.getOrDefault(false)
 
     /** The URI the activity was opened with, handed over once. */
+    /**
+     * The share / open-with payload, delivered once per intent: the first `intent.take` after an
+     * intent arrives consumes it (per the ready payload's contract), and a later intent starts the
+     * cycle again — [notifyIntentAvailable] tells the UI to ask again.
+     */
     private fun takeIntent(): String? {
         if (pendingIntent == null) {
-            pendingIntent = activity.intent?.takeIf { it.action != Intent.ACTION_MAIN }?.dataString
-                ?: activity.intent?.getStringExtra(Intent.EXTRA_TEXT)
+            val intent = activity.intent
+            if (intent != null && intent !== deliveredIntent) {
+                pendingIntent = intent.takeIf { it.action != Intent.ACTION_MAIN }?.dataString
+                    ?: intent.getStringExtra(Intent.EXTRA_TEXT)
+                deliveredIntent = intent
+            }
         }
         return pendingIntent.also { pendingIntent = null }
+    }
+
+    /** A new intent has replaced the old one; the UI picks it up with `intent.take`. */
+    fun notifyIntentAvailable() {
+        emit("intentAvailable", true)
     }
 
     /** Recomputes the managed list against what is actually installed; uninstalled packages cannot stay in it. */

@@ -1,8 +1,12 @@
 # B-box's interface on Throne
 
-The app runs **B-box's own Flutter interface**, unmodified, over Throne's backend. Nothing on the Dart side was
-rewritten: `flutter/` is a copy of `giturass/B-box`'s `flutter/` module (FlClash 0.9.2 presentation, M3 Expressive),
-and the only new code is the Android host that answers the channels those screens already call.
+The app runs **B-box's own Flutter interface** over Throne's backend. `flutter/` starts as a copy of
+`giturass/B-box`'s `flutter/` module (FlClash 0.9.2 presentation, M3 Expressive) — 99 files vendored
+unchanged and 33 adapted, all recorded with hashes in `flclash-manifest.json`. On top of that the
+port carries its own Dart code (the manifest's `ownFiles` partition: the channel client, the pages
+Throne adds — routes, settings, logs — and the capability-gated shells), plus the Android host that
+answers the channels the screens call. Claims of "nothing on the Dart side was rewritten" describe
+the vendored subset only.
 
 > **Build status.** The debug AAR builds and links. `flutter build aar --debug` produced
 > `flutter/build/host/outputs/repo` (this workspace also copied the `io.flutter` engine artifacts from the Gradle
@@ -122,14 +126,16 @@ Events are pushed by diffing `BboxBridge.state`: `dashboard` and `rates` when th
 
 ## Not wired yet
 
-These answer with an `unsupported` error, which the UI shows as a snackbar:
+These answer with an `unsupported` error, which the UI shows as a snackbar. All are B-box features
+Throne has no counterpart for; `Capabilities.kt` is the single source of truth and prunes the
+navigation accordingly:
 
-`terminal`, `tailscale`/`taildrop`, `webdav.*`, `backup.*`, `capture.*` (request debugging), `remote.*`,
-`apps.list`/`apps.icon`, `connections.*`, `logs.*`, `dashboard.probe.*`, `updates.check`, `stun`/`quality` tools.
+`terminal`, `capture.*` (request debugging), `remote.*`, `reports`, the `stun` / `quality` tools,
+`endpoints` (tailscale / openvpn / openconnect / usbip), `taildrop`, `apps.permission` (the list
+comes from PackageManager and needs no Shizuku grant), and the `dnsObject` editor.
 
-The models and the repository work for connections and logs already exist in the bridge; each needs its reader
-(the clash API for connections, `CoreLog`'s buffer for logs) and a wire shape. Until then the pages that depend on
-them render empty rather than failing.
+Everything else answers: `webdav.*`, `backup.*`, `apps.list` / `apps.icon`, `connections.*`,
+`logs.*`, `updates.check`, `dashboard.probe.*` and the rest are all wired.
 
 ## Television entry
 

@@ -51,7 +51,9 @@ class _LogsPageState extends State<LogsPage> {
       onKeywordsUpdate: (words) => setState(() => _query = words.join(' ')),
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
       iconActions: [IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'), onPressed: () => box.act('document.save', {
-        'name': 'B-box.log', 'content': logs.map((line) => '${recordTime(line['receivedAt'])} [${line['level']}] ${line['message']}').join('\n'),
+        // redact: the core log lines carry URLs and keys; the bridge redacts like the native export.
+        'name': 'B-box.log', 'redact': true,
+        'content': logs.map((line) => '${recordTime(line['receivedAt'])} [${line['level']}] ${line['message']}').join('\n'),
       }))],
       menuItems: [
         CommonPopupMenuItem(glyph: _paused == null ? AppGlyphs.playPause(1) : AppGlyphs.playPause(0),

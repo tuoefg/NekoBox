@@ -8,6 +8,8 @@ class AccessPage extends StatefulWidget {
 }
 
 class _AccessPageState extends State<AccessPage> {
+  /// Android package names, the same rule PackageNameInput.isPackageName enforces natively.
+  static final _packageName = RegExp(r'^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)*$');
   Future<List<Json>>? _apps;
   final _scroll = ScrollController();
   Json? _draft, _saved;
@@ -112,7 +114,18 @@ class _AccessPageState extends State<AccessPage> {
   Future<void> _import() async {
     if (_managed) return;
     final text = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
-    if (text != null && mounted) _set('perAppList', text.split(RegExp(r'\s+')).where((value) => value.isNotEmpty).toSet().toList()..sort());
+    if (text == null || !mounted) return;
+    final names = text.split(RegExp(r'\s+')).where((value) => value.isNotEmpty).toSet().toList()..sort();
+    // The native clipboard import refuses names that are no package (a URL, a sentence) instead of
+    // quietly keeping them as fake apps; match it (PackageNameInput.rejectInvalid).
+    final invalid = names.where((name) => !_packageName.hasMatch(name)).take(3).toList();
+    if (invalid.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(context.tr('Not a valid package name: {names}').replaceAll('{names}', invalid.join(', '))),
+      ));
+      return;
+    }
+    _set('perAppList', names);
   }
 
   Future<void> _querySettings({bool retry = false}) async {

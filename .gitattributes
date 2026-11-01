@@ -1,0 +1,29 @@
+# The repository is LF everywhere; this pins it so a checkout stays LF regardless of
+# core.autocrlf. The vendored-file hashes in flutter/flclash-manifest.json are computed over
+# LF content, so they only reproduce against an LF working tree.
+* text=auto
+
+*.kt eol=lf
+*.java eol=lf
+*.dart eol=lf
+*.yaml eol=lf
+*.yml eol=lf
+*.json eol=lf
+*.md eol=lf
+*.xml eol=lf
+*.gradle eol=lf
+*.gradle.kts eol=lf
+*.properties eol=lf
+*.sh eol=lf
+*.bash eol=lf
+*.py eol=lf
+*.html eol=lf
+*.css eol=lf
+*.js eol=lf
+*.ts eol=lf
+*.txt eol=lf
+*.frag eol=lf
+*.vert eol=lf
+*.pro eol=lf
+*.toml eol=lf
+*.lock eol=lf

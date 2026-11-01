@@ -55,8 +55,8 @@ translation, not a set of adapters bolted onto each screen.
 | node `delay` / `testedAt` | `ProxyEntity.latency` / `latencyAt` | Seconds in the row, milliseconds in the model. |
 | `dashboard.profiles[]` | subscription groups (`ProxyGroup.isSubscription`) | `traffic` / `expiry` come from `SubUserInfo` (`groups.sub_metadata_json`). |
 | `dashboard.egress` | `BboxEgress` | IP, country, organisation, ASN and address family. |
-| `dashboard.memory` | `Runtime` | B-box shows the core's RSS; Throne has no such figure, so the process heap is shown instead. |
-| `dashboard.intranet` | — | Throne exposes no LAN addresses; the panel stays hidden. |
+| `dashboard.memory` | core's `/memory` (`BboxApi.memory`) | `inuse`, or `rss` for a build naming it that; the process heap is the last resort when the API is off. |
+| `dashboard.intranet` | `lanWire` / `lanSet` | The mixed inbound's "Allow LAN" and its port; the panel shows the active bindings. |
 
 ## Actions
 
@@ -96,9 +96,11 @@ honours the mode as well.
 
 ## Not wired yet
 
-* The connections and logs screens: the models exist (`ConnectionInfo`, `logs`), but the sources are the sing-box
-  clash API and `CoreLog`'s buffer, which need their own readers.
-* `addProfile`: importing is an activity flow (`ProfileSelectActivity`, the scanner, file pickers); the card opens it
-  once that flow is ported.
-* The per-node IP / quality probe of the status card: B-box asks libbox for a routed probe; only the egress identity is
-  read here.
+These fall through the dispatch to the `unsupported` error. They are the B-box features Throne has
+no counterpart for (the manifest in `Capabilities.kt` is the single source of truth): `terminal`,
+`capture.*`, `remote.*`, `reports`, the `stun` / `quality` tools, `endpoints` (tailscale / openvpn /
+openconnect / usbip), `taildrop`, `apps.permission`, and the `dnsObject` editor.
+
+Wired since the earlier drafts of this file: the connections and logs screens (`BboxApi.connections`
+over the clash API, `BboxLogs` over `CoreLog`), profile import (`addProfile` and the scanner/file
+flows), and the per-node probe (`dashboard.probe.*` with `dashboard.qualityCache.*`).
