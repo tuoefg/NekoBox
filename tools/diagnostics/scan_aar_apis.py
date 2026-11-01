@@ -82,7 +82,9 @@ class ClassFile:
                 offset += 4
             elif tag in (9, 10, 11):
                 class_index, nt_index = struct.unpack_from(">HH", data, offset)
-                member_refs.append((class_index, nt_index, {9: "field", 10: "method", 11: "imethod"}[tag]))
+                # Methodref and InterfaceMethodref are one member kind for matching: a class
+                # file's methods section does not say which way the caller reached the member.
+                member_refs.append((class_index, nt_index, {9: "field", 10: "method", 11: "method"}[tag]))
                 offset += 4
             elif tag in (3, 4):
                 offset += 4
@@ -135,8 +137,8 @@ def parse_jar_classes(data: bytes) -> list[ClassFile]:
             if entry.endswith(".class"):
                 try:
                     classes.append(ClassFile(jar.read(entry)))
-                except Exception as failure:  # noqa: BLE001 - the entry name is the diagnosis
-                    raise ValueError(f"{entry}: {failure}") from failure
+                except Exception as failure:  # noqa: BLE001 - a bad entry must not kill the scan
+                    print(f"warning: {entry}: {failure}", file=sys.stderr)
     return classes
 
 
@@ -166,42 +168,65 @@ def reference_world() -> tuple[set[tuple[str, str, str, str]], dict[str, str]]:
     return members, supers
 
 
-def backed(ref: tuple[str, str, str, str], members: set, supers: dict[str, str]) -> bool:
+PLATFORM = ("java/", "javax/", "android/", "dalvik/", "libcore/", "sun/", "jdk/", "kotlinx/android/")
+
+# Verdicts for one reference against the pinned jars.
+#   declared          - the member is declared by the class or a library superclass
+#   platform-owner    - the owner class itself comes from the platform; the pin cannot speak to it
+#   platform-super    - the chain ran into a platform superclass without a hit; the member would
+#                       have to be declared there (java/lang/Object's universal methods live here).
+#                       Counted separately: unverifiable by pinning, not evidence of a real miss.
+#   missing           - owner is in the pinned jars and no class in its chain declares the member
+#   unknown-owner     - the owner class is not in the pinned jars at all (a class-level miss)
+def backed(ref: tuple[str, str, str, str], members: set, supers: dict[str, str]) -> str:
     cls, name, desc, kind = ref
+    if cls.startswith(PLATFORM):
+        return "platform-owner"
     seen = set()
     while cls and cls not in seen:
         seen.add(cls)
         if (cls, name, desc, kind) in members:
-            return True
-        cls = supers.get(cls, "")
-        # The JDK and Android framework types are not in the reference jars; their members are
-        # provided by the platform at runtime, so only library members can be missing.
-        if cls.startswith(("java/", "javax/", "android/", "dalvik/")):
-            return True
-    return False
+            return "declared"
+        if cls.startswith(PLATFORM):
+            return "platform-super"
+        parent = supers.get(cls)
+        if parent is None:
+            return "unknown-owner" if len(seen) == 1 else "missing"
+        cls = parent
+    return "missing"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("artifacts", nargs="+", help="classes.jar or .aar files to scan")
+    parser.add_argument("artifacts", nargs="*", help="classes.jar or .aar files to scan")
     parser.add_argument("--all", action="store_true", help="list every reference, not just missing ones")
+    parser.add_argument("--libs", action="store_true", help="also scan app/libs/*.jar (vendored prebuilt jars)")
     args = parser.parse_args()
 
+    paths = [Path(raw) for raw in args.artifacts]
+    if args.libs:
+        paths += sorted((REPO_ROOT / "app/libs").glob("*.jar")) if (REPO_ROOT / "app/libs").is_dir() else []
+    if not paths:
+        parser.error("no artifacts to scan")
+
     refs_total: set[tuple[str, str, str, str]] = set()
-    for raw in args.artifacts:
-        refs = {ref for cls in read_artifact_classes(Path(raw)) for ref in cls.refs if ref[0].startswith(WATCHED)}
+    for path in paths:
+        refs = {ref for cls in read_artifact_classes(path) for ref in cls.refs if ref[0].startswith(WATCHED)}
         refs_total |= refs
-        print(f"{Path(raw).name}: {len(refs)} coroutines/stdlib references")
+        print(f"{path.name}: {len(refs)} coroutines/stdlib references")
 
     members, supers = reference_world()
-    missing = {ref for ref in refs_total if not backed(ref, members, supers)}
+    verdicts = {ref: backed(ref, members, supers) for ref in refs_total}
+    counts = {state: sum(1 for v in verdicts.values() if v == state)
+              for state in ("declared", "platform-owner", "platform-super", "missing", "unknown-owner")}
+    missing = {ref for ref, v in verdicts.items() if v in ("missing", "unknown-owner")}
 
     if args.all:
         for cls, name, desc, kind in sorted(refs_total):
-            mark = "MISSING " if (cls, name, desc, kind) in missing else "         "
-            print(f"{mark}{kind:7s} {cls}.{name}{desc}")
+            print(f"{verdicts[(cls, name, desc, kind)]:14s} {kind:7s} {cls}.{name}{desc}")
 
-    print(f"\n{len(refs_total)} references, {len(missing)} unbacked by the pinned versions")
+    print(f"\n{len(refs_total)} references: " +
+          ", ".join(f"{state}={count}" for state, count in counts.items()))
     for cls, name, desc, kind in sorted(missing):
         print(f"  MISSING {kind} {cls}.{name}{desc}")
     return 1 if missing else 0

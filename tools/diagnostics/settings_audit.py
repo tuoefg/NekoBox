@@ -31,7 +31,7 @@ CONSTANTS = REPO_ROOT / "app/src/main/java/io/nekohasekai/sagernet/Constants.kt"
 SCHEMA = REPO_ROOT / "app/src/main/java/io/throne/bbox/bridge/SettingsSchema.kt"
 THRONE_DART = REPO_ROOT / "flutter/lib/pages/throne.dart"
 
-STORE_CALL = re.compile(r'(?:bool|int|long|string|oneOf|stringList)\("([A-Za-z0-9_]+)"')
+STORE_CALL = re.compile(r'(?:bool|int|long|string|oneOf|stringList)\(\s*"([A-Za-z0-9_]+)"')
 KEY_CONST = re.compile(r'const val [A-Z0-9_]+ = "([A-Za-z0-9_]+)"')
 BRIDGE_KEY = re.compile(
     r'(?:boolEntry|intEntry|textEntry|listEntry)\(\s*"([A-Za-z0-9_]+)"'
@@ -39,12 +39,13 @@ BRIDGE_KEY = re.compile(
     r'|Entry\(\s*"([A-Za-z0-9_]+)"'
 )
 ALIAS_ROW = re.compile(r'"([A-Za-z0-9_]+)"\s+to\s+"([A-Za-z0-9_]+)"')
-UI_KEY = re.compile(r"Setting(?:Toggle|Text|Number|Lines|DnsServer)\(\s*'[^']*'\s*,\s*'([A-Za-z0-9_]+)'")
-UI_CHOICE = re.compile(r"SettingChoice<[^>]*>\(\s*'[^']*'\s*,\s*'([A-Za-z0-9_]+)'")
-UI_SET = re.compile(r"setSetting\(\s*'([A-Za-z0-9_]+)'")
-UI_READ = re.compile(r"settings\[\s*'([A-Za-z0-9_]+)'\s*\]")
+_Q = r"[\"']"
+UI_KEY = re.compile(r"Setting(?:Toggle|Text|Number|Lines|DnsServer)\(\s*" + _Q + r"[^\"']*" + _Q + r"\s*,\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q)
+UI_CHOICE = re.compile(r"SettingChoice<[^>]*>\(\s*" + _Q + r"[^\"']*" + _Q + r"\s*,\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q)
+UI_SET = re.compile(r"setSetting\(\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q)
+UI_READ = re.compile(r"settings\[\s*" + _Q + r"([A-Za-z0-9_]+)" + _Q + r"\s*\]")
 RESTORE_KEYS = re.compile(r"restoreDefaultsAction\(\s*context\s*,\s*const\s*\[([^\]]*)\]")
-RESTORE_KEY_ITEM = re.compile(r"'([A-Za-z0-9_]+)'")
+RESTORE_KEY_ITEM = re.compile(r"[\"']([A-Za-z0-9_]+)[\"']")
 
 # Store keys that are runtime state rather than user settings: they carry a selection, a
 # history or a service status and are managed by code, never edited on a settings page.
@@ -83,6 +84,15 @@ NON_SETTING = {
     "serverConfig",
 }
 
+# UI settings the shell keeps in its own SETTINGS_KEY JSON overlay (applySettings' else branch)
+# instead of ThroneSettings: they are B-box presentation keys Throne has no counterpart for.
+OVERLAY_SETTING = {
+    "fontFamily",
+    "fontFollowTheme",
+    "fontPath",
+    "fontSize",
+}
+
 
 def camel_to_snake(name: str) -> str:
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
@@ -96,6 +106,9 @@ def parse_store_keys() -> tuple[set[str], set[str]]:
     registry = set(STORE_CALL.findall(read(REGISTRY)))
     key_object = read(CONSTANTS)
     key_block = key_object[key_object.index("object Key {"):]
+    # Stop at the object's closing brace; later top-level `const val` lines are other constants.
+    end = key_block.index("\n}")
+    key_block = key_block[:end]
     constants = set(KEY_CONST.findall(key_block))
     return registry, constants
 
@@ -147,7 +160,8 @@ def main() -> int:
     registry_missing = sorted(key for key in registry if key not in covered_rows and key not in NON_SETTING)
     constants_missing = sorted(key for key in constants if key not in covered_rows and key not in NON_SETTING)
     bridge_missing_ui = sorted(key for key in bridge if key not in ui_controls and key not in NON_SETTING)
-    ui_missing_bridge = sorted(key for key in ui_controls if key not in bridge and key not in NON_SETTING)
+    ui_missing_bridge = sorted(
+        key for key in ui_controls if key not in bridge and key not in NON_SETTING and key not in OVERLAY_SETTING)
     restored_missing_control = sorted(key for key in ui_restored if key not in ui_controls)
 
     gaps = {

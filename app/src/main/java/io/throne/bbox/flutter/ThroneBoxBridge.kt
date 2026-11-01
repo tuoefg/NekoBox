@@ -113,6 +113,9 @@ class ThroneBoxBridge(
     /** The intent instance whose payload was already offered to the UI; a repeat take must not re-deliver it. */
     private var deliveredIntent: Intent? = null
 
+    /** Set when an intent arrived while no event sink was attached; raised again in [onListen]. */
+    private var intentAvailablePending = false
+
     @Volatile
     private var lanBusy = false
 
@@ -141,6 +144,10 @@ class ThroneBoxBridge(
 
     override fun onListen(arguments: Any?, eventSink: EventChannel.EventSink?) {
         sink = eventSink
+        if (intentAvailablePending) {
+            intentAvailablePending = false
+            emit("intentAvailable", true)
+        }
         pump?.cancel()
         pump = scope.launch {
             BboxBridge.state
@@ -202,8 +209,9 @@ class ThroneBoxBridge(
     // ------------------------------------------------------------------------------------------------ calls
 
     /**
-     * Runs [block] off the channel thread and answers the call with whatever it produces. A thrown exception becomes
-     * the platform error whose message the UI shows, so a failure is never a silent empty screen.
+     * Runs [block] on the scope's dispatcher (the main thread) and answers the call with whatever it
+     * produces. A thrown exception becomes the platform error whose message the UI shows, so a
+     * failure is never a silent empty screen. A block that does I/O must switch dispatchers itself.
      */
     private fun MethodChannel.Result.respond(block: suspend () -> Any?) {
         scope.launch {
@@ -567,9 +575,11 @@ class ThroneBoxBridge(
                     // (LogExport.build with redact = true), and so must anything that asks for it here.
                     val redact = call.argument<Boolean>("redact") == true
                     result.respond {
-                        val text = if (!redact) content else {
-                            val redactor = LogRedactor(hideDestinations = false)
-                            content.lineSequence().joinToString("\n", transform = redactor::redact)
+                        val text = withContext(Dispatchers.IO) {
+                            if (!redact) content else {
+                                val redactor = LogRedactor(hideDestinations = false)
+                                content.lineSequence().joinToString("\n", transform = redactor::redact)
+                            }
                         }
                         saveDocument(name, text)
                     }
@@ -992,7 +1002,8 @@ class ThroneBoxBridge(
     /**
      * The share / open-with payload, delivered once per intent: the first `intent.take` after an
      * intent arrives consumes it (per the ready payload's contract), and a later intent starts the
-     * cycle again — [notifyIntentAvailable] tells the UI to ask again.
+     * cycle again — [notifyIntentAvailable] tells the UI to ask again. Two intents before either is
+     * taken keep only the latest, as `setIntent` replaced the first.
      */
     private fun takeIntent(): String? {
         if (pendingIntent == null) {
@@ -1006,8 +1017,16 @@ class ThroneBoxBridge(
         return pendingIntent.also { pendingIntent = null }
     }
 
-    /** A new intent has replaced the old one; the UI picks it up with `intent.take`. */
+    /**
+     * A new intent has replaced the old one; the UI picks it up with `intent.take`. When the UI is
+     * not attached the intent still waits for the next `ready`, so nothing is lost — only the ping
+     * is, and the pending flag re-raises it in [onListen].
+     */
     fun notifyIntentAvailable() {
+        if (sink == null) {
+            intentAvailablePending = true
+            return
+        }
         emit("intentAvailable", true)
     }
 
