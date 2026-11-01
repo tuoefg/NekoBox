@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.fragment.app.FragmentActivity
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.ktx.Logs
-import io.nekohasekai.sagernet.ui.MainActivity
 
 // Entry for a .thrbackup opened from outside (VIEW/SEND intents).
 object BackupEntry {
@@ -25,16 +24,6 @@ object BackupEntry {
         }
         if (!backup) return false
         synchronized(this) { pending = uri }
-        activity.runOnUiThread {
-            if (activity is MainActivity) {
-                activity.displayFragmentWithId(R.id.nav_tools)
-            } else {
-                activity.startActivity(
-                    Intent(activity, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(uri)
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                )
-            }
-        }
         return true
     }
 

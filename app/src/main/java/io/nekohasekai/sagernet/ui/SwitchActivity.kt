@@ -2,39 +2,19 @@ package io.nekohasekai.sagernet.ui
 
 import android.content.Intent
 import android.os.Bundle
-import io.nekohasekai.sagernet.Action
 import io.nekohasekai.sagernet.R
-import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.database.ProfileManager
-import io.nekohasekai.sagernet.ktx.runOnMainDispatcher
 
-class SwitchActivity : ThemedActivity(R.layout.layout_empty),
-    ConfigurationFragment.SelectCallback {
+class SwitchActivity : ThemedActivity(R.layout.layout_empty) {
 
     override val isDialog = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         if (savedInstanceState != null) return
-        supportFragmentManager.beginTransaction()
-            .replace(
-                R.id.fragment_holder,
-                ConfigurationFragment.forSelection(null, R.string.action_switch)
-            )
-            .commitAllowingStateLoss()
-    }
-
-    /** A running service switches in place (a no-op for its own profile); a stopped one only changes the selection. */
-    override fun returnProfile(profileId: Long) {
-        val old = DataStore.selectedProxy
-        DataStore.selectedProxy = profileId
-        runOnMainDispatcher {
-            ProfileManager.postUpdate(old, true)
-            ProfileManager.postUpdate(profileId, true)
-        }
-        sendBroadcast(
-            Intent(Action.SWITCH_PROFILE).setPackage(packageName).putExtra(Action.EXTRA_PROFILE_ID, profileId)
+        // The profile list lives in the Flutter UI now (batch L2).
+        startActivity(
+            Intent(this, io.throne.bbox.flutter.BboxFlutterActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
         )
         finish()
     }

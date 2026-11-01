@@ -180,11 +180,6 @@
 
     <!-- Section notes (category summaries) wrap instead of being cut to one line -->
     <style name="PreferenceThemeOverlay.SagerNet" parent="PreferenceThemeOverlay">
-        <item name="preferenceCategoryStyle">@style/Preference.Category.SagerNet</item>
-    </style>
-
-    <style name="Preference.Category.SagerNet" parent="Preference.Category.Material">
-        <item name="android:layout">@layout/layout_preference_category</item>
     </style>
 
     <style name="Widget.MaterialComponents.Chip.Choice.SagerNet">

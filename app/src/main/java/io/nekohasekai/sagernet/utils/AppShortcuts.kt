@@ -11,7 +11,7 @@ import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ui.QuickDisableShortcut
 import io.nekohasekai.sagernet.ui.QuickEnableShortcut
-import io.nekohasekai.sagernet.ui.ScannerActivity
+import io.throne.bbox.flutter.BboxFlutterActivity
 
 /**
  * The launcher shortcuts, published at runtime: a static shortcuts.xml can only name one hard-coded package, which
@@ -30,7 +30,7 @@ object AppShortcuts {
                 shortcut(context, "quick_disable", R.string.quick_disable, R.drawable.ic_qu_shadowsocks_launcher,
                     QuickDisableShortcut::class.java),
                 shortcut(context, "quick_scan", R.string.add_profile_methods_scan_qr_code,
-                    R.drawable.ic_qu_camera_launcher, ScannerActivity::class.java)
+                    R.drawable.ic_qu_camera_launcher, io.throne.bbox.flutter.BboxFlutterActivity::class.java)
                     .takeIf { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) },
             ).filterNotNull()
             val current = ShortcutManagerCompat.getDynamicShortcuts(context)

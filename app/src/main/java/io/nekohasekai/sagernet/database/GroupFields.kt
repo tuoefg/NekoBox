@@ -1,4 +1,4 @@
-package io.nekohasekai.sagernet.ui.profiles
+package io.nekohasekai.sagernet.database
 
 import io.nekohasekai.sagernet.database.ProxyGroup
 import io.nekohasekai.sagernet.database.SagerDatabase

@@ -47,7 +47,7 @@ object BboxTestSession {
         if (bySpeed) {
             val upload = state.speedMode == TestUiState.SPEED_MODE_UPLOAD
             // Kept like the latency sort, so the next stored result re-sorts instead of undoing the order.
-            io.nekohasekai.sagernet.ui.profiles.GroupFields.update(groupId) {
+            io.nekohasekai.sagernet.database.GroupFields.update(groupId) {
                 it.testSortBy = (if (upload) TestBy.UL_SPEED else TestBy.DL_SPEED).value
             }
             GroupSort.sortProfiles(groupId, GroupSortAction(GroupSortMethod.BY_TEST_RESULT, descending = true))

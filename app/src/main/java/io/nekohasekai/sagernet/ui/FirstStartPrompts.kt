@@ -13,7 +13,6 @@ import com.google.android.material.snackbar.Snackbar
 import io.nekohasekai.sagernet.R
 import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.database.DataStore
-import io.nekohasekai.sagernet.ui.settings.GeneralSettingsFragment
 import io.nekohasekai.sagernet.utils.BatteryOptimizations
 
 /**
@@ -112,19 +111,10 @@ class FirstStartPrompts(private val activity: ComponentActivity) {
         if (activity.isFinishing || activity.isDestroyed) return
         // The native general-settings screen only exists behind MainActivity; the Flutter host
         // (and any other host) shows the plain hint, its settings live in the ported UI.
-        if (activity is MainActivity) {
-            val host = activity as MainActivity
-            host.snackbar(R.string.battery_prompt_later).setAction(R.string.settings) {
-                host.openSettingsScreen(
-                    GeneralSettingsFragment::class.java.name, host.getString(R.string.settings_general)
-                )
-            }.show()
-        } else {
-            Snackbar.make(
-                activity.window.decorView.findViewById(android.R.id.content) ?: activity.window.decorView,
-                R.string.battery_prompt_later, Snackbar.LENGTH_LONG,
-            ).show()
-        }
+        Snackbar.make(
+            activity.window.decorView.findViewById(android.R.id.content) ?: activity.window.decorView,
+            R.string.battery_prompt_later, Snackbar.LENGTH_LONG,
+        ).show()
     }
 
     private companion object {
