@@ -7,11 +7,14 @@ import io.nekohasekai.sagernet.database.ProxyGroup
 import io.nekohasekai.sagernet.database.SagerDatabase
 import io.nekohasekai.sagernet.database.SettingsMapper
 import io.nekohasekai.sagernet.bg.autoselector.AutoSelectorProfiles
+import io.nekohasekai.sagernet.bg.autoselector.AutoSelectorRuntime
 import io.nekohasekai.sagernet.group.SubscriptionQueue
 import io.nekohasekai.sagernet.outbound.Outbound
 import io.nekohasekai.sagernet.outbound.import.ProfileImport
 import io.nekohasekai.sagernet.outbound.types.AutoSelector
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -275,6 +278,32 @@ object BboxProfiles {
         AutoSelectorProfiles.save(id, selector)
         BboxBridge.scheduleRefresh(immediate = true)
         autoSelectorInfo(id)
+    }
+
+    /** The running selector's status (AutoSelectorStatus.toJson); the phase is "idle" when nothing runs. */
+    suspend fun autoSelectorStatus(): String = withContext(Dispatchers.IO) {
+        AutoSelectorRuntime.statusJson(withMembers = true)
+    }
+
+    /**
+     * Pins the selector to one member profile ([memberId] < 0 returns to automatic). The choice is
+     * stored first so the next build carries it, then handed to the core when one is running.
+     */
+    suspend fun autoSelectorPin(id: Long, memberId: Long): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val selector = AutoSelectorProfiles.load(id) ?: error("No auto selector with id $id")
+        AutoSelectorProfiles.writes.withLock {
+            if (selector.pinnedID != memberId) {
+                selector.pinnedID = memberId
+                AutoSelectorProfiles.save(id, selector)
+            }
+        }
+        AutoSelectorRuntime.select(memberId)
+        autoSelectorInfo(id)
+    }
+
+    /** Re-probes every member of the running selector now. */
+    suspend fun autoSelectorRecheck(): Unit = withContext(Dispatchers.IO) {
+        AutoSelectorRuntime.recheck()
     }
 
     /** The group as the configuration editor's document. */

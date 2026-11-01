@@ -337,6 +337,16 @@ class ThroneBoxBridge(
                     val values = call.argument<Map<String, Any?>>("value") ?: call.arguments as? Map<String, Any?>
                     result.respond { BboxProfiles.autoSelectorSave(call.argument<Int>("id")?.toLong() ?: -1L, values.orEmpty()) }
                 }
+                "profiles.autoSelectorStatus" -> result.respond { BboxProfiles.autoSelectorStatus() }
+                "profiles.autoSelectorPin" -> result.respond {
+                    BboxProfiles.autoSelectorPin(
+                        call.argument<Int>("id")?.toLong() ?: -1L,
+                        call.argument<Int>("memberId")?.toLong() ?: -1L,
+                    )
+                }
+                "profiles.autoSelectorRecheck" -> result.respond {
+                    BboxProfiles.autoSelectorRecheck(); null
+                }
                 "profiles.importFile" -> result.respond { importFile() }
                 "profiles.scan" -> {
                     val session = call.argument<String>("session").orEmpty()

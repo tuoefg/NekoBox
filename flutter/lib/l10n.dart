@@ -579,6 +579,13 @@ const _zh = <String, String>{
   'Sniff override destination': '嗅探覆盖目标',
   'Strategy': '策略',
   'Comma-separated': '逗号分隔',
+  'Phase': '阶段',
+  'Pinned': '已固定',
+  'Members': '成员',
+  'Recheck now': '立即重新探测',
+  'Ranking': '排名',
+  'Pin': '固定',
+  'Use automatic': '使用自动选择',
 };
 
 extension BoxLocalization on BuildContext {

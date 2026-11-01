@@ -12,6 +12,7 @@ class AutoSelectorPage extends StatefulWidget {
 
 class _AutoSelectorPageState extends State<AutoSelectorPage> {
   Json _info = const {};
+  Json _status = const {};
   bool _loading = true;
   bool _saving = false;
   String? _error;
@@ -33,9 +34,40 @@ class _AutoSelectorPageState extends State<AutoSelectorPage> {
         _gids..clear()..addAll((data['gids'] as List? ?? const []).map((e) => (e as num).toInt()));
         _loading = false;
       });
+      await _loadStatus();
     } catch (error) {
       if (!mounted) return;
       setState(() { _loading = false; _error = BoxController.describe(error); });
+    }
+  }
+
+  Future<void> _loadStatus() async {
+    final box = context.box;
+    try {
+      final raw = await box.call('profiles.autoSelectorStatus');
+      if (mounted) setState(() => _status = json(raw));
+    } catch (error) {
+      // The status is a live read; a service that is not running simply has none.
+    }
+  }
+
+  Future<void> _pin(int memberId) async {
+    final box = context.box;
+    try {
+      await box.call('profiles.autoSelectorPin', {'id': widget.id, 'memberId': memberId});
+      if (mounted) await _load();
+    } catch (error) {
+      if (mounted) box.report(error);
+    }
+  }
+
+  Future<void> _recheck() async {
+    final box = context.box;
+    try {
+      await box.call('profiles.autoSelectorRecheck', {});
+      if (mounted) await _loadStatus();
+    } catch (error) {
+      if (mounted) box.report(error);
     }
   }
 
@@ -67,7 +99,11 @@ class _AutoSelectorPageState extends State<AutoSelectorPage> {
       saving: _saving,
       onSave: _save,
       error: _error,
+      actions: [
+        IconButtonData(glyph: AppGlyphs.refresh, tooltip: 'Refresh', onPressed: _load),
+      ],
       children: [
+        ..._statusSection(context),
         generateSection(title: context.tr('Filters'), items: [
           FormRow(title: context.tr('Name'), trailing: FormRowTextField(
             initialValue: '${_info['name'] ?? ''}',
@@ -180,4 +216,62 @@ class _AutoSelectorPageState extends State<AutoSelectorPage> {
   }
 
   String _balanceName(String value) => value == 'sticky' ? 'Sticky' : 'Rotate';
+
+  /// The live view of the running selector: its phase and selection, then the ranked members,
+  /// each one pin-able. A stopped service has no members to show.
+  List<Widget> _statusSection(BuildContext context) {
+    final phase = _status['phase']?.toString() ?? 'idle';
+    if (phase == 'idle') {
+      return [generateSection(items: [
+        ListItem(title: Text(context.tr('Status')), subtitle: Text(context.tr('Not running'))),
+      ])];
+    }
+    final members = (_status['members'] as List? ?? const []).map((e) => json(e)).toList();
+    final pinnedId = (_status['pinned_id'] as num?)?.toInt() ?? -1;
+    return [
+      generateSection(title: context.tr('Status'), items: [
+        ListItem(title: Text(context.tr('Phase')), trailing: Text('${_status['core_phase'] ?? phase}')),
+        ListItem(title: Text(context.tr('Selected')),
+          subtitle: Text('${_status['selected_name'] ?? ''}')),
+        ListItem(title: Text(context.tr('Pinned')),
+          trailing: Text(pinnedId < 0 ? context.tr('Automatic') : '#$pinnedId'),
+          onTap: () => _pin(-1)),
+        ListItem(title: Text(context.tr('Members')), subtitle: Text(
+          '${_status['members_alive'] ?? 0} alive · ${_status['members_qualified'] ?? 0} qualified · ${_status['members_cooldown'] ?? 0} cooldown')),
+        ListItem(leading: const GlyphIcon(AppGlyphs.bolt), title: Text(context.tr('Recheck now')),
+          onTap: _recheck),
+      ]),
+      if (members.isNotEmpty)
+        generateSection(title: context.tr('Ranking'), items: [
+          for (final member in members)
+            ListItem(
+              title: Text('${member['name'] ?? member['tag']}'),
+              subtitle: Text(_memberSummary(member)),
+              trailing: member['id'] == pinnedId ? const GlyphIcon(AppGlyphs.pin) : null,
+              onTap: () => _memberMenu(member),
+            ),
+        ]),
+    ];
+  }
+
+  String _memberSummary(Json member) {
+    final rank = (member['rank'] as num?)?.toInt() ?? 0;
+    final state = member['state']?.toString() ?? '';
+    final average = (member['average_ms'] as num?)?.toInt() ?? 0;
+    final samples = (member['samples'] as num?)?.toInt() ?? 0;
+    return '#$rank · $state · ${average}ms · $samples×';
+  }
+
+  Future<void> _memberMenu(Json member) async {
+    final picked = await showDialog<String>(context: context, builder: (context) => SimpleDialog(
+      title: Text('${member['name'] ?? member['tag']}'),
+      children: [
+        SimpleDialogOption(onPressed: () => Navigator.pop(context, 'pin'), child: Text(context.tr('Pin'))),
+        SimpleDialogOption(onPressed: () => Navigator.pop(context, 'auto'), child: Text(context.tr('Use automatic'))),
+      ],
+    ));
+    if (!mounted) return;
+    if (picked == 'pin') await _pin((member['id'] as num?)?.toInt() ?? -1);
+    if (picked == 'auto') await _pin(-1);
+  }
 }
