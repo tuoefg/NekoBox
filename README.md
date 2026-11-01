@@ -28,7 +28,7 @@ Releases from v2.0.0 on are signed with a new key, so Android refuses to install
 - JSON editor with sing-box schema checking, completion and formatting
 - Home-screen widgets, a quick settings tile, and server switching from the notification
 - Android TV: launcher banner, D-pad navigation, previous / next server
-
+- One interface: the Flutter UI is the app's only screen as of 3.0.0 (the legacy Fragment interface retired; the VPN notification, share/open intents and the quick settings tile all land in it)
 ## Supported protocols
 
 - SOCKS
