@@ -1,3 +1,11 @@
+#### 3.1.0
+
+* The hardening round ships here (its code rode the 3.0.13 build): the core log folds the sing-box lazy handshake's known-benign connection-reset errors behind a counting chip, a long single-line log line wraps inside its tile instead of overflowing it, tapping a record copies it
+* Crashes keep a durable seven-day record beside the rotating core.log, exported as one redacted file from the logs page
+* CI gates: the Dart/Kotlin channel contract is audited on every push, the freshly built Flutter AAR is scanned for APIs the pinned kotlin-stdlib/coroutines do not provide, and `flutter analyze --fatal-infos` keeps the module at zero lint debt (167 stale infos cleared)
+* The update integrity gate is a plain JVM surface with rejection tests; `docs/device-checklist.md` documents the pre-release device gate
+* The README and design docs describe this distribution on its own terms; `docs/roadmap.md` carries the development plan
+
 #### 3.0.13
 
 * The home status card keeps its vector country flag upright while its crop follows the animated clover, filling the badge throughout a refresh
