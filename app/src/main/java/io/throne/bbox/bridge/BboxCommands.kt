@@ -16,6 +16,7 @@ import io.nekohasekai.sagernet.ui.test.TestSessionClient
 import io.throne.bbox.model.BboxActions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,6 +30,32 @@ import kotlinx.coroutines.withContext
 object BboxCommands : BboxActions {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    /** The session watcher that turns a test's results into catalog refreshes; one at a time. */
+    private var testWatcher: Job? = null
+
+    /**
+     * A test writes its results from the service process ([TestSessionClient]), whose profile updates the catalog's
+     * in-process listeners never hear — the cards would keep their old latency until the next cold start. The session
+     * reports back here, because this is the process that started it, so each landed result re-reads the catalog.
+     */
+    private fun watchTestSession() {
+        if (testWatcher?.isActive == true) return
+        testWatcher = scope.launch {
+            var seen = -1
+            TestSessionClient.state.collect { state ->
+                if (state.done != seen) {
+                    seen = state.done
+                    if (seen > 0) BboxBridge.scheduleRefresh()
+                }
+                if (!state.running && seen > 0) {
+                    BboxBridge.scheduleRefresh(immediate = true)
+                    testWatcher?.cancel()
+                    testWatcher = null
+                }
+            }
+        }
+    }
 
     override fun toggleService() {
         val state = DataStore.serviceState
@@ -86,7 +113,7 @@ object BboxCommands : BboxActions {
                 g to ProfileManager.memberIds(g.id)
             } ?: return@launch
             if (target.second.isEmpty()) return@launch
-            TestSessionClient.start(
+            val started = TestSessionClient.start(
                 TestSpec(
                     kind = TestSpec.KIND_URL,
                     profileIds = target.second.toLongArray(),
@@ -94,6 +121,7 @@ object BboxCommands : BboxActions {
                 ),
                 target.first.id,
             )
+            if (started) watchTestSession()
         }
     }
 
@@ -103,10 +131,11 @@ object BboxCommands : BboxActions {
                 val g = GroupRepo.all().firstOrNull { it.displayName() == group } ?: return@withContext null
                 ProfileManager.members(g.id).firstOrNull { it.displayName() == tag }
             } ?: return@launch
-            TestSessionClient.start(
+            val started = TestSessionClient.start(
                 TestSpec(kind = TestSpec.KIND_URL, profileIds = longArrayOf(profile.id), scopeLabel = profile.displayName()),
                 profile.groupId,
             )
+            if (started) watchTestSession()
         }
     }
 
