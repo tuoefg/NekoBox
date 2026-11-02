@@ -6,6 +6,8 @@
 
 import 'dart:math' as math;
 import 'package:b_box_ui/widgets.dart';
+import 'package:country_flags/country_flags.dart' as country_flags;
+import 'package:flutter/widgets.dart';
 import 'package:material_new_shapes/material_new_shapes.dart';
 
 const _ipMask = '*****';
@@ -406,14 +408,8 @@ class _IpChips extends StatelessWidget {
 
 const _spinPeriod = Duration(milliseconds: 1500);
 
-/// The badge carries the flag by default (the product's choice over FlClash's
-/// code text), so the reference draws the same regional-indicator glyph.
-String _referenceFlag(String code) {
-  final c = code.trim().toUpperCase();
-  if (c.length != 2 || c.codeUnits.any((u) => u < 0x41 || u > 0x5A)) return c;
-  return String.fromCharCodes([for (final u in c.codeUnits) 0x1F1E6 + u - 0x41]);
-}
-
+/// The badge carries a cover-fitted vector flag by default (the product's
+/// choice over FlClash's code text).
 /// The exit's country on a clover that checks the exit again when tapped and
 /// turns while it is being checked.
 class _CountryBadge extends StatefulWidget {
@@ -485,6 +481,7 @@ class _CountryBadgeState extends State<_CountryBadge>
     final enabled = !widget.checking;
     final size = widget.size;
     final code = widget.countryCode;
+    final flagCode = code == null ? null : country_flags.FlagCode.fromCountryCode(code);
     final tooltip = context.appLocalizations.retry;
     final color = Color.alphaBlend(
       foreground.withValues(alpha: enabled && _hovered ? 0.08 : 0),
@@ -520,19 +517,38 @@ class _CountryBadgeState extends State<_CountryBadge>
                       size: size * 0.42,
                       color: foreground,
                     )
-                  : Text(
-                      _referenceFlag(code),
-                      maxLines: 1,
-                      style: AppTextStyle.title1
-                          .of(context)
-                          .copyWith(color: foreground),
-                    ),
+                  : flagCode == null
+                      ? Text(
+                          code,
+                          maxLines: 1,
+                          style: AppTextStyle.footnote.of(context, emphasized: true)
+                            .copyWith(color: foreground, letterSpacing: .04 * AppTextStyle.footnote.size),
+                        )
+                      : ClipPath(
+                          clipper: const _ReferenceCountryBadgeClipper(),
+                          clipBehavior: Clip.antiAlias,
+                          child: country_flags.CountryFlag.fromCountryCode(
+                            code,
+                            theme: country_flags.ImageTheme(width: size, height: size),
+                          ),
+                        ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _ReferenceCountryBadgeClipper extends CustomClipper<Path> {
+  const _ReferenceCountryBadgeClipper();
+
+  @override
+  Path getClip(Size size) => shapePathOf(MaterialShapes.clover4Leaf)
+    .transform(Matrix4.diagonal3Values(size.width, size.height, 1).storage);
+
+  @override
+  bool shouldReclip(_ReferenceCountryBadgeClipper oldClipper) => false;
 }
 
 class _Cells extends StatelessWidget {

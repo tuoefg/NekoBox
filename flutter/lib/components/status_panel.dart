@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:country_flags/country_flags.dart' as country_flags;
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:material_new_shapes/material_new_shapes.dart';
 import '../widgets.dart';
 import '../pages/profiles.dart';
@@ -265,13 +267,6 @@ class _IpText extends StatelessWidget {
   });
 }
 
-/// The regional-indicator flag of an ISO alpha-2 code; empty when the country is not one.
-String _flagEmoji(String code) {
-  final c = code.trim().toUpperCase();
-  if (c.length != 2 || c.codeUnits.any((u) => u < 0x41 || u > 0x5A)) return '';
-  return String.fromCharCodes([for (final u in c.codeUnits) 0x1F1E6 + u - 0x41]);
-}
-
 class _CountryBadge extends StatefulWidget {
   const _CountryBadge({this.country, required this.active, required this.checking, this.onRefresh});
   final String? country;
@@ -302,8 +297,8 @@ class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderS
     final color = widget.active ? context.colorScheme.onSurface : context.colorScheme.onSurfaceVariant;
     final enabled = widget.onRefresh != null;
     final country = widget.country?.trim();
-    final flag = country == null || country.isEmpty ? '' : _flagEmoji(country);
     final code = country == null || country.isEmpty ? null : country.toUpperCase();
+    final flagCode = code == null ? null : country_flags.FlagCode.fromCountryCode(code);
     final background = Color.alphaBlend(color.withValues(alpha: enabled && _hovered ? .08 : 0), SurfaceLevel.inset.colorOf(context.colorScheme));
     // Tap swaps the flag for the abbreviation; a long press still re-checks the IP.
     final hint = code != null
@@ -316,12 +311,30 @@ class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderS
         child: ElasticPress(enabled: enabled, child: AnimatedBuilder(animation: _turn, builder: (_, child) => ShapeBadge(
           shape: MaterialShapes.clover4Leaf, color: background, size: 48,
           rotation: _turn.value * 2 * math.pi, ring: _focused ? focusRingSide(context.colorScheme) : null, child: child), child: code != null
-          ? Text(_showCode || flag.isEmpty ? code : flag, maxLines: 1,
-              style: flag.isEmpty || _showCode
-                  ? AppTextStyle.footnote.of(context, emphasized: true).copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size)
-                  : AppTextStyle.title1.of(context).copyWith(color: color))
+          ? _showCode || flagCode == null
+              ? Text(code, maxLines: 1, style: AppTextStyle.footnote.of(context, emphasized: true)
+                  .copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size))
+              : ClipPath(
+                  key: const Key('country-badge-flag-clip'),
+                  clipper: const _CountryBadgeClipper(),
+                  clipBehavior: Clip.antiAlias,
+                  child: country_flags.CountryFlag.fromCountryCode(code,
+                    key: const Key('country-badge-flag'),
+                    theme: const country_flags.ImageTheme(width: 48, height: 48)))
           : GlyphIcon(AppGlyphs.proxies, size: 48 * .42, color: color))))));
   }
+}
+
+/// Clips the cover-fitted vector flag to the same upright clover as the badge.
+class _CountryBadgeClipper extends CustomClipper<Path> {
+  const _CountryBadgeClipper();
+
+  @override
+  Path getClip(Size size) => shapePathOf(MaterialShapes.clover4Leaf)
+    .transform(Matrix4.diagonal3Values(size.width, size.height, 1).storage);
+
+  @override
+  bool shouldReclip(_CountryBadgeClipper oldClipper) => false;
 }
 
 TextStyle _statusLabelStyle(BuildContext context) => AppTextStyle.caption1.of(context).toTabular.copyWith(color: context.colorScheme.onSurfaceVariant);

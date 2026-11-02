@@ -1,3 +1,7 @@
+#### 3.0.8
+
+* The status badge's exit-country flag is now a vector (SVG) flag from the country_flags package instead of a regional-indicator emoji, rendering identically across platforms; it is still clipped to the clover badge and swaps to the country code on tap, with a long press to re-check the IP
+
 #### 3.0.7
 
 * The network-speed card formats the session total ("12.3 MB") instead of printing the raw byte count

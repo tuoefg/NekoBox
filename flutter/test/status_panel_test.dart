@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:b_box_ui/main.dart';
 import 'package:b_box_ui/widgets.dart';
 import 'package:b_box_ui/components/status_panel.dart';
+import 'package:country_flags/country_flags.dart' as country_flags;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'support/errors.dart';
@@ -120,7 +121,12 @@ void main() {
     expect(dashboard.calls.where((call) => call.method == 'service.start'), isEmpty);
     expect(dashboard.ids, hasLength(1));
     expect(find.text('203.0.113.9'), findsOneWidget);
-    expect(find.text('\u{1F1EC}\u{1F1E7}'), findsOneWidget); // the badge carries GB's flag
+    final flag = tester.widget<country_flags.CountryFlag>(find.byKey(const Key('country-badge-flag')));
+    expect(flag.flagCode, 'gb');
+    expect(flag.theme, isA<country_flags.ImageTheme>()
+      .having((theme) => theme.width, 'width', 48)
+      .having((theme) => theme.height, 'height', 48));
+    expect(find.byKey(const Key('country-badge-flag-clip')), findsOneWidget);
     expect(find.text('Example Business'), findsOneWidget);
     expect(find.text('Business'), findsOneWidget);
     expect(find.text('Quality Good'), findsOneWidget);

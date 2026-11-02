@@ -141,6 +141,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump();
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       final runtime = !scenario.running ? '—' : tester.widgetList<Text>(find.byType(Text))
         .map((text) => text.data).whereType<String>()
