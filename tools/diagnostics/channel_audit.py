@@ -39,7 +39,9 @@ DART_DISPATCH = FLUTTER_LIB / "box.dart"
 # out. The bare form (`call('…')` inside BoxController) is matched separately.
 RECEIVER = r"\w*box\s*!?\??\s*\.\s*(?:call|act)"
 CALL_RE = re.compile(rf"(?<!\?)(?:{RECEIVER}|(?<![\w?.])(?:call|act))\(\s*'([a-zA-Z][a-zA-Z0-9_.:]*)'", re.IGNORECASE)
-DYNAMIC_CALL_RE = re.compile(rf"(?<!\?)(?:{RECEIVER}|(?<![\w?.])(?:call|act))\(\s*(?!['\s)])", re.IGNORECASE)
+# An interpolated method name (`act('${widget.kind}.submit')`) is a dispatch the
+# literal regex cannot name: the quote-with-$ form lands here instead.
+DYNAMIC_CALL_RE = re.compile(rf"(?<!\?)(?:{RECEIVER}|(?<![\w?.])(?:call|act))\(\s*(?!['\s)])|(?<!\?)(?:{RECEIVER}|(?<![\w?.])(?:call|act))\(\s*'(?:[^'\\]|\\.)*\$", re.IGNORECASE)
 KOTLIN_METHOD_RE = re.compile(r'"([a-zA-Z][a-zA-Z0-9_.:]*)"\s*->')
 EMIT_RE = re.compile(r'\bemit\(\s*"([a-zA-Z][a-zA-Z0-9_]*)"')
 DART_CASE_RE = re.compile(r"case\s+'([a-zA-Z][a-zA-Z0-9_]*)'")
@@ -61,8 +63,8 @@ CAPABILITY_PREFIXES: dict[str, set[str]] = {
     "reports": {"reports."},
     "stun": {"stun."},
     "quality": {"quality."},
-    "taildrop": {"taildrop.", "share."},
-    "endpoints": {"tailscale.", "usb."},
+    "taildrop": {"taildrop.", "share.send", "share.discard"},  # share.text is live regardless of Taildrop
+    "endpoints": {"tailscale.", "usb.", "openvpn.", "openconnect.", "usbip."},
 }
 
 # Dynamic dispatch sites (ternaries, widget-driven methods) with their literals;
@@ -73,6 +75,9 @@ DYNAMIC_SITES: dict[str, set[str]] = {
     "flutter/lib/components/capture_poll.dart": {"capture."},  # widget.method, capability-gated page
     "flutter/lib/components/status_panel.dart": {"service.start", "service.stop"},
     "flutter/lib/pages/backup.dart": {"webdav.read", "backup.read"},
+    "flutter/lib/pages/authentication.dart": {
+        f"{kind}.{action}" for kind in ("tailscale", "openconnect", "openvpn", "usbip") for action in ("cancel", "submit")
+    },  # '${widget.kind}.{cancel,submit}', capability-gated page
     "flutter/lib/pages/diagnostics.dart": {"quality.start", "quality.stop", "quality.confirm", "quality.dismiss", "stun.start", "stun.stop"},
     "flutter/lib/pages/logs.dart": {"logs.clear", "logs.logcat.clear"},
     "flutter/lib/pages/requests.dart": {"capture."},  # passthrough, capability-gated page
@@ -105,16 +110,12 @@ def kotlin_handlers() -> set[str]:
     start = text.find("when (call.method)")
     if start < 0:
         return set()
-    depth = 0
-    end = start
-    for index in range(text.find("{", start), len(text)):
-        if text[index] == "{":
-            depth += 1
-        elif text[index] == "}":
-            depth -= 1
-            if depth == 0:
-                end = index
-                break
+    # The when block runs to the next member function: brace matching cannot be used
+    # here, because Kotlin's nested string interpolations ("${if (x) "a" else "b"}")
+    # defeat every regular-expression counter.
+    tail = text[start:]
+    next_fun = re.search(r"\n    (?:private |internal |override )?(?:suspend )?fun ", tail)
+    end = start + (next_fun.start() if next_fun else len(tail))
     return {name for name in KOTLIN_METHOD_RE.findall(text[start:end]) if METHOD_NAME_RE.match(name)}
 
 
@@ -163,11 +164,22 @@ def site_allowed(site: str, absent_prefixes: set[str]) -> bool:
         if text.count("\n", 0, match.start()) + 1 != int(line):
             continue
         first = first_argument(text, match.end())
-        # A conditional dispatch offers its branch results as the method names;
-        # anything else on the line (map keys, etc.) is not a method literal.
+        if "${" in first:
+            # An interpolated name (`'${widget.kind}.cancel'`): vouch through the constant
+            # tail after the last interpolation, which the declared set must end with.
+            tail = re.search(r"\}([a-zA-Z0-9_.]*)'?\"?\)?\s*,?\s*$", first)
+            if not tail or not tail.group(1):
+                return False
+            return any(name.endswith(tail.group(1)) for name in literals if not name.endswith("."))
+        # A conditional dispatch offers its branch results as the method names; a plain
+        # quoted name must be declared; a bare identifier/member chain is widget-driven
+        # and gated by its page's capability.
         branches = [a or b for a, b in re.findall(r"\?\s*'([^']+)'|:\s*'([^']+)'", first)]
         if not branches:
-            return True  # widget-driven (widget.method): gated by its page's capability
+            branches = re.findall(r"'([a-zA-Z][a-zA-Z0-9_.:]*)'|\"([a-zA-Z][a-zA-Z0-9_.:]*)\"", first)
+            branches = [a or b for a, b in branches]
+        if not branches:
+            return True
         return all(
             method in literals or any(method.startswith(prefix) for prefix in literals | absent_prefixes)
             for method in branches

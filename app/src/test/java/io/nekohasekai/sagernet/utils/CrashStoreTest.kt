@@ -16,6 +16,12 @@ class CrashStoreTest {
 
     private val now = System.currentTimeMillis()
 
+    @org.junit.After
+    fun reset() {
+        CrashStore.dir = null
+        CrashStore.clock = { System.currentTimeMillis() }
+    }
+
     private fun install() {
         CrashStore.dir = temp.root
         CrashStore.clock = { now }
@@ -38,6 +44,19 @@ class CrashStoreTest {
         val first = CrashStore.record(Thread.currentThread(), RuntimeException("one"))!!
         val second = CrashStore.record(Thread.currentThread(), RuntimeException("two"))!!
         assertEquals(listOf(second.name, first.name), CrashStore.list().map { it.name })
+    }
+
+    @Test
+    fun theSerialIsPaddedSoNamesSortWithinOneSecond() {
+        install()
+        // Two records in the same second: the unpadded serials 9 and 10 would sort 9 > 10.
+        assertTrue(CrashStore.record(Thread.currentThread(), RuntimeException("a"))!!.name.endsWith("-0001.log"))
+        assertTrue(CrashStore.record(Thread.currentThread(), RuntimeException("b"))!!.name.endsWith("-0002.log"))
+        val ninth = CrashStore.record(Thread.currentThread(), RuntimeException("i"))!!
+        val tenth = CrashStore.record(Thread.currentThread(), RuntimeException("x"))!!
+        assertTrue(ninth.name.endsWith("-0009.log"))
+        assertTrue(tenth.name.endsWith("-0010.log"))
+        assertEquals(listOf(tenth.name, ninth.name), CrashStore.list().map { it.name }.take(2))
     }
 
     @Test

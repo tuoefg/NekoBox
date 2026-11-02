@@ -20,9 +20,9 @@ object CrashHandler : Thread.UncaughtExceptionHandler {
 
         try {
             // core.log rotates: keep the crash in its own file too, or it can scroll
-            // away before anyone exports it.
+            // away before anyone exports it. Throwable: the crash may itself be an OOM.
             CrashStore.record(thread, throwable)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
         }
 
         try {

@@ -28,17 +28,19 @@ object CrashStore {
 
     private fun storage(): File = dir ?: File(app.filesDir, "crashes").apply { mkdirs() }
 
-    private val stampFormat = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US)
+    // SimpleDateFormat is not thread-safe and record() runs on whichever thread crashed;
+    // a fresh instance per call is cheaper than a lock on the crash path.
+    private fun stamp(at: Long) = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US).format(Date(at))
 
     /** Writes one crash record; returns the file, or null when the disk said no. */
     fun record(thread: Thread, throwable: Throwable): File? {
         val at = clock()
-        val name = "crash-${stampFormat.format(Date(at))}-${serial.incrementAndGet()}.log"
+        val name = "crash-${stamp(at)}-%04d.log".format(serial.incrementAndGet())
         val file = File(storage(), name)
         val written = runCatching {
             file.writeText(
                 buildString {
-                    appendLine("time: ${stampFormat.format(Date(at))}")
+                    appendLine("time: ${stamp(at)}")
                     appendLine("thread: ${thread.name}")
                     appendLine("version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
                     appendLine()
@@ -61,9 +63,10 @@ object CrashStore {
     /** Deletes records older than the retention window; the age comes from the file name. */
     fun prune() {
         val cutoff = clock() - RETENTION_DAYS * 24 * 60 * 60 * 1000L
+        val format = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.US)
         list().forEach { file ->
             val stamp = file.name.removePrefix("crash-").removeSuffix(".log").take(19)
-            val at = runCatching { stampFormat.parse(stamp)?.time }.getOrNull()
+            val at = runCatching { format.parse(stamp)?.time }.getOrNull()
             // A record whose name does not parse has no honest age: drop it rather than
             // keep an unprunable file forever.
             if (at == null || at < cutoff) runCatching { file.delete() }

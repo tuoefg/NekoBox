@@ -1,4 +1,5 @@
 import 'package:super_sliver_list/super_sliver_list.dart';
+import 'package:flutter/services.dart';
 import '../widgets.dart';
 import '../components/record.dart';
 import '../components/data_subscription.dart';
@@ -76,7 +77,7 @@ class _LogsPageState extends State<LogsPage> {
     final box = context.box;
     setState(() => _exporting = true);
     try {
-      final files = (json(await box.call('crashes.list', {})) as List).cast<Json>();
+      final files = rows(await box.call('crashes.list', {}));
       if (!mounted) return;
       if (files.isEmpty) {
         box.messages.add(context.tr('No crash logs'));
@@ -84,11 +85,19 @@ class _LogsPageState extends State<LogsPage> {
       }
       final parts = <String>[];
       for (final file in files) {
-        final read = json(await box.call('crashes.read', {'name': file['name']}));
-        parts.add('===== ${file['name']} =====\n${read['content']}');
+        // One unreadable record (pruned mid-export, say) must not sink the whole file.
+        try {
+          final read = json(await box.call('crashes.read', {'name': file['name']}));
+          parts.add('===== ${file['name']} =====\n${read['content']}');
+        } catch (error) {
+          parts.add('===== ${file['name']} =====\n(unreadable: ${BoxController.describe(error)})');
+        }
       }
+      final stamp = DateTime.fromMillisecondsSinceEpoch(files.first['time'] as int);
+      final date = '${stamp.year}-${stamp.month.toString().padLeft(2, '0')}-${stamp.day.toString().padLeft(2, '0')}'
+          '-${stamp.hour.toString().padLeft(2, '0')}-${stamp.minute.toString().padLeft(2, '0')}-${stamp.second.toString().padLeft(2, '0')}';
       final saved = await box.call('document.save', {
-        'name': 'crashes-${recordTime(files.first['time'] * 1000)}.log', 'redact': true,
+        'name': 'crashes-$date.log', 'redact': true,
         'content': parts.join('\n\n'),
       });
       if (mounted && saved != null) box.messages.add(context.tr(saved == true ? 'Exported' : 'Export failed'));
@@ -108,6 +117,9 @@ class _LogsPageState extends State<LogsPage> {
       words.every(([item['level'], item['message']].join(' ').toLowerCase()).contains),
     );
     final noiseCount = matches.where(_isNoise).length;
+    // The fold is a display convenience: exports carry every matching record, and the
+    // export button stays alive while only folded noise is on screen.
+    final exportable = matches.toList();
     final logs = (_showNoise ? matches : matches.where((item) => !_isNoise(item))).toList();
     return BoxDataSubscription(data: _logcat ? BoxData.logcat : BoxData.logs, child: CommonScaffold(
       title: context.tr('Logs'),
@@ -115,8 +127,9 @@ class _LogsPageState extends State<LogsPage> {
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
       iconActions: [
         IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'),
-          onPressed: logs.isEmpty || _exporting ? null : () => _export(logs)),
-        IconButtonData(glyph: AppGlyphs.error, tooltip: context.tr('Export crash logs'), onPressed: _exportCrashes),
+          onPressed: exportable.isEmpty || _exporting ? null : () => _export(exportable)),
+        IconButtonData(glyph: AppGlyphs.error, tooltip: context.tr('Export crash logs'),
+          onPressed: _exporting ? null : _exportCrashes),
       ],
       menuItems: [
         CommonPopupMenuItem(glyph: _paused == null ? AppGlyphs.playPause(1) : AppGlyphs.playPause(0),
@@ -175,7 +188,14 @@ class _LogsPageState extends State<LogsPage> {
                   final tone = ['error', 'fatal', 'panic'].contains(level) ? RecordTone.error
                       : ['warn', 'warning'].contains(level) ? RecordTone.warning : RecordTone.neutral;
                   return RecordListItem(
-                    key: ValueKey(log['id']), onTap: () {},
+                    key: ValueKey(log['id']),
+                    // Tap copies the line: the wrapping Text body has no selection handles,
+                    // and a crash line is exactly what gets pasted into a bug report.
+                    onTap: () async {
+                      await Clipboard.setData(ClipboardData(text: log['message'].toString()));
+                      if (!context.mounted) return;
+                      box.messages.add(context.tr('Copied'));
+                    },
                     header: RecordHeader(children: [
                       if ((log['receivedAt'] as num? ?? 0) > 0) RecordTimestamp(recordTime(log['receivedAt'])),
                       RecordLabel(label: level, tone: tone, onPressed: () => context.commonScaffoldState?.addKeyword(level)),

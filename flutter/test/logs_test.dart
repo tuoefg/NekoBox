@@ -19,6 +19,7 @@ void main() {
   final messages = <String>[];
   Object? saveResult = true;
   Completer<Object?>? pendingSave;
+  List<Json> crashFiles = [];
 
   Future<void> mount(WidgetTester tester, {bool remote = false}) async {
     tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
@@ -50,6 +51,10 @@ void main() {
       }
       if (call.method == 'logs.logcat.clear') {
         events.add({'type': 'logcat', 'value': {'reset': true, 'entries': []}});
+      }
+      if (call.method == 'crashes.list') return crashFiles;
+      if (call.method == 'crashes.read') {
+        return {'name': json(call.arguments)['name'], 'content': 'stack line'};
       }
       return null;
     });
@@ -271,5 +276,36 @@ void main() {
     expect(find.text('Folded 1 connection resets'), findsNothing);
     expect(find.textContaining('report handshake success'), findsOneWidget);
     expect(tester.takeException(), isNull, reason: 'final');
+  });
+
+  testWidgets('crash export combines the records into one redacted file', (tester) async {
+    await mount(tester);
+    crashFiles = [
+      {'name': 'crash-a.log', 'size': 10, 'time': 1700000000000},
+      {'name': 'crash-b.log', 'size': 12, 'time': 1700000001000},
+    ];
+    saveResult = false;
+    scaffold(tester).iconActions.last.onPressed!();
+    await tester.pumpAndSettle();
+    expect(messages, ['Export failed']);
+    final save = calls.lastWhere((call) => call.method == 'document.save');
+    final args = json(save.arguments);
+    expect(args['redact'], true);
+    expect(args['name'] as String, contains('crashes-'));
+    expect(exported, contains('===== crash-a.log ====='));
+    expect(exported, contains('stack line'));
+    // An empty store is a message, not an export attempt.
+    crashFiles = [];
+    saveResult = null;
+    scaffold(tester).iconActions.last.onPressed!();
+    await tester.pumpAndSettle();
+    expect(messages, ['Export failed', 'No crash logs']);
+    // A cancelled picker after a real export stays silent.
+    crashFiles = [{'name': 'crash-a.log', 'size': 10, 'time': 1700000000000}];
+    saveResult = true;
+    scaffold(tester).iconActions.last.onPressed!();
+    await tester.pumpAndSettle();
+    expect(messages, ['Export failed', 'No crash logs', 'Exported']);
+    expect(tester.takeException(), isNull);
   });
 }

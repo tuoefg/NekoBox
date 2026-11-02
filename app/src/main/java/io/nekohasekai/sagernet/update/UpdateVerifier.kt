@@ -28,12 +28,14 @@ object UpdateVerifier {
 
     fun verify(context: Context, file: File, offer: UpdateChecker.Offer) {
         val expected = offer.expected!!
+        // Both sizes first, so a mismatched download reports size even when its digest is
+        // also wrong — the order the pre-refactor code used.
+        if (file.length() != expected.size || file.length() != offer.apk!!.size) reject(context, R.string.update_error_size)
         try {
             verifyIntegrity(file, expected.size, expected.sha256)
         } catch (e: IntegrityRejected) {
             reject(context, if (e.reason == IntegrityReason.SHA256) R.string.update_error_sha256 else R.string.update_error_size)
         }
-        if (file.length() != offer.apk!!.size) reject(context, R.string.update_error_size)
 
         val pm = context.packageManager
         val archive = archiveInfo(pm, file) ?: reject(context, R.string.update_error_parse)
