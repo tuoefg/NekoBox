@@ -81,6 +81,14 @@
 | `capture` HTTP 捕获改写 | 高级调试利器 | 依赖 libbox 私有引擎，Throne 核心是否暴露**未证实** | 先做可行性侦察（grep Throne 核心 aar/api），证实前不立项 |
 | `dnsObject` 裸 DNS 编辑器 | 高级用户刚需 | 纯 JSON 引擎已就绪（批次 E），加 schema 即可 | 备选——若 quality 侦察失败则上此项 |
 
+**侦察结论（2026-11-03，quality 立项通过，实现留待下一轮）：**
+
+- 核心 API 在：throneproj/Throne 的 libbox 暴露完整的 `NetworkQualityTest` 族（`experimental/libbox/networkquality.go`、`CommandClient.StartNetworkQualityTest(configURL, outboundTag, serial, maxRuntimeSeconds, http3, handler)`），与 B-box 用法逐参一致
+- 参考实现齐：B-box 的 `NetworkQualityViewModel.kt`（状态机 + toWire 线格式：phase/idleLatencyMs/downloadCapacity/uploadCapacity/RPM+accuracy/isRunning/configURL/serial/http3/maxRuntime）与 `BoxTools.kt` 的 `quality.start` 分支（validate url → selectOutbound → setSerial → setHttp3 → setMaxRuntime → start）可直接翻译
+- vendored 页面现成：`flutter/lib/pages/diagnostics.dart`（quality=true 分支）已消费 `quality` 事件流与 `quality.start/stop/confirm/dismiss`
+- **实现路径（下一轮照此执行）**：quality 的取样必须跑在 :bg 进程（box 所在处）——照 `TestSessionClient` 模式：`ICoreService` 加 `startNetworkQuality(config, callback)` AIDL 方法 + bg 侧 libbox 会话 + 回调 marshal 到主进程 → `BboxQuality` 状态机（移植 ViewModel）→ ThroneBoxBridge 四个 when 分支转发并 `emit("quality", wire)` → `Capabilities.kt` `"quality" to true` → diagnostics 页从设置/工具页入口可达 → 通道审计自动覆盖新契约
+- 工作量估计：AIDL + bg 实现 + 桥接 + 状态机移植 ≈ 一个完整批次（半天），含测试与评审
+
 流程：openspec 提案（proposal + tasks + spec delta）→ 桥接层 → Flutter 页 → `Capabilities.kt` 置 true → 设备清单过 N3。其余 false 项（terminal/taildrop/endpoints/remote/stun/perAppManaged/rootQuery）**明确不做**（重依赖或低价值），除非用户点名。
 
 ### W5 · 上游跟踪（常驻，不占版本号）
