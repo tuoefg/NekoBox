@@ -1,3 +1,7 @@
+#### 3.0.5
+
+* Settings follow Throne's own list: one Settings entry opens General, Appearance, Inbound, TUN, Routing, DNS, Node presets, Testing, Subscriptions, Core, Diagnostics and Backup directly, and WARP moves inside Routing
+
 #### 3.0.4
 
 * Finish the rename: the first-start prompts, the notification, battery, Wi-Fi and VPN explanations, the update dialogs and the import warnings now call the app flrone, and the suggested backup file name is `flrone-backup.json`

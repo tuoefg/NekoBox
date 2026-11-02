@@ -21,3 +21,6 @@ local.properties
 
 # python bytecode
 __pycache__/
+
+# local release bundles (release_assets.py output)
+/dist*/
