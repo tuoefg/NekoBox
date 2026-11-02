@@ -129,6 +129,45 @@ void main() {
     await events.close();
   });
 
+  testWidgets('nodes select and test while the service is stopped', (tester) async {
+    reportFlutterErrors();
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final events = StreamController<dynamic>.broadcast();
+    const channel = MethodChannel('test.proxy-stopped');
+    final calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return call.method == 'ready'
+          ? {'version': 'test', 'coreVersion': 'test', 'dashboard': {'status': 'Stopped'}, 'preferences': {'locale': 'en'}}
+          : null;
+    });
+    addTearDown(() => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null));
+    await tester.pumpWidget(BoxApp(controller: BoxController(channel: channel, events: events.stream)));
+    await tester.pumpAndSettle();
+    events.add({'type': 'groups', 'value': [
+      {'id': 1, 'tag': 'Group A', 'selected': 'Node A', 'selectable': true, 'items': [
+        {'id': 10, 'tag': 'Node A', 'type': 'Shadowsocks', 'delay': 12},
+        {'id': 11, 'tag': 'Node B', 'type': 'Shadowsocks', 'delay': 34},
+      ]},
+    ]});
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Proxies').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Node B'));
+    await tester.pumpAndSettle();
+    expect((calls.lastWhere((call) => call.method == 'groups.select').arguments as Map)['tag'], 'Node B');
+    await tester.tap(find.byTooltip('Test latency').first);
+    await tester.pumpAndSettle();
+    expect((calls.lastWhere((call) => call.method == 'groups.test').arguments as Map)['tag'], 'Group A');
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    await events.close();
+  });
+
   testWidgets('selected proxies are located outside the lazy grid and the active group survives group updates', (tester) async {
     reportFlutterErrors();
     tester.view.physicalSize = const Size(360, 800);

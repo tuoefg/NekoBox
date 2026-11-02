@@ -49,9 +49,9 @@ class ProxyNodeCard extends StatelessWidget {
       menuItems: [
         if (group['selectable'] == true)
           CommonPopupMenuItem(glyph: AppGlyphs.checkCircle, label: context.tr('Select'), checked: selected,
-            onPressed: context.box.running ? onSelect : null),
+            onPressed: onSelect),
         CommonPopupMenuItem(glyph: AppGlyphs.bolt, label: context.tr('Test latency'),
-          onPressed: context.box.running && !testing ? onTest : null),
+          onPressed: testing ? null : onTest),
         CommonPopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Copy link'), onPressed: () async {
           final box = context.box;
           try {
@@ -106,7 +106,9 @@ class ProxyNodeCard extends StatelessWidget {
       ],
       child: CommonCard(
         radius: AppCorner.lg, enterActionsOnRight: true, isSelected: selected,
-        onPressed: group['selectable'] == true && context.box.running ? onSelect : null,
+        // Both actions outlive the service: a selection is stored for the next start and a test runs
+        // over its own instance of the profile, so a stopped VPN must not turn the card inert.
+        onPressed: group['selectable'] == true ? onSelect : null,
         child: Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Column(
           mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -123,7 +125,7 @@ class ProxyNodeCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis, style: AppTextStyle.footnote.of(context).copyWith(color: context.colorScheme.onSurface.opacity80)))),
               if (!metrics.loose) const SizedBox(width: 4),
               Flexible(child: Semantics(button: true, label: context.tr('Test latency'), child: GestureDetector(
-                behavior: HitTestBehavior.opaque, onTap: context.box.running && !testing ? onTest : null,
+                behavior: HitTestBehavior.opaque, onTap: testing ? null : onTest,
                 child: FadeBox(alignment: metrics.loose ? Alignment.centerLeft : Alignment.centerRight, child: testing
                   ? CommonCircleLoading(size: metrics.delayHeight)
                   : !tested ? GlyphIcon(AppGlyphs.bolt, size: metrics.delayHeight)

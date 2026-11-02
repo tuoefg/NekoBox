@@ -281,7 +281,7 @@ class ProxyGroupHeader extends StatelessWidget {
               TonalButtonTheme(size: TonalButtonSize.compact, child: Row(children: [
                 if (expanded) TonalButtonGroup(size: TonalButtonSize.compact, children: [
                   IconButton(tooltip: context.tr('Scroll to selected'), onPressed: onLocate, iconSize: 19, icon: const GlyphIcon(AppGlyphs.locate)),
-                  IconButton(tooltip: context.tr('Test latency'), onPressed: testing || !context.box.running ? null : onTest,
+                  IconButton(tooltip: context.tr('Test latency'), onPressed: testing ? null : onTest,
                     icon: testing ? CommonCircleLoading(size: TonalButtonSize.compact.icon) : const GlyphIcon(AppGlyphs.bolt)),
                 ]) else Text(group['type'] as String? ?? (group['selectable'] == true ? 'Selector' : 'URLTest'),
                   maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyle.caption1.of(context, emphasized: true).toLight),

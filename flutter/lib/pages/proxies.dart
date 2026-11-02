@@ -34,8 +34,10 @@ class _ProxiesPageState extends State<ProxiesPage> {
     ],
   );
 
+  // Testing and selecting both work with the service stopped: a test runs over its own instance of the
+  // profile, and a selection is a stored preference the next start reads, so neither waits for the VPN.
   Future<void> _test(String tag) async {
-    if (_testing.contains(tag) || !context.box.running) return;
+    if (_testing.contains(tag)) return;
     setState(() => _testing.add(tag));
     await context.box.act('groups.test', {'tag': tag});
     if (mounted) setState(() => _testing.remove(tag));
@@ -43,7 +45,7 @@ class _ProxiesPageState extends State<ProxiesPage> {
 
   Future<void> _select(Json group, Json node) async {
     final box = context.box;
-    if (!box.running || group['selectable'] != true || node['tag'] == group['selected']) return;
+    if (group['selectable'] != true || node['tag'] == group['selected']) return;
     if (await box.act('groups.select', {'group': group['tag'], 'tag': node['tag']})) {
       if (box.preferences['closeConnectionsOnSelect'] == true) await box.act('connections.closeAll');
     }
@@ -118,7 +120,7 @@ class _ProxiesPageState extends State<ProxiesPage> {
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
       primaryAction: list ? null : IconButtonData(glyph: AppGlyphs.bolt, tooltip: context.tr('Test latency'),
         isLoading: _testing.contains(_currentGroup),
-        onPressed: box.running && _currentGroup != null ? () => _test(_currentGroup!) : null),
+        onPressed: _currentGroup != null ? () => _test(_currentGroup!) : null),
       iconActions: [
         if (!list) IconButtonData(glyph: AppGlyphs.locate, tooltip: context.tr('Scroll to selected'), onPressed: groups.isEmpty ? null : _locate),
       ],
@@ -131,7 +133,6 @@ class _ProxiesPageState extends State<ProxiesPage> {
         CommonPopupMenuItem(glyph: AppGlyphs.eyeOff, label: context.tr('Hide timeout proxies'), checked: box.preferences['hideTimeoutProxies'] == true,
           section: const CommonPopupMenuSection(), onPressed: () => box.setPreference('hideTimeoutProxies', box.preferences['hideTimeoutProxies'] != true)),
         CommonPopupMenuItem(glyph: AppGlyphs.bolt, label: context.tr('Test all'), onPressed: () async {
-          if (!box.running) return;
           for (final group in groups) { await _test(group['tag'] as String); }
         }),
         CommonPopupMenuItem(glyph: AppGlyphs.dashboard, label: context.tr('Test panel'), onPressed: () => openForm(context, const TestPanelPage())),
