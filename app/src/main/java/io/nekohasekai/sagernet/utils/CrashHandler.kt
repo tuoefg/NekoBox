@@ -19,6 +19,13 @@ object CrashHandler : Thread.UncaughtExceptionHandler {
         }
 
         try {
+            // core.log rotates: keep the crash in its own file too, or it can scroll
+            // away before anyone exports it.
+            CrashStore.record(thread, throwable)
+        } catch (e: Exception) {
+        }
+
+        try {
             Logs.e(thread.toString())
             Logs.e(throwable.stackTraceToString())
         } catch (e: Exception) {

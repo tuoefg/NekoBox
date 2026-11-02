@@ -69,6 +69,36 @@ class _LogsPageState extends State<LogsPage> {
     }
   }
 
+  /// Dumps every kept crash record into one redacted file; the records survive
+  /// core.log's rotation, so the user can hand them over after a restart.
+  Future<void> _exportCrashes() async {
+    if (_exporting) return;
+    final box = context.box;
+    setState(() => _exporting = true);
+    try {
+      final files = (json(await box.call('crashes.list', {})) as List).cast<Json>();
+      if (!mounted) return;
+      if (files.isEmpty) {
+        box.messages.add(context.tr('No crash logs'));
+        return;
+      }
+      final parts = <String>[];
+      for (final file in files) {
+        final read = json(await box.call('crashes.read', {'name': file['name']}));
+        parts.add('===== ${file['name']} =====\n${read['content']}');
+      }
+      final saved = await box.call('document.save', {
+        'name': 'crashes-${recordTime(files.first['time'] * 1000)}.log', 'redact': true,
+        'content': parts.join('\n\n'),
+      });
+      if (mounted && saved != null) box.messages.add(context.tr(saved == true ? 'Exported' : 'Export failed'));
+    } catch (error) {
+      box.report(error);
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   @override Widget build(BuildContext context) {
     final box = context.watchBox(BoxAspect.logs);
     if (_logcat) context.watchBox(BoxAspect.logcat);
@@ -83,8 +113,11 @@ class _LogsPageState extends State<LogsPage> {
       title: context.tr('Logs'),
       onKeywordsUpdate: (words) => setState(() => _query = words.join(' ')),
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
-      iconActions: [IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'),
-        onPressed: logs.isEmpty || _exporting ? null : () => _export(logs))],
+      iconActions: [
+        IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'),
+          onPressed: logs.isEmpty || _exporting ? null : () => _export(logs)),
+        IconButtonData(glyph: AppGlyphs.error, tooltip: context.tr('Export crash logs'), onPressed: _exportCrashes),
+      ],
       menuItems: [
         CommonPopupMenuItem(glyph: _paused == null ? AppGlyphs.playPause(1) : AppGlyphs.playPause(0),
           label: context.tr(_paused == null ? 'Pause' : 'Resume'), onPressed: _paused == null ? _pause : _resume),

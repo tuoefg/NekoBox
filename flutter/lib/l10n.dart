@@ -380,6 +380,7 @@ const _zh = <String, String>{
   'Log level': '日志级别', 'Follow configuration': '跟随配置',
   'Folded {count} connection resets': '已折叠 {count} 条连接重置噪音',
   'Hide connection-reset noise': '隐藏连接重置噪音',
+  'Export crash logs': '导出崩溃日志', 'No crash logs': '暂无崩溃日志',
   'Trace': '跟踪', 'Debug': '调试', 'Info': '信息', 'Warn': '警告', 'Fatal': '致命', 'Panic': '崩溃',
   'Turn on': '开启', 'Turn off': '关闭', 'Select all': '全选', 'Deselect all': '取消全选', 'Action': '操作', 'Time': '时间',
   'Clipboard import': '从剪贴板导入', 'Clipboard export': '导出到剪贴板',

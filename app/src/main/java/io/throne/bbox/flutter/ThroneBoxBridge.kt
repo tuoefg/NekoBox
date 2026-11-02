@@ -16,6 +16,7 @@ import io.nekohasekai.sagernet.SagerNet
 import android.os.Build
 import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.utils.CrashStore
 import io.nekohasekai.sagernet.database.DnsServerHistory
 import io.nekohasekai.sagernet.database.GroupRepo
 import io.nekohasekai.sagernet.database.RouteManager
@@ -598,6 +599,22 @@ class ThroneBoxBridge(
                     null
                 }
                 // The system logcat tab: same shape as the core log's events, a different source.
+                // The durable crash records: core.log rotates, these files survive until pruned.
+                "crashes.list" -> result.respond {
+                    withContext(Dispatchers.IO) {
+                        CrashStore.list().map { file ->
+                            mapOf("name" to file.name, "size" to file.length(), "time" to file.lastModified())
+                        }
+                    }
+                }
+                "crashes.read" -> result.respond {
+                    val name = call.argument<String>("name").orEmpty()
+                    // The name comes back from crashes.list; anything path-like is rejected outright.
+                    require(name.isNotEmpty() && !name.contains('/') && !name.contains('\\') && !name.contains("..")) {
+                        "bad crash log name"
+                    }
+                    withContext(Dispatchers.IO) { mapOf("name" to name, "content" to CrashStore.read(name)) }
+                }
                 "logs.logcat.visible" -> {
                     if (call.argument<Boolean>("visible") == true) {
                         BboxLogcat.start(scope) { emit("logcat", BboxLogcat.wire(it)) }
