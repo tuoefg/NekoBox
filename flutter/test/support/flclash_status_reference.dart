@@ -406,6 +406,14 @@ class _IpChips extends StatelessWidget {
 
 const _spinPeriod = Duration(milliseconds: 1500);
 
+/// The badge carries the flag by default (the product's choice over FlClash's
+/// code text), so the reference draws the same regional-indicator glyph.
+String _referenceFlag(String code) {
+  final c = code.trim().toUpperCase();
+  if (c.length != 2 || c.codeUnits.any((u) => u < 0x41 || u > 0x5A)) return c;
+  return String.fromCharCodes([for (final u in c.codeUnits) 0x1F1E6 + u - 0x41]);
+}
+
 /// The exit's country on a clover that checks the exit again when tapped and
 /// turns while it is being checked.
 class _CountryBadge extends StatefulWidget {
@@ -513,14 +521,11 @@ class _CountryBadgeState extends State<_CountryBadge>
                       color: foreground,
                     )
                   : Text(
-                      code.toUpperCase(),
+                      _referenceFlag(code),
                       maxLines: 1,
-                      style: AppTextStyle.footnote
-                          .of(context, emphasized: true)
-                          .copyWith(
-                            color: foreground,
-                            letterSpacing: 0.04 * AppTextStyle.footnote.size,
-                          ),
+                      style: AppTextStyle.title1
+                          .of(context)
+                          .copyWith(color: foreground),
                     ),
             ),
           ),

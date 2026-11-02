@@ -127,6 +127,9 @@ class _SpeedTile extends StatelessWidget {
     final box = context.watchBox(BoxAspect.traffic), colors = context.colorScheme;
     final color = upload ? colors.onSurfaceVariant : colors.primary;
     final show = bytes(box.rates[upload ? 'upload' : 'download'] as num? ?? 0).split(' ');
+    // The bridge sends the session total as a raw byte count; a pre-formatted string passes through.
+    final raw = box.dashboard[upload ? 'uploadTotal' : 'downloadTotal'];
+    final total = raw is num ? bytes(raw) : (raw?.toString() ?? '0 B');
     final scale = math.max(1.0, MediaQuery.textScalerOf(context).scale(1));
     final textHeight = 14 + 4 + (AppTextStyle.footnote.leading + AppTextStyle.title1.leading + AppTextStyle.caption1.leading) * scale;
     return LayoutBuilder(builder: (context, constraints) {
@@ -152,7 +155,7 @@ class _SpeedTile extends StatelessWidget {
                 TextSpan(text: show.first, style: AppTextStyle.title1.of(context, emphasized: true).toTabular.copyWith(letterSpacing: -.02 * AppTextStyle.title1.size)),
                 TextSpan(text: ' ${show.last}/s', style: AppTextStyle.footnote.of(context, emphasized: true).copyWith(color: colors.onSurfaceVariant)),
               ]), maxLines: 1, overflow: TextOverflow.clip),
-              Text('${context.tr('Total')} ${box.dashboard[upload ? 'uploadTotal' : 'downloadTotal'] ?? '0 B'}',
+              Text('${context.tr('Total')} $total',
                 maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: AppTextStyle.caption1.of(context).toTabular.copyWith(color: colors.onSurfaceVariant)),
             ],

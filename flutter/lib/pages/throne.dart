@@ -610,21 +610,21 @@ class CorePage extends StatelessWidget {
     return BoxPage(title: 'Core', actions: [
       restoreDefaultsAction(context, const [
         'logLevel', 'xrayLogLevel', 'logBufSize', 'enableStats', 'disableTrafficStats', 'skipCert',
-        'useMozillaCerts', 'xrayUseSystemCa', 'clashApiEnabled', 'clashApiPort', 'clashApiListenAddr',
-        'clashApiSecret', 'boxApiEnabled', 'boxApiPort', 'boxApiSecret', 'enableNtp', 'ntpServerAddress',
-        'ntpServerPort', 'ntpInterval', 'ntpOutbound',
+        'useMozillaCerts', 'xrayUseSystemCa', 'xrayVlessPreference', 'clashApiEnabled', 'clashApiPort',
+        'clashApiListenAddr', 'clashApiSecret', 'boxApiEnabled', 'boxApiPort', 'boxApiSecret',
+        'enableNtp', 'ntpServerAddress', 'ntpServerPort', 'ntpInterval', 'ntpOutbound',
       ]),
     ], children: [
-      generateSection(items: [
+      // The categories and their order are Throne's settings_core.
+      generateSection(title: context.tr('Logging'), items: [
         ListItem(title: Text(context.tr('Core version')), subtitle: Text(context.box.coreVersion)),
         SettingChoice<String>('Log level', 'logLevel', options: logLevels, text: (value) => value.toUpperCase()),
         SettingChoice<String>('Xray log level', 'xrayLogLevel', options: xrayLogLevels, text: (value) => value.toUpperCase()),
         SettingNumber('Log buffer', 'logBufSize', min: 0, unit: 'KiB'),
+      ]),
+      generateSection(title: context.tr('Statistics'), items: [
         SettingToggle('Traffic statistics', 'enableStats', autoRestart: true),
         SettingToggle('Disable per-profile statistics', 'disableTrafficStats', autoRestart: true),
-        SettingToggle('Skip certificate verification', 'skipCert'),
-        SettingToggle('Use the Mozilla root store', 'useMozillaCerts'),
-        SettingToggle('Xray uses the system CA', 'xrayUseSystemCa'),
       ]),
       generateSection(title: context.tr('Clash API'), items: [
         SettingToggle('Enable Clash API', 'clashApiEnabled', autoRestart: true),
@@ -634,12 +634,22 @@ class CorePage extends StatelessWidget {
           SettingText('Secret', 'clashApiSecret'),
         ],
       ]),
-      generateSection(title: context.tr('Core API'), items: [
+      generateSection(title: context.tr('API dashboard'), items: [
         SettingToggle('Enable core API', 'boxApiEnabled', autoRestart: true),
         if (boxApi) ...[
           SettingNumber('Port', 'boxApiPort', min: 1, max: 65535, autoRestart: true),
           SettingText('Secret', 'boxApiSecret'),
         ],
+      ]),
+      // Which transports' VLESS nodes are built for the Xray core instead of sing-box.
+      generateSection(title: context.tr('Xray'), items: [
+        SettingChoice<int>('Xray VLESS preference', 'xrayVlessPreference',
+          options: xrayVlessPreferences, text: xrayVlessPreferenceName),
+      ]),
+      generateSection(title: context.tr('Security'), items: [
+        SettingToggle('Skip certificate verification', 'skipCert'),
+        SettingToggle('Use the Mozilla root store', 'useMozillaCerts'),
+        SettingToggle('Xray uses the system CA', 'xrayUseSystemCa'),
       ]),
       generateSection(title: context.tr('NTP'), items: [
         SettingToggle('Enable NTP', 'enableNtp', autoRestart: true),
@@ -655,6 +665,14 @@ class CorePage extends StatelessWidget {
 // ---------------------------------------------------------------------------------------------- testing
 
 const speedTestModes = [0, 1, 2, 3, 4];
+
+/// VLESS nodes are built for the Xray core only for the transports the preference names;
+/// the rest stay with sing-box. The order matches `xray_vless_preference_entries`.
+const xrayVlessPreferences = [0, 1, 2];
+
+String xrayVlessPreferenceName(int value) => switch (value) {
+  0 => 'XHTTP only', 1 => 'XHTTP and Reality', _ => 'All VLESS',
+};
 const exitLookupProviders = ['auto', 'ip-api', 'ipwho', 'ipinfo', 'ipapi-co', 'ip2location', 'freeipapi', 'cloudflare'];
 
 class TestingPage extends StatelessWidget {

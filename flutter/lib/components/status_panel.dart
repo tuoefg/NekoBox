@@ -265,6 +265,13 @@ class _IpText extends StatelessWidget {
   });
 }
 
+/// The regional-indicator flag of an ISO alpha-2 code; empty when the country is not one.
+String _flagEmoji(String code) {
+  final c = code.trim().toUpperCase();
+  if (c.length != 2 || c.codeUnits.any((u) => u < 0x41 || u > 0x5A)) return '';
+  return String.fromCharCodes([for (final u in c.codeUnits) 0x1F1E6 + u - 0x41]);
+}
+
 class _CountryBadge extends StatefulWidget {
   const _CountryBadge({this.country, required this.active, required this.checking, this.onRefresh});
   final String? country;
@@ -275,6 +282,8 @@ class _CountryBadge extends StatefulWidget {
 class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderStateMixin {
   late final _turn = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
   bool _hovered = false, _focused = false;
+  // The badge shows the flag by default and the country's abbreviation on tap.
+  bool _showCode = false;
   @override void didChangeDependencies() { super.didChangeDependencies(); _spin(); }
   @override void didUpdateWidget(_CountryBadge oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -292,14 +301,25 @@ class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderS
   @override Widget build(BuildContext context) {
     final color = widget.active ? context.colorScheme.onSurface : context.colorScheme.onSurfaceVariant;
     final enabled = widget.onRefresh != null;
+    final country = widget.country?.trim();
+    final flag = country == null || country.isEmpty ? '' : _flagEmoji(country);
+    final code = country == null || country.isEmpty ? null : country.toUpperCase();
     final background = Color.alphaBlend(color.withValues(alpha: enabled && _hovered ? .08 : 0), SurfaceLevel.inset.colorOf(context.colorScheme));
-    return Tooltip(message: context.tr('Retry'), child: Semantics(button: true, label: context.tr('Retry'), enabled: enabled,
-      child: InkResponse(onTap: widget.onRefresh, onHover: (value) => setState(() => _hovered = value), onFocusChange: (value) => setState(() => _focused = value),
+    // Tap swaps the flag for the abbreviation; a long press still re-checks the IP.
+    final hint = code != null
+        ? context.tr(_showCode ? 'Show the country icon' : 'Show the country code')
+        : context.tr('Retry');
+    return Tooltip(message: hint, child: Semantics(button: true, label: hint, enabled: enabled,
+      child: InkResponse(onTap: code != null ? () => setState(() => _showCode = !_showCode) : widget.onRefresh,
+        onLongPress: widget.onRefresh, onHover: (value) => setState(() => _hovered = value), onFocusChange: (value) => setState(() => _focused = value),
         overlayColor: const WidgetStatePropertyAll(Colors.transparent), splashFactory: NoSplash.splashFactory,
         child: ElasticPress(enabled: enabled, child: AnimatedBuilder(animation: _turn, builder: (_, child) => ShapeBadge(
           shape: MaterialShapes.clover4Leaf, color: background, size: 48,
-          rotation: _turn.value * 2 * math.pi, ring: _focused ? focusRingSide(context.colorScheme) : null, child: child), child: widget.country?.isNotEmpty == true
-          ? Text(widget.country!.toUpperCase(), maxLines: 1, style: AppTextStyle.footnote.of(context, emphasized: true).copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size))
+          rotation: _turn.value * 2 * math.pi, ring: _focused ? focusRingSide(context.colorScheme) : null, child: child), child: code != null
+          ? Text(_showCode || flag.isEmpty ? code : flag, maxLines: 1,
+              style: flag.isEmpty || _showCode
+                  ? AppTextStyle.footnote.of(context, emphasized: true).copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size)
+                  : AppTextStyle.title1.of(context).copyWith(color: color))
           : GlyphIcon(AppGlyphs.proxies, size: 48 * .42, color: color))))));
   }
 }

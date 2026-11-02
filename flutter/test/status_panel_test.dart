@@ -120,7 +120,7 @@ void main() {
     expect(dashboard.calls.where((call) => call.method == 'service.start'), isEmpty);
     expect(dashboard.ids, hasLength(1));
     expect(find.text('203.0.113.9'), findsOneWidget);
-    expect(find.text('GB'), findsOneWidget);
+    expect(find.text('\u{1F1EC}\u{1F1E7}'), findsOneWidget); // the badge carries GB's flag
     expect(find.text('Example Business'), findsOneWidget);
     expect(find.text('Business'), findsOneWidget);
     expect(find.text('Quality Good'), findsOneWidget);
@@ -269,7 +269,7 @@ void main() {
     expect(find.byType(EgressDetails), findsNothing);
 
     dashboard.failQuality = false;
-    await tester.tap(find.byTooltip('Retry'));
+    await tester.longPress(find.byTooltip('Show the country code'));
     await tester.pump();
     await tester.pump();
     expect(dashboard.ids, hasLength(2));

@@ -261,6 +261,8 @@ object Settings {
         textEntry("ntpInterval", Apply.Reload, { DataStore.ntpInterval }, { DataStore.ntpInterval = it }),
         textEntry("ntpOutbound", Apply.Reload, { DataStore.ntpOutbound }, { DataStore.ntpOutbound = it }),
         textEntry("xrayLogLevel", Apply.Reload, { DataStore.xrayLogLevel }, { DataStore.xrayLogLevel = it }),
+        // Import-time only: decides which VLESS transports are built for the Xray core.
+        intEntry("xrayVlessPreference", { DataStore.xrayVlessPreference }, { DataStore.xrayVlessPreference = it }),
         boolEntry("useMozillaCerts", Apply.Reload, { DataStore.useMozillaCerts }, { DataStore.useMozillaCerts = it }),
         boolEntry("xrayUseSystemCa", Apply.Reload, { DataStore.xrayUseSystemCa }, { DataStore.xrayUseSystemCa = it }),
         textEntry("boxApiSecret", Apply.Reload, { DataStore.coreBoxApiSecret }, { DataStore.coreBoxApiSecret = it }),
