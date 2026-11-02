@@ -1,3 +1,10 @@
+#### 3.0.9
+
+* The status badge's vector flag now fills the clover with BoxFit.cover so flags of any aspect ratio crop and fill the badge instead of leaving empty space
+* Log export shows a confirmation ("已导出") or failure ("导出失败") message instead of being silent
+* Logcat entries on Android 10+ preserve the tag (e.g., "ActivityManager: …") that the LEVEL/TAG threadtime format packed into one token
+* Logcat clear destroys the running process so its buffered output does not refill the local queue with entries the system buffer was just asked to drop
+
 #### 3.0.8
 
 * The status badge's exit-country flag is now a vector (SVG) flag from the country_flags package instead of a regional-indicator emoji, rendering identically across platforms; it is still clipped to the clover badge and swaps to the country code on tap, with a long press to re-check the IP

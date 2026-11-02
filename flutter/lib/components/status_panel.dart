@@ -320,7 +320,7 @@ class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderS
                   clipBehavior: Clip.antiAlias,
                   child: country_flags.CountryFlag.fromCountryCode(code,
                     key: const Key('country-badge-flag'),
-                    theme: const country_flags.ImageTheme(width: 48, height: 48)))
+                    theme: const country_flags.ImageTheme(width: 48, height: 48, fit: BoxFit.cover)))
           : GlyphIcon(AppGlyphs.proxies, size: 48 * .42, color: color))))));
   }
 }

@@ -529,7 +529,7 @@ class _CountryBadgeState extends State<_CountryBadge>
                           clipBehavior: Clip.antiAlias,
                           child: country_flags.CountryFlag.fromCountryCode(
                             code,
-                            theme: country_flags.ImageTheme(width: size, height: size),
+                            theme: country_flags.ImageTheme(width: size, height: size, fit: BoxFit.cover),
                           ),
                         ),
             ),

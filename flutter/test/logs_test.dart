@@ -32,7 +32,10 @@ void main() {
         'dashboard': {'status': 'Stopped',
           if (remote) ...{'remote': 'Server', 'remoteConnected': true}},
       };
-      if (call.method == 'document.save') exported = json(call.arguments)['content'] as String;
+      if (call.method == 'document.save') {
+        exported = json(call.arguments)['content'] as String;
+        return true;
+      }
       if (call.method == 'logs.clear') {
         events.add({'type': 'logs', 'value': {'defaultLogLevel': box.defaultLogLevel, 'entries': []}});
       }

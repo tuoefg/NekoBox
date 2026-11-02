@@ -125,7 +125,8 @@ void main() {
     expect(flag.flagCode, 'gb');
     expect(flag.theme, isA<country_flags.ImageTheme>()
       .having((theme) => theme.width, 'width', 48)
-      .having((theme) => theme.height, 'height', 48));
+      .having((theme) => theme.height, 'height', 48)
+      .having((theme) => theme.fit, 'fit', BoxFit.cover));
     expect(find.byKey(const Key('country-badge-flag-clip')), findsOneWidget);
     expect(find.text('Example Business'), findsOneWidget);
     expect(find.text('Business'), findsOneWidget);

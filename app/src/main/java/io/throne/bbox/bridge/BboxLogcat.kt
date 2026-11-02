@@ -111,9 +111,15 @@ object BboxLogcat {
         process = null
     }
 
-    /** Throne has no logcat counterpart of the core log's file truncate: `logcat -c` is the system's own clear. */
+    /**
+     * Throne has no logcat counterpart of the core log's file truncate: `logcat -c` is the system's own clear.
+     * The running process is destroyed too, so its buffered output does not refill the local queue with
+     * entries the system buffer was just asked to drop; the reader loop reopens from the cleared buffer.
+     */
     fun clear() {
         runCatching { ProcessBuilder("logcat", "-c").start().waitFor() }
+        runCatching { process?.destroy() }
+        process = null
         synchronized(this) {
             buffer.clear()
             pending.clear()
@@ -151,8 +157,10 @@ object BboxLogcat {
     }
 
     /**
-     * threadtime is `MM-DD HH:MM:SS.mmm PID TID P TAG: message`; the priority letter is the level the
-     * screen's filter already knows. Anything else passes through as ordinary output.
+     * threadtime is `MM-DD HH:MM:SS.mmm PID TID LEVEL/TAG: message` (Android 10+) or
+     * `MM-DD HH:MM:SS.mmm PID TID LEVEL TAG: message` (older). The priority letter is the level
+     * the screen's filter knows; the tag is prepended to the message so neither is lost.
+     * Anything else passes through as ordinary output.
      */
     private fun parse(line: String): Entry? {
         if (line.isBlank()) return null
@@ -161,10 +169,21 @@ object BboxLogcat {
             return Entry(id = nextId++, level = "info", message = line, receivedAt = System.currentTimeMillis())
         }
         val receivedAt = parseStamp(parts[0], parts[1]) ?: System.currentTimeMillis()
+        val tagPart = parts[4]
+        val level = levels[tagPart.firstOrNull()?.uppercaseChar()] ?: "info"
+        // Android 10+ packs "LEVEL/TAG:" into one token (e.g., "I/ActivityManager:");
+        // older versions keep them apart, so parts[5] already carries "TAG: message".
+        val slashIdx = tagPart.indexOf('/')
+        val message = if (slashIdx >= 0) {
+            val tag = tagPart.substring(slashIdx + 1).removeSuffix(":")
+            if (tag.isNotEmpty()) "$tag: ${parts[5]}" else parts[5]
+        } else {
+            parts[5]
+        }
         return Entry(
             id = nextId++,
-            level = levels[parts[4].firstOrNull()?.uppercaseChar()] ?: "info",
-            message = parts[5],
+            level = level,
+            message = message,
             receivedAt = receivedAt,
         )
     }

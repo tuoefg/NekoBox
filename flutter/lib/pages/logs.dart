@@ -53,11 +53,18 @@ class _LogsPageState extends State<LogsPage> {
       title: context.tr('Logs'),
       onKeywordsUpdate: (words) => setState(() => _query = words.join(' ')),
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
-      iconActions: [IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'), onPressed: () => box.act('document.save', {
-        // redact: log lines carry URLs and keys; the bridge redacts like the native export.
-        'name': _logcat ? 'Logcat.log' : 'B-box.log', 'redact': true,
-        'content': logs.map((line) => '${recordTime(line['receivedAt'])} [${line['level']}] ${line['message']}').join('\n'),
-      }))],
+      iconActions: [IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'), onPressed: () async {
+        try {
+          final ok = await box.call('document.save', {
+            // redact: log lines carry URLs and keys; the bridge redacts like the native export.
+            'name': _logcat ? 'Logcat.log' : 'B-box.log', 'redact': true,
+            'content': logs.map((line) => '${recordTime(line['receivedAt'])} [${line['level']}] ${line['message']}').join('\n'),
+          }) == true;
+          if (context.mounted) box.messages.add(context.tr(ok ? 'Exported' : 'Export failed'));
+        } catch (error) {
+          box.report(error);
+        }
+      })],
       menuItems: [
         CommonPopupMenuItem(glyph: _paused == null ? AppGlyphs.playPause(1) : AppGlyphs.playPause(0),
           label: context.tr(_paused == null ? 'Pause' : 'Resume'), onPressed: _paused == null ? _pause : _resume),
