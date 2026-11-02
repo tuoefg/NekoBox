@@ -1,6 +1,6 @@
 #### 3.0.9
 
-* The status badge's vector flag now fills the clover with BoxFit.cover so flags of any aspect ratio crop and fill the badge instead of leaving empty space
+* The status badge's vector flag fills the clover without letterboxing: country_flags paints the .si flag with BoxFit.cover in the 48x48 badge box and the clover clip trims the overflow; a widget-tree test now locks that vector path in
 * Log export shows a confirmation ("已导出") or failure ("导出失败") message instead of being silent
 * Logcat entries on Android 10+ preserve the tag (e.g., "ActivityManager: …") that the LEVEL/TAG threadtime format packed into one token
 * Logcat clear destroys the running process so its buffered output does not refill the local queue with entries the system buffer was just asked to drop

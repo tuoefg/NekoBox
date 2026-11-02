@@ -125,8 +125,10 @@ void main() {
     expect(flag.flagCode, 'gb');
     expect(flag.theme, isA<country_flags.ImageTheme>()
       .having((theme) => theme.width, 'width', 48)
-      .having((theme) => theme.height, 'height', 48)
-      .having((theme) => theme.fit, 'fit', BoxFit.cover));
+      .having((theme) => theme.height, 'height', 48));
+    // The vector .si flag (not the emoji fallback) fills the badge: country_flags' image
+    // widget paints with BoxFit.cover, and the clover clip below crops the overflow.
+    expect(find.byKey(const Key('svgFlag')), findsOneWidget);
     expect(find.byKey(const Key('country-badge-flag-clip')), findsOneWidget);
     expect(find.text('Example Business'), findsOneWidget);
     expect(find.text('Business'), findsOneWidget);

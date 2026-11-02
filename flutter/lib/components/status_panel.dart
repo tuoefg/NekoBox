@@ -314,13 +314,15 @@ class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderS
           ? _showCode || flagCode == null
               ? Text(code, maxLines: 1, style: AppTextStyle.footnote.of(context, emphasized: true)
                   .copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size))
+              // country_flags paints the vector .si flag with BoxFit.cover inside this 48x48
+              // box, so flags of any aspect ratio crop to fill before the clover clips them.
               : ClipPath(
                   key: const Key('country-badge-flag-clip'),
                   clipper: const _CountryBadgeClipper(),
                   clipBehavior: Clip.antiAlias,
                   child: country_flags.CountryFlag.fromCountryCode(code,
                     key: const Key('country-badge-flag'),
-                    theme: const country_flags.ImageTheme(width: 48, height: 48, fit: BoxFit.cover)))
+                    theme: const country_flags.ImageTheme(width: 48, height: 48)))
           : GlyphIcon(AppGlyphs.proxies, size: 48 * .42, color: color))))));
   }
 }
