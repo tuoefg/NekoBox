@@ -1,4 +1,8 @@
 import '../widgets.dart';
+import 'access.dart';
+import 'appearance.dart';
+import 'backup.dart';
+import 'diagnostics.dart';
 
 export 'appearance.dart';
 export 'access.dart';
@@ -20,72 +24,96 @@ class NativeToggle extends StatelessWidget {
   }
 }
 
-/// The Throne settings groups: what upstream plus a group B-box never had.
+/// Throne's settings home: the entries of `global_preferences.xml`, in its order, one level deep.
 ///
-/// Inbound, TUN, DNS, routing, core, testing and subscriptions are taken from Throne's own
-/// settings tree; they replace nothing because the UI had no equivalent pages.
-class GeneralSettingsPage extends StatelessWidget {
-  const GeneralSettingsPage({super.key});
+/// Inbound, TUN, routing, DNS and the rest are pages of their own rather than items behind a
+/// "General" container; General is the connection/behaviour page upstream calls General.
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key});
   @override Widget build(BuildContext context) {
     final caps = context.box.capabilities;
-    return BoxPage(title: 'General', children: [
+    return BoxPage(title: 'Settings', children: [
       generateSection(items: [
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.vpn), title: Text(context.tr('Service')), widget: const ServiceSettingsPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.settings), title: Text(context.tr('General')), widget: const GeneralPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.paintbrush), title: Text(context.tr('Appearance')), widget: const AppearancePage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.devices), title: Text(context.tr('Inbound')), widget: const InboundPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.split), title: Text(context.tr('TUN')), widget: const TunPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.dns), title: Text(context.tr('DNS')), widget: const DnsPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.rules), title: Text(context.tr('Routing')), widget: const RoutingPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.proxies), title: Text(context.tr('WARP')), widget: const WarpPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.cpu), title: Text(context.tr('Core')), widget: const CorePage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.speed), title: Text(context.tr('Testing')), widget: const TestingPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.dns), title: Text(context.tr('DNS')), widget: const DnsPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.sliders), title: Text(context.tr('Node presets')), widget: const PresetsPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.speed), title: Text(context.tr('Testing')), widget: const TestingPage()),
         ListItem.open(leading: const GlyphIcon(AppGlyphs.profiles), title: Text(context.tr('Subscriptions')), widget: const SubscriptionPage()),
-        if (caps.of('update'))
-          ListItem.open(leading: const GlyphIcon(AppGlyphs.info), title: Text(context.tr('Updates')), widget: const UpdatePage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.cpu), title: Text(context.tr('Core')), widget: const CorePage()),
+        if (caps.of('quality') || caps.of('stun'))
+          ListItem.open(leading: const GlyphIcon(AppGlyphs.target), title: Text(context.tr('Diagnostics')), widget: const DiagnosticsSettingsPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.appsList), title: Text(context.tr('Access control')), widget: const AccessPage()),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.cloudSync), title: Text(context.tr('Backup and restore')), widget: const BackupPage()),
       ]),
     ]);
   }
 }
 
-/// Lifecycle plus the handful of Android-side behaviours that Throne reads on its own.
+/// Throne puts the two network probes on the settings list itself; both pages answer a host method,
+/// so the entry only exists when the host advertises them.
+class DiagnosticsSettingsPage extends StatelessWidget {
+  const DiagnosticsSettingsPage({super.key});
+  @override Widget build(BuildContext context) {
+    final caps = context.box.capabilities;
+    return BoxPage(title: 'Diagnostics', children: [
+      generateSection(items: [
+        if (caps.of('quality'))
+          ListItem.open(leading: const GlyphIcon(AppGlyphs.target), title: Text(context.tr('Network quality')), widget: const DiagnosticsPage(quality: true)),
+        if (caps.of('stun'))
+          ListItem.open(leading: const GlyphIcon(AppGlyphs.connections), title: Text(context.tr('STUN test')), widget: const DiagnosticsPage(quality: false)),
+      ]),
+    ]);
+  }
+}
+
+/// Throne's General page: connection, behaviour, and the update entry upstream keeps here.
 ///
 /// Removed here, because Throne has no equivalent: auto redirect, dynamic notification, deprecation
 /// warnings, the core memory killer and its limit, and power reports.
-class ServiceSettingsPage extends StatelessWidget {
-  const ServiceSettingsPage({super.key});
-  @override Widget build(BuildContext context) => BoxPage(title: 'Service', loading: context.box.serviceSettingsChanging, children: [
-    generateSection(items: [
-      ListItem<String>.options(
-        title: Text(context.tr('Service mode')), options: const ['vpn', 'proxy'],
-        value: context.box.settings['serviceMode'] == 'proxy' ? 'proxy' : 'vpn',
-        textBuilder: (value) => context.tr(value == 'vpn' ? 'VPN' : 'Proxy only'),
-        onChanged: (value) => context.box.setSetting('serviceMode', value, autoRestart: true),
-      ),
-      // "Allow bypass" lives on the Access screen as the per-app mode; the private-range switch is
-      // under TUN, because upstream keeps them in two different stores.
-      const NativeToggle('Always show the address', 'alwaysShowAddress', restart: false),
-      // Both are read by the host on its next update, so they need no core restart.
-      const NativeToggle('Show group name in the notification', 'showGroupInNotification', restart: false),
-      const NativeToggle('Show direct speed', 'showDirectSpeed', restart: false),
-    ]),
-    generateSection(title: context.tr('Connections'), items: [
-      const NativeToggle('Reset connections on network change', 'networkChangeResetConnections', restart: false),
-      const NativeToggle('Reset connections when waking up', 'wakeResetConnections', restart: false),
-    ]),
-    generateSection(title: context.tr('Behaviour'), items: [
-      const NativeToggle('Connect after reboot', 'rememberEnable', restart: false),
-      const NativeToggle('Hide from recent apps', 'hideFromRecentApps', restart: false),
-      const NativeToggle('Treat the VPN as metered', 'meteredNetwork', autoRestart: true),
-      const NativeToggle('Skip delete confirmation', 'skipDeleteConfirmation', restart: false),
-      // A failed rule-set download normally blocks a start; this lets the core come up anyway.
-      const NativeToggle('Start without rule sets', 'startWithoutRuleSets', restart: false),
-    ]),
-    generateSection(items: [
-      ListItem(title: Text(context.tr('Battery optimization')),
-        subtitle: Text(context.tr(context.box.settings['batteryExempt'] == true ? 'Unrestricted' : 'Allow background operation')),
-        onTap: () => context.box.act('battery.open')),
-    ]),
-  ]);
+class GeneralPage extends StatelessWidget {
+  const GeneralPage({super.key});
+  @override Widget build(BuildContext context) {
+    final caps = context.box.capabilities;
+    return BoxPage(title: 'General', loading: context.box.serviceSettingsChanging, children: [
+      generateSection(items: [
+        ListItem<String>.options(
+          title: Text(context.tr('Service mode')), options: const ['vpn', 'proxy'],
+          value: context.box.settings['serviceMode'] == 'proxy' ? 'proxy' : 'vpn',
+          textBuilder: (value) => context.tr(value == 'vpn' ? 'VPN' : 'Proxy only'),
+          onChanged: (value) => context.box.setSetting('serviceMode', value, autoRestart: true),
+        ),
+        // "Allow bypass" lives on the Access screen as the per-app mode; the private-range switch is
+        // under TUN, because upstream keeps them in two different stores.
+        const NativeToggle('Always show the address', 'alwaysShowAddress', restart: false),
+        // Both are read by the host on its next update, so they need no core restart.
+        const NativeToggle('Show group name in the notification', 'showGroupInNotification', restart: false),
+        const NativeToggle('Show direct speed', 'showDirectSpeed', restart: false),
+      ]),
+      generateSection(title: context.tr('Connections'), items: [
+        const NativeToggle('Reset connections on network change', 'networkChangeResetConnections', restart: false),
+        const NativeToggle('Reset connections when waking up', 'wakeResetConnections', restart: false),
+      ]),
+      generateSection(title: context.tr('Behaviour'), items: [
+        const NativeToggle('Connect after reboot', 'rememberEnable', restart: false),
+        const NativeToggle('Hide from recent apps', 'hideFromRecentApps', restart: false),
+        const NativeToggle('Treat the VPN as metered', 'meteredNetwork', autoRestart: true),
+        const NativeToggle('Skip delete confirmation', 'skipDeleteConfirmation', restart: false),
+        // A failed rule-set download normally blocks a start; this lets the core come up anyway.
+        const NativeToggle('Start without rule sets', 'startWithoutRuleSets', restart: false),
+        ListItem(title: Text(context.tr('Battery optimization')),
+          subtitle: Text(context.tr(context.box.settings['batteryExempt'] == true ? 'Unrestricted' : 'Allow background operation')),
+          onTap: () => context.box.act('battery.open')),
+      ]),
+      // Upstream keeps the two update switches in a section of this page.
+      if (caps.of('update')) generateSection(title: context.tr('Updates'), items: [
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.sync), title: Text(context.tr('Update settings')), widget: const UpdatePage()),
+      ]),
+    ]);
+  }
 }
 
 class RemotePage extends StatefulWidget {

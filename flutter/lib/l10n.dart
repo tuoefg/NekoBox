@@ -225,7 +225,7 @@ const _zh = <String, String>{
   'Invalid WebDAV credentials': '无效的 WebDAV 凭据', 'Delete WebDAV account': '删除 WebDAV 账户',
   'Enter the WebDAV directory URL. Backups are stored in a folder on that server.': '请输入 WebDAV 目录地址。备份保存在该服务器上的文件夹中。',
   'About': '关于', 'Source code': '源代码', 'Open-source licenses': '开源许可',
-  'Other': '其他', 'General': '常规', 'Check for updates': '检查更新', 'Update available': '有可用更新',
+  'Other': '其他', 'General': '常规', 'Diagnostics': '诊断', 'Update settings': '更新设置', 'Check for updates': '检查更新', 'Update available': '有可用更新',
   'You are up to date': '已是最新版本', 'No release metadata available': '暂无可验证的版本信息', 'Releases': '发布版本',
   'A sing-box client with the FlClash Android interface.': '采用 FlClash Android 界面的 sing-box 客户端。',
   'FlClash interface': 'FlClash 界面', 'Version': '版本', 'Network diagnostics': '网络诊断',

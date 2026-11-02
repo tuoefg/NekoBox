@@ -29,11 +29,11 @@ void main() {
     final box = BoxController(channel: channel, events: events.stream);
     await tester.pumpWidget(BoxApp(controller: box));
     await tester.pumpAndSettle();
-    openPage(tester.element(find.byType(HomePage)), const GeneralSettingsPage());
+    openPage(tester.element(find.byType(HomePage)), const SettingsPage());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Service'));
+    await tester.tap(find.text('General'));
     await tester.pumpAndSettle();
-    expect(find.byType(ServiceSettingsPage), findsOneWidget);
+    expect(find.byType(GeneralPage), findsOneWidget);
     expect(find.text('Apply service changes'), findsNothing);
     for (final (title, key, value, restarts) in [
       ('Always show the address', 'alwaysShowAddress', true, false),
@@ -71,7 +71,7 @@ void main() {
     final box = BoxController(channel: channel, events: events.stream);
     await tester.pumpWidget(BoxApp(controller: box));
     await tester.pumpAndSettle();
-    openPage(tester.element(find.byType(HomePage)), const ServiceSettingsPage());
+    openPage(tester.element(find.byType(HomePage)), const GeneralPage());
     await tester.pumpAndSettle();
     // Only an autoRestart switch asks the host to reload, which is what puts the page in this state.
     await tester.scrollUntilVisible(find.text('Treat the VPN as metered'), 200, scrollable: find.byType(Scrollable).first);
@@ -79,7 +79,7 @@ void main() {
     await tester.tap(find.text('Treat the VPN as metered'));
     await tester.pump();
     await tester.pump();
-    final switches = find.descendant(of: find.byType(ServiceSettingsPage), matching: find.byType(CommonSwitch));
+    final switches = find.descendant(of: find.byType(GeneralPage), matching: find.byType(CommonSwitch));
     // The page has more switches than fit a test viewport, so assert on the ones that are built.
     expect(switches, findsWidgets);
     expect(box.serviceSettingsChanging, true);

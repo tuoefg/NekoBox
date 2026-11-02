@@ -460,6 +460,10 @@ class RoutingPage extends StatelessWidget {
         SettingToggle('Update rule sets', 'routeAutoUpdateEnabled'),
         if (autoUpdate) SettingNumber('Update interval', 'routeAutoUpdateMinutes', min: 30, unit: 'min'),
       ]),
+      // Upstream keeps WARP in this page as its own section, not as a settings entry beside it.
+      generateSection(items: [
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.proxies), title: Text(context.tr('WARP')), widget: const WarpPage()),
+      ]),
     ]);
   }
 }

@@ -3,7 +3,6 @@ import 'connections.dart';
 import 'requests.dart';
 import 'logs.dart';
 import 'settings.dart';
-import 'diagnostics.dart';
 import 'endpoints.dart';
 import 'reports.dart';
 import 'terminal.dart';
@@ -30,18 +29,10 @@ class ToolsPage extends StatelessWidget {
         if (caps.of('remote'))
           ListItem.open(leading: const GlyphIcon(AppGlyphs.proxies), title: Text(context.tr('Remote control')), widget: const RemotePage()),
       ]),
+      // One entry, as Throne's drawer has: every settings page lives behind it, in its own order.
       _section(<ListItem>[
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.paintbrush), title: Text(context.tr('Appearance')), widget: const AppearancePage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.settings), title: Text(context.tr('General')), widget: const GeneralSettingsPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.appsList), title: Text(context.tr('Access control')), widget: const AccessPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.cloudSync), title: Text(context.tr('Backup and restore')), widget: const BackupPage()),
-      ], title: context.tr('Settings')),
-      _section(<ListItem>[
-        if (caps.of('quality'))
-          ListItem.open(leading: const GlyphIcon(AppGlyphs.speed), title: Text(context.tr('Network quality')), widget: const DiagnosticsPage(quality: true)),
-        if (caps.of('stun'))
-          ListItem.open(leading: const GlyphIcon(AppGlyphs.proxies), title: Text(context.tr('STUN test')), widget: const DiagnosticsPage(quality: false)),
-      ], title: context.tr('Network diagnostics')),
+        ListItem.open(leading: const GlyphIcon(AppGlyphs.settings), title: Text(context.tr('Settings')), widget: const SettingsPage()),
+      ]),
       _section(<ListItem>[
         if (caps.of('reports'))
           for (final kind in ['crash', 'oom', 'power'])
