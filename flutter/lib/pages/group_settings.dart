@@ -90,7 +90,8 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
 
   void _setOption(String key, Object? value) => setState(() => _options = {..._options, key: value});
 
-  bool get _subscription => _data?['isSubscription'] == true;
+  /// The bridge names the kind in `type` ("subscription" / "basic"), the same key the save sends back.
+  bool get _subscription => _data?['type'] == 'subscription';
 
   /// The HWID fields are only editable while the identity is actually sent (the native enable rule).
   bool get _hwidSent {
@@ -228,7 +229,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
 
   String _routeLabel(String id) {
     for (final choice in rows(_data?['routeChoices'])) {
-      if (choice[0]?.toString() == id) return choice[1].toString();
+      if (choice['id']?.toString() == id) return choice['label'].toString();
     }
     return id;
   }
@@ -258,7 +259,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
     final candidates = rows(_data?['candidates']).map((candidate) =>
       ((candidate['id'] as num).toInt().toString(), candidate['label'].toString())).toList();
     final routeChoices = rows(_data?['routeChoices']).map((choice) =>
-      (choice[0]?.toString() ?? '-1', choice[1]?.toString() ?? '')).toList();
+      (choice['id']?.toString() ?? '-1', choice['label']?.toString() ?? '')).toList();
     return FormPage(
       title: 'Group settings', saving: _saving, onSave: _save, error: issue?.message,
       children: [

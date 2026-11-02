@@ -107,3 +107,8 @@ list needs no Shizuku grant.
 Wired since the earlier drafts of this file: the connections and logs screens (`BboxApi.connections`
 over the clash API, `BboxLogs` over `CoreLog`), profile import (`addProfile` and the scanner/file
 flows), and the per-node probe (`dashboard.probe.*` with `dashboard.qualityCache.*`).
+
+File payloads the platform hands the app land here too: `files.open` takes a `content://` or
+`file://` Uri and answers either with the `backup` envelope of a `.thrbackup` (the same shape
+`backup.create` returns, so the restore confirmation is the one the backup page uses) or with the
+editor's seed for a document, decided by the container's "THRN" magic rather than by its name.

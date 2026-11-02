@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show LicenseRegistry, LicenseEntryWithL
 import 'package:flutter/services.dart';
 import 'widgets.dart';
 import 'pages/dashboard.dart';
+import 'pages/backup.dart';
 import 'pages/proxies.dart';
 import 'pages/profiles.dart';
 import 'pages/tools.dart';
@@ -175,6 +176,18 @@ class _HomePageState extends State<HomePage> {
     try {
       if (uri.startsWith('bbox-share:')) {
         if (mounted) await openPage(context, SharePage(token: uri.substring('bbox-share:'.length)));
+        return;
+      }
+      // A file the platform handed us: the host reads it and says which it is, because a .thrbackup is a
+      // binary container the config importer cannot parse and a document is text it can.
+      if (uri.startsWith('content://') || uri.startsWith('file://')) {
+        final data = json(await _box!.call('files.open', {'uri': uri}));
+        final backup = json(data['backup']);
+        if (backup.isNotEmpty) {
+          if (mounted) await restoreBackupFile(context, backup);
+        } else if (mounted) {
+          await openForm(context, ProfileForm(initial: data));
+        }
         return;
       }
       final data = json(await _box!.call('profiles.decodeIntent', {'uri': uri}));

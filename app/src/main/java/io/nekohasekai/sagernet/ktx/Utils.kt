@@ -6,6 +6,8 @@ import android.content.ActivityNotFoundException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.util.TypedValue
 import android.view.View
 import android.widget.FrameLayout
@@ -49,6 +51,19 @@ inline fun <T> Iterable<T>.forEachTry(action: (T) -> Unit) {
 
 val Throwable.readableMessage
     get() = localizedMessage.takeIf { !it.isNullOrBlank() } ?: javaClass.simpleName
+
+/**
+ * The file a share carries: ACTION_SEND keeps it in EXTRA_STREAM rather than in the data slot, and
+ * the typed getter is the only one Android 13 left. The intent the platform hands us may hold a
+ * file in either, so callers read this after the data slot has been tried.
+ */
+val Intent.streamUri: Uri?
+    get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+    } else {
+        @Suppress("DEPRECATION")
+        getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+    }
 
 fun broadcastReceiver(callback: (Context, Intent) -> Unit): BroadcastReceiver =
     object : BroadcastReceiver() {

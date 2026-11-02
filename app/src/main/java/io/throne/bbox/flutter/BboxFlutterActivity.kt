@@ -48,8 +48,20 @@ class BboxFlutterActivity : FlutterFragmentActivity() {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) {
             firstStart.start()
-            if (intent?.getBooleanExtra(PlatformNotifications.EXTRA_WIFI_PERMISSION, false) == true) wifiFlow.run()
+            if (intent?.getBooleanExtra(PlatformNotifications.EXTRA_WIFI_PERMISSION, false) == true) startWifiFlow()
         }
+    }
+
+    /**
+     * The Wi-Fi walk-through the warning notification asks for. A tap on it while the UI is already up
+     * lands in [onNewIntent] and never in [onCreate], so both entry points call this. A walk-through
+     * already running keeps the floor: a second one would stack its rationale on top of the first.
+     */
+    private fun startWifiFlow() {
+        if (wifiWaiting) return
+        wifiWaiting = true
+        // A refused start (another walk-through owns the flow) never calls back, so the flag goes back here.
+        if (!wifiFlow.run(onDone = { wifiWaiting = false })) wifiWaiting = false
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -149,6 +161,8 @@ class BboxFlutterActivity : FlutterFragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // A hot start still has to run what a cold one would: the Wi-Fi walk-through, then the payload.
+        if (intent.getBooleanExtra(PlatformNotifications.EXTRA_WIFI_PERMISSION, false)) startWifiFlow()
         bridge?.notifyIntentAvailable()
     }
 

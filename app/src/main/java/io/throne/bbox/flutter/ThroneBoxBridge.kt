@@ -23,6 +23,7 @@ import io.nekohasekai.sagernet.database.SettingsRegistry
 import io.nekohasekai.sagernet.group.SubscriptionClient
 import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ktx.app
+import io.nekohasekai.sagernet.ktx.streamUri
 import io.nekohasekai.sagernet.outbound.OutboundFactory
 import io.nekohasekai.sagernet.ui.json.engine.JsonTree
 import io.nekohasekai.sagernet.ui.json.engine.JsonType
@@ -371,6 +372,10 @@ class ThroneBoxBridge(
                 "profiles.decodeIntent" -> {
                     val uri = call.argument<String>("uri").orEmpty()
                     result.respond { BboxProfiles.decodeIntent(uri) }
+                }
+                "files.open" -> {
+                    val uri = call.argument<String>("uri").orEmpty()
+                    result.respond { BboxProfiles.decodeFile(uri) }
                 }
                 "profiles.nodeLink" -> {
                     val group = call.argument<String>("group").orEmpty()
@@ -1163,7 +1168,6 @@ class ThroneBoxBridge(
         power.isIgnoringBatteryOptimizations(app.packageName)
     }.getOrDefault(false)
 
-    /** The URI the activity was opened with, handed over once. */
     /**
      * The share / open-with payload, delivered once per intent: the first `intent.take` after an
      * intent arrives consumes it (per the ready payload's contract), and a later intent starts the
@@ -1174,8 +1178,11 @@ class ThroneBoxBridge(
         if (pendingIntent == null) {
             val intent = activity.intent
             if (intent != null && intent !== deliveredIntent) {
+                // A file arrives in the data slot when it was opened (VIEW) and in the stream slot when it
+                // was shared (SEND); the text slot is the QR scanner's and the share sheet's.
                 pendingIntent = intent.takeIf { it.action != Intent.ACTION_MAIN }?.dataString
                     ?: intent.getStringExtra(Intent.EXTRA_TEXT)
+                    ?: intent.streamUri?.toString()
                 deliveredIntent = intent
             }
         }

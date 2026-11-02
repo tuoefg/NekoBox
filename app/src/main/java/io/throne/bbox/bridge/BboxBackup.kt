@@ -79,6 +79,30 @@ object BboxBackup {
     )
 
     /**
+     * A .thrbackup the platform handed us (a VIEW or SEND of a "THRN" container). It becomes the same envelope
+     * [create] and [readWebdav] hand out, so the confirmation and [restore] need no path of their own.
+     *
+     * Returns null when [bytes] are not a Throne backup at all — a shared document is the importer's business —
+     * and refuses a container it cannot read, which only the magic can tell apart.
+     */
+    suspend fun open(bytes: ByteArray): Map<String, Any?>? = withContext(Dispatchers.IO) {
+        // "THRN" first and silently: a plain document is not a broken backup.
+        if (!ThrBackup.hasMagic(ByteArrayInputStream(bytes))) return@withContext null
+        val loaded = runCatching { BackupRestore.load(ByteArrayInputStream(bytes)) }
+            .onFailure { Logs.w(it) }.getOrNull() ?: error("This backup cannot be read")
+        val payload = mapOf(
+            "format" to loaded.contents.formatVersion,
+            "createdAt" to loaded.contents.createdAt,
+            "profiles" to profileNames(loaded.database),
+            KEY to Base64.encodeToString(bytes, Base64.DEFAULT),
+        )
+        // The envelope is what travels to the UI and what [restore] decodes, so the staged database goes back.
+        loaded.discard()
+        holder = Holder(payload)
+        payload
+    }
+
+    /**
      * Restores an envelope. [strategy] is B-box's merge-vs-replace choice, which Throne's restore does not have — it
      * replaces a part's rows keeping ids, so `Compatible` narrows the selection to profiles rather than pretending to
      * merge. `Override` additionally takes the routes and settings.

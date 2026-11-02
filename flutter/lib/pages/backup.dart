@@ -101,37 +101,19 @@ class _BackupPageState extends State<BackupPage> {
   Future<void> _restore(bool remote) async {
     if (_locked || context.box.remote) return;
     final box = context.box;
-    final strategy = box.preferences['restoreStrategy'] as String? ?? 'Compatible';
     setState(() => _locked = true);
     try {
+      // The scope narrows what the WebDAV download and the envelope read bring back.
       final scope = await showFloatingDialog<String>(context: context, child: const RestoreScopeDialog());
       if (scope == null || !mounted) return;
       _showLoading(true);
       final data = await box.call(remote ? 'webdav.read' : 'backup.read', {'scope': scope});
       _showLoading(false);
       if (data == null || !mounted) return;
-      final count = rows(json(data)['profiles']).length;
-      final approved = await showFloatingDialog<bool>(context: context, child: CommonDialog(
-        title: context.tr('Restore backup'), destructive: strategy == 'Override',
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: [
-          Text(context.tr('Restore {count} profiles?').replaceAll('{count}', '$count')),
-          Text(context.tr(strategy == 'Override'
-            ? 'Profiles missing from this backup will be removed.'
-            : 'Matching profiles will be replaced. Other profiles will be kept.')),
-          if (scope == 'all') Text(context.tr('Application settings and remote servers will also be restored.')),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Restore'))),
-        ],
-      ));
-      if (approved != true || !mounted) return;
-      _showLoading(true);
-      await box.call('backup.restore', {'backup': data, 'scope': scope, 'strategy': strategy});
-      _showLoading(false);
+      await restorePayload(context, json(data), scope: scope, onLoading: _showLoading);
       if (!mounted) return;
+      // A restore that took the settings moved the WebDAV account under the page.
       if (scope == 'all') await _loadAccount();
-      if (mounted) await _success('Restore', 'Restore complete');
     } catch (error) { box.report(error); }
     finally { if (mounted) setState(() { _loading = false; _locked = false; }); }
   }
@@ -181,6 +163,57 @@ class _BackupPageState extends State<BackupPage> {
       )),
     ));
   }
+}
+
+/// Confirms and restores a backup the caller already holds. The page's own two reads, the WebDAV
+/// download and a .thrbackup the platform handed us all end here, so the confirmation is worded the
+/// same way whichever route brought the envelope in. The strategy is the page's stored preference.
+Future<void> restorePayload(BuildContext context, Json payload, {required String scope, ValueChanged<bool>? onLoading}) async {
+  final box = context.box;
+  final strategy = box.preferences['restoreStrategy'] as String? ?? 'Compatible';
+  final approved = await showFloatingDialog<bool>(context: context, child: _RestoreConfirm(
+    count: rows(payload['profiles']).length, scope: scope, destructive: strategy == 'Override'));
+  if (approved != true || !context.mounted) return;
+  onLoading?.call(true);
+  try {
+    await box.call('backup.restore', {'backup': payload, 'scope': scope, 'strategy': strategy});
+  } finally { onLoading?.call(false); }
+  if (!context.mounted) return;
+  await showFloatingDialog<void>(context: context, child: CommonDialog(
+    title: context.tr('Restore'), child: Text(context.tr('Restore complete')), actions: [
+      TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close'))),
+    ]));
+}
+
+/// A .thrbackup opened from outside: the host read it before it got here, so only the scope is left
+/// to ask. A refusal asks nothing further and restores nothing.
+Future<void> restoreBackupFile(BuildContext context, Json payload) async {
+  final scope = await showFloatingDialog<String>(context: context, child: const RestoreScopeDialog());
+  if (scope == null || !context.mounted) return;
+  await restorePayload(context, payload, scope: scope);
+}
+
+/// What the restore is about to replace, before it touches anything.
+class _RestoreConfirm extends StatelessWidget {
+  const _RestoreConfirm({required this.count, required this.scope, required this.destructive});
+  final int count;
+  final String scope;
+  final bool destructive;
+
+  @override Widget build(BuildContext context) => CommonDialog(
+    title: context.tr('Restore backup'), destructive: destructive,
+    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: [
+      Text(context.tr('Restore {count} profiles?').replaceAll('{count}', '$count')),
+      Text(context.tr(destructive
+        ? 'Profiles missing from this backup will be removed.'
+        : 'Matching profiles will be replaced. Other profiles will be kept.')),
+      if (scope == 'all') Text(context.tr('Application settings and remote servers will also be restored.')),
+    ]),
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+      TextButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Restore'))),
+    ],
+  );
 }
 
 String? backupFileIssue(String? value) => value == null || value.isEmpty || value.length > 128 ||

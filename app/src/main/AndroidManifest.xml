@@ -199,6 +199,60 @@
                 <data android:scheme="json" />
             </intent-filter>
         </activity>
+
+        <!-- The launch targets left outside the Flutter tree: the service notification's switch button
+             (SwitchActivity, which forwards to the Flutter host), the VPN consent hop (VpnRequestActivity), the
+             widgets' and the launcher's quick toggles, and the updater's dialog. None of them draws a screen of its
+             own any more, but an undeclared launch target is an ActivityNotFoundException at the tap. The attributes
+             are what keeps each hop invisible: no recents entry, a translucent theme for the toggles, and the :bg
+             process for the toggles because that is where the service state lives. -->
+        <activity
+            android:name="io.nekohasekai.sagernet.ui.SwitchActivity"
+            android:configChanges="uiMode"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:theme="@style/Theme.SagerNet.Dialog" />
+        <activity
+            android:name="io.nekohasekai.sagernet.ui.VpnRequestActivity"
+            android:excludeFromRecents="true"
+            android:taskAffinity="" />
+        <activity
+            android:name=".QuickToggleShortcut"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/quick_toggle"
+            android:launchMode="singleTask"
+            android:process=":bg"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_SHORTCUT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="io.nekohasekai.sagernet.ui.QuickEnableShortcut"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/quick_enable"
+            android:launchMode="singleTask"
+            android:process=":bg"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name="io.nekohasekai.sagernet.ui.QuickDisableShortcut"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/quick_disable"
+            android:launchMode="singleTask"
+            android:process=":bg"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity
+            android:name="io.nekohasekai.sagernet.update.UpdateActivity"
+            android:configChanges="uiMode"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.SagerNet.Dialog" />
+
         <service
             android:name="io.nekohasekai.sagernet.bg.ProxyService"
             android:exported="false"

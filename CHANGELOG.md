@@ -1,3 +1,11 @@
+#### 3.0.1
+
+* Fix group settings: saving a subscription group failed every time, opening the group could crash on the front/landing candidate list, the routing profile picker showed raw ids, and the update interval reset itself to 0
+* Fix the entry points the retired interface left behind: notification actions, the VPN permission prompt, the quick enable/disable shortcuts and the update notification all open their screen again
+* Restore `.thrbackup` files opened from a file manager or the share sheet, with the same scope and confirmation as a backup taken in the app
+* Start the Wi-Fi permission walk-through when the warning notification is tapped while the app is already open
+* Open files shared from other apps: the share stream is delivered as well as the open-with link, and a shared link, subscription or document lands in the importer
+
 #### 3.0.0
 
 * The ported Flutter interface completes the full-parity plan and the old Fragment UI retires: the VPN notification, app restarts and the always-on prompts land in the Flutter host, and the settings screens, protocol editors, JSON editor and their activities are gone

@@ -52,6 +52,9 @@ import org.json.JSONObject
  */
 object BboxProfiles {
 
+    /** A file opened from outside is read whole, so a document the size of a video is refused up front. */
+    private const val MAX_IMPORT_BYTES = 16 * 1024 * 1024
+
     data class Config(val content: String, val formatted: String, val revision: String, val stats: Map<String, Any?>) {
         /** The four keys `profiles.config` and `profiles.write` must answer with; `config.dart` reads all of them. */
         fun wire(): Map<String, Any?> = mapOf(
@@ -156,24 +159,30 @@ object BboxProfiles {
         val device = identity.device
         val options = group.subOptions
         // "Default (<global profile>)", then every routing profile Android can use, this subscription's own marked.
+        // Every pick list crosses the bridge as id/label objects, the shape rows() reads on the Dart side.
         val routeChoices = arrayListOf(
-            listOf("-1", app.getString(R.string.grp_route_profile_default, RouteManager.current().name))
+            mapOf("id" to "-1", "label" to app.getString(R.string.grp_route_profile_default, RouteManager.current().name))
         )
         for (route in RouteManager.usable()) {
             val name = route.name.ifBlank { "#" + route.id }
             val label = if (id > 0 && route.source_gid == id) {
                 app.getString(R.string.grp_route_profile_from_subscription, name)
             } else name
-            routeChoices.add(listOf(route.id.toString(), label))
+            routeChoices.add(mapOf("id" to route.id.toString(), "label" to label))
         }
-        val initialRoute = group.routeId.toString().takeIf { picked -> routeChoices.any { it[0] == picked } } ?: "-1"
+        val initialRoute = group.routeId.toString().takeIf { picked -> routeChoices.any { it["id"] == picked } } ?: "-1"
 
         // The front/landing picker's menu: every profile the fixed slots accept, auto selectors refused
         // (dialog_edit_group.cpp:63 — they move server on their own).
         val candidates = GroupRepo.all().flatMap { candidateGroup ->
             ProfileManager.members(candidateGroup.id)
                 .filter { it.type != AutoSelectorProfiles.TYPE }
-                .map { listOf(it.id.toString(), "[" + candidateGroup.displayName() + "] " + it.displayName()) }
+                .map {
+                    mapOf(
+                        "id" to it.id.toInt(),
+                        "label" to "[" + candidateGroup.displayName() + "] " + it.displayName(),
+                    )
+                }
         }
 
         mapOf(
@@ -261,11 +270,13 @@ object BboxProfiles {
         val globalSendHwid = identity.sendHwid
         val mode = SendHwid.of(number("sendHwid") ?: SendHwid.KEEP_DEFAULT.value)
         val hwidSent = mode == SendHwid.ON || (mode == SendHwid.KEEP_DEFAULT && globalSendHwid)
+        // The interval is a number like every other numeric option, not one of the header strings.
+        val interval = number("updateInterval") ?: 0
         SettingChecks.headerValue(text("userAgent")).takeIf { it.isNotEmpty() }?.let { error(it) }
         if (hwidSent) for (key in listOf("hwid", "hwidOs", "hwidOsVersion", "hwidModel")) {
             SettingChecks.headerValue(text(key)).takeIf { it.isNotEmpty() }?.let { error(it) }
         }
-        SettingChecks.groupUpdateInterval(text("updateInterval")).takeIf { it.isNotEmpty() }?.let { error(it) }
+        SettingChecks.groupUpdateInterval(if (interval > 0) "$interval" else "").takeIf { it.isNotEmpty() }?.let { error(it) }
         for (key in listOf("nameInclude", "nameExclude")) {
             SubscriptionNameFilter.error(text(key))?.let { error("Invalid regular expression: $it") }
         }
@@ -289,7 +300,7 @@ object BboxProfiles {
             hwidOs = text("hwidOs"),
             hwidOsVersion = text("hwidOsVersion"),
             hwidModel = text("hwidModel"),
-            updateInterval = (text("updateInterval").toIntOrNull() ?: 0).takeIf { it > 0 } ?: 0,
+            updateInterval = interval.takeIf { it > 0 } ?: 0,
             respectServerInterval = when (number("respectServerInterval")) { 1 -> true; 2 -> false; else -> null },
             keepWorking = flag("keepWorking"),
             removeDuplicates = flag("removeDuplicates"),
@@ -306,7 +317,7 @@ object BboxProfiles {
         group.landingProxyId = (values["landingProxyId"] as? Number)?.toLong() ?: group.landingProxyId
         // A routing profile the menus did not offer (a dangling one) is kept while the choice stands.
         val routeChoices = groupSettingsRouteChoices(group.id)
-        val initialRoute = group.routeId.toString().takeIf { picked -> routeChoices.any { it[0] == picked } } ?: "-1"
+        val initialRoute = group.routeId.toString().takeIf { picked -> routeChoices.any { it["id"] == picked } } ?: "-1"
         val pickedRoute = values["routeId"] as? String ?: initialRoute
         if (pickedRoute != initialRoute) group.routeId = pickedRoute.toLongOrNull()?.takeIf { it > 0 } ?: -1L
         group.importSubRoute = newUrl.isNotEmpty() && flag("importSubRoute")
@@ -328,14 +339,36 @@ object BboxProfiles {
     }
 
     /** The routing-profile choices of [saveGroupSettings], recomputed the way [groupSettings] built them. */
-    private fun groupSettingsRouteChoices(id: Long): List<List<String>> {
+    private fun groupSettingsRouteChoices(id: Long): List<Map<String, String>> {
         val choices = arrayListOf(
-            listOf("-1", app.getString(R.string.grp_route_profile_default, RouteManager.current().name))
+            mapOf("id" to "-1", "label" to app.getString(R.string.grp_route_profile_default, RouteManager.current().name))
         )
         for (route in RouteManager.usable()) {
-            choices.add(listOf(route.id.toString(), route.name.ifBlank { "#" + route.id }))
+            choices.add(mapOf("id" to route.id.toString(), "label" to route.name.ifBlank { "#" + route.id }))
         }
         return choices
+    }
+
+    /**
+     * Turns imported text into something the editor can open, on an IO dispatcher. See [decode].
+     */
+    suspend fun decodeIntent(uri: String): Map<String, Any?> = withContext(Dispatchers.IO) { decode(uri) }
+
+    /**
+     * Turns a file the platform handed us into what the UI should do with it, keyed by `backup` or by the editor's
+     * own shape. A "THRN" container opens the restore, because the importer cannot read one and a parse error is
+     * not an answer the user can act on; anything else is read as text and decoded the way [decodeIntent] decodes
+     * imported text, so a shared document holding a link, a base64 subscription or a JSON config opens the editor.
+     */
+    suspend fun decodeFile(uriString: String): Map<String, Any?> = withContext(Dispatchers.IO) {
+        val uri = android.net.Uri.parse(uriString)
+        val bytes = app.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: error("The file could not be read")
+        if (bytes.size > MAX_IMPORT_BYTES) error("The file is too large to import")
+        val backup = BboxBackup.open(bytes)
+        // The envelope carries the container; its absence is the importer's turn.
+        if (backup != null) return@withContext mapOf("backup" to backup)
+        decode(String(bytes, Charsets.UTF_8))
     }
 
     /**
@@ -344,7 +377,7 @@ object BboxProfiles {
      * JSON or YAML document — goes through Throne's importer, so a single `ss://`/`vmess://`/`vless://` node opens
      * with its own name instead of failing the sing-box JSON check.
      */
-    suspend fun decodeIntent(uri: String): Map<String, Any?> = withContext(Dispatchers.IO) {
+    private fun decode(uri: String): Map<String, Any?> {
         val raw = uri.trim()
         val wrapped = if (raw.startsWith("sing-box://import-remote-profile", ignoreCase = true)) {
             val query = raw.substringAfter('?')
@@ -357,7 +390,7 @@ object BboxProfiles {
         val remote = target.startsWith("http://", ignoreCase = true) || target.startsWith("https://", ignoreCase = true)
         if (remote) {
             val name = runCatching { java.net.URI(target).host }.getOrNull().orEmpty()
-            return@withContext mapOf(
+            return mapOf(
                 "name" to name,
                 "url" to target,
                 "remote" to true,
@@ -367,7 +400,7 @@ object BboxProfiles {
             )
         }
         val outbounds = parseOutbounds(target)
-        mapOf(
+        return mapOf(
             "name" to outbounds.first().displayName(),
             "url" to "",
             "remote" to false,

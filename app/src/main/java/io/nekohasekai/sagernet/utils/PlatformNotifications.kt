@@ -14,7 +14,7 @@ object PlatformNotifications {
 
     const val CHANNEL_WARNINGS = "warnings"
 
-    /** MainActivity runs the Wi-Fi permission flow when started with this extra. */
+    /** The Flutter activity runs the Wi-Fi permission flow when started or resumed with this extra. */
     const val EXTRA_WIFI_PERMISSION = "wifiPermissionFlow"
 
     private const val TAG = "platform"

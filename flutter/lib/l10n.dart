@@ -334,6 +334,9 @@ const _zh = <String, String>{
   "Sign in": "登录",
   "Sign out": "退出登录",
   "None": "无",
+  // The group settings "Type" row: the key comes from a ternary, so the coverage gate cannot see it.
+  // "Subscription" and "Type" already have entries further down the file; only "Basic" was missing.
+  "Basic": "本地",
   "Online": "在线",
   "Offline": "离线",
   "OS": "系统",
