@@ -597,9 +597,13 @@ class ThroneBoxBridge(
                     result.success(null)
                 }
                 "logs.logcat.clear" -> {
-                    BboxLogcat.clear()
-                    emit("logcat", BboxLogcat.wire(BboxLogcat.Batch(reset = true)))
-                    result.success(null)
+                    // logcat -c forks a child and waits for it; the channel thread is the main
+                    // thread, so the clear runs off it the way every other blocking call does.
+                    result.respond {
+                        withContext(Dispatchers.IO) { BboxLogcat.clear() }
+                        emit("logcat", BboxLogcat.wire(BboxLogcat.Batch(reset = true)))
+                        null
+                    }
                 }
                 "dashboard.memory.visible" -> {
                     setMemoryVisible(call.argument<Boolean>("visible") == true)
@@ -1024,7 +1028,10 @@ class ThroneBoxBridge(
         val uri = host.pickSaveTarget(name, mime) ?: return false
         return withContext(Dispatchers.IO) {
             runCatching {
-                host.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray(Charsets.UTF_8)) }
+                // A null stream means nothing was written; reporting success here would let the
+                // UI confirm an export that did not happen.
+                val output = host.contentResolver.openOutputStream(uri) ?: error("cannot open $uri")
+                output.use { it.write(content.toByteArray(Charsets.UTF_8)) }
                 true
             }.onFailure { Logs.w(it) }.getOrDefault(false)
         }

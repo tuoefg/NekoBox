@@ -1,3 +1,8 @@
+#### 3.0.10
+
+* Logcat clear no longer forks and waits for `logcat -c` on the main thread: the clear runs on the IO dispatcher, so tapping Clear cannot stall the interface while the child process runs
+* A log export whose target stream cannot be opened now reports "导出失败" instead of confirming an export that wrote nothing
+
 #### 3.0.9
 
 * The status badge's vector flag fills the clover without letterboxing: country_flags paints the .si flag with BoxFit.cover in the 48x48 badge box and the clover clip trims the overflow; a widget-tree test now locks that vector path in
