@@ -16,10 +16,24 @@ object UpdateVerifier {
 
     class Rejected(message: String) : Exception(message)
 
+    /** The integrity half of [verify], which a plain JVM test can exercise: no Android surface. */
+    enum class IntegrityReason { SIZE, SHA256 }
+
+    class IntegrityRejected(val reason: IntegrityReason) : Exception(reason.name)
+
+    fun verifyIntegrity(file: File, expectedSize: Long, expectedSha256: String) {
+        if (file.length() != expectedSize) throw IntegrityRejected(IntegrityReason.SIZE)
+        if (sha256(file) != expectedSha256.lowercase()) throw IntegrityRejected(IntegrityReason.SHA256)
+    }
+
     fun verify(context: Context, file: File, offer: UpdateChecker.Offer) {
         val expected = offer.expected!!
-        if (file.length() != expected.size || file.length() != offer.apk!!.size) reject(context, R.string.update_error_size)
-        if (sha256(file) != expected.sha256) reject(context, R.string.update_error_sha256)
+        try {
+            verifyIntegrity(file, expected.size, expected.sha256)
+        } catch (e: IntegrityRejected) {
+            reject(context, if (e.reason == IntegrityReason.SHA256) R.string.update_error_sha256 else R.string.update_error_size)
+        }
+        if (file.length() != offer.apk!!.size) reject(context, R.string.update_error_size)
 
         val pm = context.packageManager
         val archive = archiveInfo(pm, file) ?: reject(context, R.string.update_error_parse)
