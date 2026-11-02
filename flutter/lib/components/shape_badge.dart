@@ -28,6 +28,12 @@ class ShapeBadge extends StatelessWidget {
         path: shapePathOf(shape),
         color: color,
         rotation: rotation,
+      ),
+      // An opaque child (such as a flag) must not cover the focus ring.
+      foregroundPainter: ring == null ? null : ShapePainter(
+        path: shapePathOf(shape),
+        color: null,
+        rotation: rotation,
         ring: ring,
       ),
       child: SizedBox.square(
@@ -53,7 +59,7 @@ class ShapePainter extends CustomPainter {
   });
 
   final Path path;
-  final Color color;
+  final Color? color;
   final double rotation;
   final BorderSide? ring;
 
@@ -64,8 +70,10 @@ class ShapePainter extends CustomPainter {
       ..translate(size.width / 2, size.height / 2)
       ..rotate(rotation)
       ..scale(size.width, size.height)
-      ..translate(-0.5, -0.5)
-      ..drawPath(path, Paint()..color = color);
+      ..translate(-0.5, -0.5);
+    if (color case final color?) {
+      canvas.drawPath(path, Paint()..color = color);
+    }
     if (ring case final ring?) {
       strokeUnitShape(canvas, path, size.width, ring);
     }

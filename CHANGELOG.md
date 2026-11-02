@@ -1,3 +1,9 @@
+#### 3.0.12
+
+* Closing an IP-probe session now cancels its in-flight lookups and releases their threads and tunnel connections instead of stranding them; a lookup that races the close reports a clean cancellation, and a call landing after the activity closed answers "cancelled" instead of a stale failure
+* Backing out of a log-save dialog is neither an export nor a failure — the logs page stays silent; the export button disables while a save is in flight or the list is empty, and a failed save no longer loses the visible logs
+* The logcat tail is rebuilt as a cancellable reader with a mutex-guarded, time-boxed clear and injectable process spawning, making its lifecycle unit-testable on the JVM
+
 #### 3.0.11
 
 * The status card's IP quality lookup no longer fails on a freshly read IP: the probe transport opens its native session before its first request, and the bridge answers a get for a session nobody opened by creating one instead of throwing "No probe session is open" — a quality-cache miss used to fail every quality source and spam that warning

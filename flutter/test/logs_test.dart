@@ -15,6 +15,10 @@ void main() {
   late StreamController<dynamic> events;
   late BoxController box;
   String? exported;
+  final calls = <MethodCall>[];
+  final messages = <String>[];
+  Object? saveResult = true;
+  Completer<Object?>? pendingSave;
 
   Future<void> mount(WidgetTester tester, {bool remote = false}) async {
     tester.binding.platformDispatcher.localesTestValue = const [Locale('en')];
@@ -26,7 +30,9 @@ void main() {
     const channel = MethodChannel('test.logs');
     events = StreamController<dynamic>.broadcast();
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    calls.clear(); messages.clear(); saveResult = true; pendingSave = null;
     messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
       if (call.method == 'ready') return {
         'version': 'test', 'coreVersion': 'test',
         'dashboard': {'status': 'Stopped',
@@ -34,19 +40,25 @@ void main() {
       };
       if (call.method == 'document.save') {
         exported = json(call.arguments)['content'] as String;
-        return true;
+        if (saveResult is PlatformException) throw saveResult!;
+        return pendingSave == null ? saveResult : await pendingSave!.future;
       }
       if (call.method == 'logs.clear') {
         events.add({'type': 'logs', 'value': {'defaultLogLevel': box.defaultLogLevel, 'entries': []}});
       }
+      if (call.method == 'logs.logcat.clear') {
+        events.add({'type': 'logcat', 'value': {'reset': true, 'entries': []}});
+      }
       return null;
     });
     box = BoxController(channel: channel, events: events.stream);
+    final messageSubscription = box.messages.stream.listen(messages.add);
     exported = null;
     await tester.pumpWidget(BoxApp(controller: box));
     await tester.pumpAndSettle();
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox());
+      await messageSubscription.cancel();
       await events.close();
       messenger.setMockMethodCallHandler(channel, null);
     });
@@ -110,6 +122,85 @@ void main() {
     await expectExport(tester, ['Warn', 'Error', 'Fatal', 'Panic']);
     await emit(tester, 'Info');
     await expectExport(tester, ['Info', 'Warn', 'Error', 'Fatal', 'Panic']);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('logcat switches subscriptions, retains only the live window, exports and clears', (tester) async {
+    await mount(tester);
+    await emit(tester, 'Error');
+    await tester.tap(find.text('Logcat'));
+    await tester.pumpAndSettle();
+    expect(calls.where((call) => call.method == 'logs.visible').last.arguments, {'visible': false});
+    expect(calls.where((call) => call.method == 'logs.logcat.visible').last.arguments, {'visible': true});
+    events.add({'type': 'logcat', 'value': {'reset': true, 'entries': _records}});
+    await tester.pumpAndSettle();
+    await expectExport(tester, _levels);
+    final saved = json(calls.lastWhere((call) => call.method == 'document.save').arguments);
+    expect(saved['name'], 'Logcat.log');
+    expect(saved['redact'], true);
+    expect(messages.last, 'Exported');
+
+    events.add({'type': 'logcat', 'value': {'reset': false, 'firstId': 4, 'entries': [
+      _records.last, {'id': 8, 'level': 'info', 'message': 'later logcat record'},
+    ]}});
+    await tester.pumpAndSettle();
+    expect(box.logcat.map((line) => line['id']), [4, 5, 6, 7, 8]);
+    await choose(tester, 'Pause');
+    await choose(tester, 'Clear');
+    expect(calls.where((call) => call.method == 'logs.logcat.clear'), hasLength(1));
+    expect(box.logcat, isEmpty);
+    expect(find.text('No logs'), findsOneWidget);
+    expect(scaffold(tester).iconActions.single.onPressed, isNull);
+
+    events.add({'type': 'logcat', 'value': {'reset': true, 'entries': [
+      {'id': 9, 'level': 'info', 'message': 'after clear'},
+    ]}});
+    await tester.pumpAndSettle();
+    expect(find.text('after clear'), findsOneWidget);
+    expect(find.text('later logcat record'), findsNothing);
+    await tester.tap(find.text('Core log'));
+    await tester.pumpAndSettle();
+    expect(calls.where((call) => call.method == 'logs.logcat.visible').last.arguments, {'visible': false});
+    expect(calls.where((call) => call.method == 'logs.visible').last.arguments, {'visible': true});
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final result in [true, false, null]) {
+    testWidgets('export distinguishes success, failure and cancellation: $result', (tester) async {
+      await mount(tester);
+      await emit(tester, 'Error');
+      saveResult = result;
+      await expectExport(tester, ['Error', 'Fatal', 'Panic']);
+      expect(messages, result == null ? isEmpty : [result ? 'Exported' : 'Export failed']);
+      expect(scaffold(tester).iconActions.single.onPressed, isNotNull);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('export prevents reentry and reports platform errors without losing logs', (tester) async {
+    await mount(tester);
+    expect(scaffold(tester).iconActions.single.onPressed, isNull);
+    await emit(tester, 'Error');
+    pendingSave = Completer<Object?>();
+    final export = scaffold(tester).iconActions.single.onPressed!;
+    export(); export();
+    await tester.pumpAndSettle();
+    expect(calls.where((call) => call.method == 'document.save'), hasLength(1));
+    expect(scaffold(tester).iconActions.single.onPressed, isNull);
+    pendingSave!.complete(null);
+    await tester.pumpAndSettle();
+    expect(messages, isEmpty);
+    expect(scaffold(tester).iconActions.single.onPressed, isNotNull);
+    pendingSave = null;
+    saveResult = PlatformException(code: 'failed', message: 'Cannot write document');
+    scaffold(tester).iconActions.single.onPressed!();
+    await tester.pumpAndSettle();
+    expect(messages, ['Cannot write document']);
+    expect(box.logs, hasLength(_levels.length));
+    expect(scaffold(tester).iconActions.single.onPressed, isNotNull);
+    scaffold(tester).onKeywordsUpdate!(['no matching records']);
+    await tester.pumpAndSettle();
+    expect(scaffold(tester).iconActions.single.onPressed, isNull);
     expect(tester.takeException(), isNull);
   });
 

@@ -10,7 +10,7 @@ class LogsPage extends StatefulWidget {
 
 class _LogsPageState extends State<LogsPage> {
   String _query = '', _level = 'Default';
-  bool _logcat = false;
+  bool _logcat = false, _exporting = false;
   static const _priorities = {
     'panic': 0, 'fatal': 1, 'error': 2, 'warn': 3, 'warning': 3,
     'info': 4, 'debug': 5, 'trace': 6,
@@ -41,6 +41,25 @@ class _LogsPageState extends State<LogsPage> {
     return _level == 'All' || level == _level.toLowerCase();
   }
 
+  Future<void> _export(List<Json> logs) async {
+    if (_exporting || logs.isEmpty) return;
+    final box = context.box;
+    setState(() => _exporting = true);
+    try {
+      final saved = await box.call('document.save', {
+        // Log lines carry URLs and keys; the bridge redacts like the native export.
+        'name': _logcat ? 'Logcat.log' : 'B-box.log', 'redact': true,
+        'content': logs.map((line) => '${recordTime(line['receivedAt'])} [${line['level']}] ${line['message']}').join('\n'),
+      });
+      // A cancelled system picker is neither an export nor an error.
+      if (mounted && saved != null) box.messages.add(context.tr(saved == true ? 'Exported' : 'Export failed'));
+    } catch (error) {
+      box.report(error);
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
   @override Widget build(BuildContext context) {
     final box = context.watchBox(BoxAspect.logs);
     if (_logcat) context.watchBox(BoxAspect.logcat);
@@ -53,18 +72,8 @@ class _LogsPageState extends State<LogsPage> {
       title: context.tr('Logs'),
       onKeywordsUpdate: (words) => setState(() => _query = words.join(' ')),
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
-      iconActions: [IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'), onPressed: () async {
-        try {
-          final ok = await box.call('document.save', {
-            // redact: log lines carry URLs and keys; the bridge redacts like the native export.
-            'name': _logcat ? 'Logcat.log' : 'B-box.log', 'redact': true,
-            'content': logs.map((line) => '${recordTime(line['receivedAt'])} [${line['level']}] ${line['message']}').join('\n'),
-          }) == true;
-          if (context.mounted) box.messages.add(context.tr(ok ? 'Exported' : 'Export failed'));
-        } catch (error) {
-          box.report(error);
-        }
-      })],
+      iconActions: [IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'),
+        onPressed: logs.isEmpty || _exporting ? null : () => _export(logs))],
       menuItems: [
         CommonPopupMenuItem(glyph: _paused == null ? AppGlyphs.playPause(1) : AppGlyphs.playPause(0),
           label: context.tr(_paused == null ? 'Pause' : 'Resume'), onPressed: _paused == null ? _pause : _resume),

@@ -38,6 +38,7 @@ import io.throne.bbox.bridge.BboxCommands
 import io.throne.bbox.bridge.BboxEgress
 import io.throne.bbox.bridge.BboxLogcat
 import io.throne.bbox.bridge.BboxLogs
+import io.throne.bbox.bridge.BboxProbeSession
 import io.throne.bbox.bridge.BboxProfiles
 import io.throne.bbox.bridge.BboxRoutes
 import io.throne.bbox.bridge.BboxTestSession
@@ -48,6 +49,7 @@ import io.throne.bbox.bridge.Apply
 import io.throne.bbox.bridge.Settings as ThroneSettings
 import io.throne.bbox.model.BboxUiState
 import io.throne.bbox.model.ProxyGroup
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -57,7 +59,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.Closeable
@@ -120,7 +121,7 @@ class ThroneBoxBridge(
     private val scans = ConcurrentHashMap<String, StringBuilder>()
 
     /** Probe sessions: one HTTP client per id, tunneled through the running service. */
-    private val probes = ConcurrentHashMap<String, OkHttpClient>()
+    private val probes = ConcurrentHashMap<String, BboxProbeSession>()
 
     /** The URI the app was opened with, handed to the UI once. */
     private var pendingIntent: String? = null
@@ -237,9 +238,16 @@ class ThroneBoxBridge(
      * failure is never a silent empty screen. A block that does I/O must switch dispatchers itself.
      */
     private fun MethodChannel.Result.respond(block: suspend () -> Any?) {
+        if (!scope.isActive) {
+            error("cancelled", "Activity closed", null)
+            return
+        }
         scope.launch {
             try {
                 success(block())
+            } catch (e: CancellationException) {
+                error("cancelled", e.message ?: "Operation cancelled", null)
+                throw e
             } catch (e: Exception) {
                 Logs.w(e)
                 error("failed", e.message ?: e.javaClass.simpleName, null)
@@ -614,7 +622,7 @@ class ThroneBoxBridge(
                 // --- diagnostics and the status card's probes
                 "dashboard.egress" -> result.respond { egressWire() }
                 "dashboard.probe.open" -> {
-                    probes.computeIfAbsent(call.argument<String>("id").orEmpty()) { probeClient() }
+                    probes.computeIfAbsent(call.argument<String>("id").orEmpty()) { BboxProbeSession(probeClient()) }
                     result.success(null)
                 }
                 "dashboard.probe.get" -> result.respond { probeGet(call) }
@@ -892,25 +900,17 @@ class ThroneBoxBridge(
             .build()
     }
 
-    private suspend fun probeGet(call: MethodCall): Map<String, Any?> = withContext(Dispatchers.IO) {
-        // computeIfAbsent: a get for a session nobody opened still probes instead of failing the
-        // whole quality lookup with "No probe session is open".
-        val client = probes.computeIfAbsent(call.argument<String>("id").orEmpty()) { probeClient() }
+    private suspend fun probeGet(call: MethodCall): Map<String, Any?> {
+        // Capture the session before dispatching; a late request must never reopen a closed one.
+        val session = probes[call.argument<String>("id").orEmpty()]
+            ?: throw CancellationException("IP probe session closed")
         val url = call.argument<String>("url").orEmpty()
         val timeout = call.argument<Int>("timeoutMillis") ?: 8000
-        val request = Request.Builder().url(url).build()
-        client.newBuilder().callTimeout(timeout.toLong(), TimeUnit.MILLISECONDS).build()
-            .newCall(request).execute().use { response ->
-                mapOf("status" to response.code, "body" to response.body?.string().orEmpty())
-            }
+        return withContext(Dispatchers.IO) { session.get(url, timeout.toLong()) }
     }
 
-    /** Drops a probe session, releasing its executor threads and the connections pooled through the tunnel. */
     private fun closeProbe(id: String) {
-        probes.remove(id)?.let { client ->
-            runCatching { client.dispatcher.executorService.shutdown() }
-            runCatching { client.connectionPool.evictAll() }
-        }
+        probes.remove(id)?.close()
     }
 
     private suspend fun egressWire(): Map<String, Any?> = withContext(Dispatchers.IO) {
