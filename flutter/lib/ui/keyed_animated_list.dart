@@ -287,10 +287,9 @@ class _RenderSlideOnMove extends RenderProxyBox {
   bool _startPending = false;
 
   _RenderSlideOnMove({
-    required int generation,
-    required AnimationController controller,
-  }) : _generation = generation,
-       _controller = controller;
+    required this._generation,
+    required this._controller,
+  });
 
   set controller(AnimationController value) {
     if (identical(value, _controller)) {

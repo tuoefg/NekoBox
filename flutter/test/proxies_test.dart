@@ -22,8 +22,10 @@ void main() {
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
-      if (call.method == 'ready') return {'version': 'test', 'coreVersion': 'test', 'preferences': preferences,
+      if (call.method == 'ready') {
+        return {'version': 'test', 'coreVersion': 'test', 'preferences': preferences,
         'dashboard': {'status': 'Started', 'selectedProfileId': 1}};
+      }
       if (call.method == 'preferences.set') {
         preferences.addAll(json((call.arguments as Map)['value']));
         return preferences;

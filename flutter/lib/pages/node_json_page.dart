@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import '../ui/json/engine/schema_completion.dart';
-import '../ui/json/engine/schema_store.dart';
-import '../ui/json/engine/schema_validator.dart';
 import '../ui/json/relaxations.dart';
 import '../widgets.dart';
 import '../components/code_editor.dart';

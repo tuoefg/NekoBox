@@ -93,9 +93,11 @@ class ProxyNodeCard extends StatelessWidget {
           final box = context.box;
           try {
             final link = await _link(context);
-            if (context.mounted) openForm(context, BoxPage(title: 'QR code', children: [
+            if (context.mounted) {
+              openForm(context, BoxPage(title: 'QR code', children: [
               Center(child: QrCodeView(data: link)),
             ]));
+            }
           } catch (error) { box.report(error); }
         }),
         CommonPopupMenuItem(glyph: AppGlyphs.upload, label: context.tr('Share'), onPressed: () async {

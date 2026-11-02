@@ -100,7 +100,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
   }
 
   ({String field, String message})? get _issue {
-    if (_name.text.trim().isEmpty) return (field: 'name', message: context.tr('Name') + ': ' + context.tr('Required'));
+    if (_name.text.trim().isEmpty) return (field: 'name', message: '${context.tr('Name')}: ${context.tr('Required')}');
     if (_subscription) {
       final url = _url.text.trim();
       // The fetcher reads content:// URLs too, and those carry no host.
@@ -253,8 +253,10 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
 
   @override Widget build(BuildContext context) {
     if (_loading) return CommonScaffold(title: context.tr('Group settings'), isLoading: true, body: const SizedBox.shrink());
-    if (_data == null) return CommonScaffold(title: context.tr('Group settings'),
+    if (_data == null) {
+      return CommonScaffold(title: context.tr('Group settings'),
       body: ErrorState(_error ?? context.tr('No such group'), retry: _load));
+    }
     final issue = _attempted ? _issue : null;
     final candidates = rows(_data?['candidates']).map((candidate) =>
       ((candidate['id'] as num).toInt().toString(), candidate['label'].toString())).toList();

@@ -76,9 +76,9 @@ class _BackupPageState extends State<BackupPage> {
 
   void _showLoading(bool value) { if (mounted) setState(() => _loading = value); }
   Future<void> _success(String title, String message) => showFloatingDialog<void>(context: context,
-    child: CommonDialog(title: context.tr(title), child: Text(context.tr(message)), actions: [
+    child: CommonDialog(title: context.tr(title), actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close'))),
-    ]));
+    ], child: Text(context.tr(message))));
 
   Future<void> _backup(bool remote) async {
     if (_locked) return;
@@ -179,9 +179,9 @@ Future<void> restorePayload(BuildContext context, Json payload, {required String
   // and then doing nothing is worse than saying so.
   if (count == 0 && scope != 'all') {
     await showFloatingDialog<void>(context: context, child: CommonDialog(
-      title: context.tr('Restore'), child: Text(context.tr('This backup holds no profiles')), actions: [
+      title: context.tr('Restore'), actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close'))),
-      ]));
+      ], child: Text(context.tr('This backup holds no profiles'))));
     return;
   }
   final strategy = box.preferences['restoreStrategy'] as String? ?? 'Compatible';
@@ -194,9 +194,9 @@ Future<void> restorePayload(BuildContext context, Json payload, {required String
   } finally { onLoading?.call(false); }
   if (!context.mounted) return;
   await showFloatingDialog<void>(context: context, child: CommonDialog(
-    title: context.tr('Restore'), child: Text(context.tr('Restore complete')), actions: [
+    title: context.tr('Restore'), actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close'))),
-    ]));
+    ], child: Text(context.tr('Restore complete'))));
 }
 
 /// A .thrbackup opened from outside: the host read it before it got here, so only the scope is left
@@ -216,6 +216,10 @@ class _RestoreConfirm extends StatelessWidget {
 
   @override Widget build(BuildContext context) => CommonDialog(
     title: context.tr('Restore backup'), destructive: destructive,
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+      TextButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Restore'))),
+    ],
     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: [
       Text(context.tr('Restore {count} profiles?').replaceAll('{count}', '$count')),
       Text(context.tr(destructive
@@ -223,10 +227,6 @@ class _RestoreConfirm extends StatelessWidget {
         : 'Matching profiles will be replaced. Other profiles will be kept.')),
       if (scope == 'all') Text(context.tr('Application settings and remote servers will also be restored.')),
     ]),
-    actions: [
-      TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
-      TextButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Restore'))),
-    ],
   );
 }
 
@@ -264,7 +264,9 @@ class _WebDAVFormState extends State<WebDAVForm> {
     try {
       final uri = Uri.tryParse(_uri.text.trim());
       if (uri == null || !['http', 'https'].contains(uri.scheme) || uri.host.isEmpty || uri.userInfo.isNotEmpty ||
-          uri.hasQuery || uri.hasFragment || _uri.text.length > 4096) return 'Enter a WebDAV HTTP or HTTPS directory address';
+          uri.hasQuery || uri.hasFragment || _uri.text.length > 4096) {
+        return 'Enter a WebDAV HTTP or HTTPS directory address';
+      }
       if (uri.hasPort && (uri.port <= 0 || uri.port > 65535)) return 'Enter a WebDAV HTTP or HTTPS directory address';
     } catch (_) { return 'Enter a WebDAV HTTP or HTTPS directory address'; }
     if (_user.text.length > 4096 || _password.text.length > 4096) return 'Invalid WebDAV credentials';

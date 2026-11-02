@@ -33,11 +33,13 @@ void main() {
     calls.clear(); messages.clear(); saveResult = true; pendingSave = null;
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
-      if (call.method == 'ready') return {
+      if (call.method == 'ready') {
+        return {
         'version': 'test', 'coreVersion': 'test',
         'dashboard': {'status': 'Stopped',
           if (remote) ...{'remote': 'Server', 'remoteConnected': true}},
       };
+      }
       if (call.method == 'document.save') {
         exported = json(call.arguments)['content'] as String;
         if (saveResult is PlatformException) throw saveResult!;

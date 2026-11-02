@@ -23,9 +23,11 @@ void main() {
     };
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'profiles.config') return {
+      if (call.method == 'profiles.config') {
+        return {
         'content': jsonEncode(document), 'formatted': jsonEncode(document), 'revision': 'r1', 'stats': {},
       };
+      }
       return null;
     });
     final box = BoxController(channel: channel, events: const Stream.empty());
@@ -47,9 +49,11 @@ void main() {
     final events = StreamController<dynamic>.broadcast();
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'ready') return {
+      if (call.method == 'ready') {
+        return {
         'version': 'test', 'coreVersion': 'test', 'preferences': {'locale': 'en'}, 'dashboard': {'status': 'Stopped'},
       };
+      }
       if (call.method == 'profiles.config') {
         const document = '{"name":"Sub","nodes":[{"tag":"node-a","type":"VLESS","delay":120}]}';
         return {'content': document, 'formatted': document, 'revision': 'r1'};
@@ -82,9 +86,11 @@ void main() {
     final events = StreamController<dynamic>.broadcast();
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'ready') return {
+      if (call.method == 'ready') {
+        return {
         'version': 'test', 'coreVersion': 'test', 'preferences': {'locale': 'en'}, 'dashboard': {'status': 'Stopped'},
       };
+      }
       if (call.method == 'profiles.config') return {'content': '{}', 'formatted': '{}', 'revision': 'r1'};
       if (call.method == 'profiles.write') {
         throw PlatformException(code: 'config', message: 'Configuration changed; reload it before saving');

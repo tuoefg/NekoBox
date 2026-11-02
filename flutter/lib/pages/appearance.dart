@@ -102,7 +102,7 @@ class _AccentColors extends StatelessWidget {
       ]),
       Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 8, children: [
         _ColorSwatches(colors: [null, ...colors], selected: selected,
-          onSelect: (v) => box.setPreferences({'systemColor': v == null, if (v != null) 'color': v}),
+          onSelect: (v) => box.setPreferences({'systemColor': v == null, 'color': ?v}),
           onEdit: (v) => _edit(context, v), onAdd: colors.length >= 64 ? null : () => _edit(context, null),
           onDelete: (v) async {
             if (await confirm(context, 'Delete this color?')) {

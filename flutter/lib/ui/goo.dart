@@ -144,12 +144,10 @@ typedef _Placed = ({Rect rect, double lift});
 
 class _RenderGooSurface extends RenderProxyBox {
   _RenderGooSurface({
-    required LiquidGlassStyle? glass,
-    required Color color,
-    required List<BoxShadow> shadows,
-  }) : _glass = glass,
-       _color = color,
-       _shadows = shadows;
+    required this._glass,
+    required this._color,
+    required this._shadows,
+  });
 
   final _panes = <_RenderGooPane>{};
   late final _pane = LiquidGlassPane(markNeedsPaint);

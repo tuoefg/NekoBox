@@ -44,13 +44,16 @@ class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
       final context = _messenger.currentState?.context;
       if (context == null) return;
       final text = report['text']?.toString() ?? '';
+      // The listener body is synchronous — no await separates the context capture from the
+      // dialog — but the lint still fires on the builder's deferred execution.
+      // ignore: use_build_context_synchronously
       showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
-        title: Text(report['title']?.toString() ?? context.tr('Change of configuration')),
+        title: Text(report['title']?.toString() ?? dialogContext.tr('Change of configuration')),
         content: SizedBox(width: 480, child: SingleChildScrollView(child: SelectableText(
-          text.trim().isEmpty ? context.tr('Nothing changed') : text))),
+          text.trim().isEmpty ? dialogContext.tr('Nothing changed') : text))),
         actions: [
           TextButton(onPressed: () => Clipboard.setData(ClipboardData(text: text.trim())),
-            child: Text(context.tr('Copy'))),
+            child: Text(dialogContext.tr('Copy'))),
           TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(context.tr('OK'))),
         ],
       ));

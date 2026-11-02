@@ -49,10 +49,12 @@ class _RequestSettingsPageState extends State<RequestSettingsPage> {
 
   Future<void> _addDomains(TextEditingController controller) async {
     final selected = await openPage<List<String>>(context, const CaptureDomainsPage(select: true));
-    if (selected != null && selected.isNotEmpty && mounted) setState(() {
+    if (selected != null && selected.isNotEmpty && mounted) {
+      setState(() {
       controller.text = {..._lines(controller.text), ...selected}.join('\n');
       _dirty = true;
     });
+    }
   }
 
   Widget _field(TextEditingController controller, String label, {String? footer, String? hint, bool multiline = true}) => generateSection(
@@ -131,11 +133,13 @@ class _CaptureAppsPageState extends State<CaptureAppsPage> {
       final visible = apps.where((app) => '${app['name']} ${app['package']}'.toLowerCase().contains(_query)).toList();
       return ListView.builder(padding: EdgeInsets.fromLTRB(16, context.contentTopPadding, 16, 24 + context.bottomInset),
         itemCount: visible.length + 1, itemBuilder: (context, index) {
-          if (index == 0) return Column(children: [
+          if (index == 0) {
+            return Column(children: [
             Padding(padding: const EdgeInsets.all(12), child: Text(context.tr('An empty selection captures applications in this Android user. Flrone itself is excluded from eBPF capture. Applications sharing a UID share the same filter.'))),
             if (snapshot.hasError) ErrorState(snapshot.error!, retry: () => setState(() => _apps = context.box.call('apps.list', {'system': true, 'refresh': true}).then(rows))),
             if (!snapshot.hasData && !snapshot.hasError) const Center(child: CircularProgressIndicator()),
           ]);
+          }
           final app = visible[index - 1], package = app['package'].toString();
           return ListItem.checkbox(title: Text(app['name']?.toString() ?? package), subtitle: Text(package), value: _selected.contains(package),
             onChanged: (_) => setState(() { if (!_selected.add(package)) _selected.remove(package); }));

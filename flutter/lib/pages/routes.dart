@@ -478,9 +478,9 @@ class _RuleOrderPageState extends State<RuleOrderPage> {
         setState(() => _saving = true);
         try {
           await context.box.call('routes.saveRules', {'id': widget.profileId, 'rules': _rules});
-          if (mounted) context.safeNestedPop(true);
+          if (context.mounted) context.safeNestedPop(true);
         } catch (error) {
-          if (mounted) { setState(() => _saving = false); context.box.report(error); }
+          if (context.mounted) { setState(() => _saving = false); context.box.report(error); }
         }
       }),
     body: AbsorbPointer(absorbing: _saving, child: ReorderableListView.builder(

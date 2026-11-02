@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
 
 import '../widgets.dart';
 
@@ -36,7 +34,7 @@ class CodeEditor extends StatefulWidget {
 /// A [TextEditingController] whose [buildTextSpan] paints the engine's tokens: keys, strings,
 /// numbers, literals and comments, plus a wavy underline per issue span.
 class JsonCodeController extends TextEditingController {
-  JsonCodeController({String? text}) : super(text: text);
+  JsonCodeController({super.text});
 
   /// Set by the page when the validator (or the parser) ran; cleared on the next change.
   List<JsonIssue> issues = [];

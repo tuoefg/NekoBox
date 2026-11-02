@@ -6,12 +6,8 @@ import 'dart:convert' as convert;
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:b_box_ui/ui/json/engine/json_formatter.dart';
-import 'package:b_box_ui/ui/json/engine/json_tree.dart';
 import 'package:b_box_ui/ui/json/engine/schema_completion.dart';
 import 'package:b_box_ui/ui/json/engine/schema_document.dart';
-import 'package:b_box_ui/ui/json/engine/schema_store.dart';
-import 'package:b_box_ui/ui/json/engine/schema_validator.dart';
 import 'package:b_box_ui/ui/json/relaxations.dart';
 
 SchemaDocument? _schema;

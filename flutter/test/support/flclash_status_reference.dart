@@ -7,7 +7,6 @@
 import 'dart:math' as math;
 import 'package:b_box_ui/widgets.dart';
 import 'package:country_flags/country_flags.dart' as country_flags;
-import 'package:flutter/widgets.dart';
 import 'package:material_new_shapes/material_new_shapes.dart';
 
 const _ipMask = '*****';

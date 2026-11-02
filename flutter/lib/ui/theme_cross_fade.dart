@@ -133,12 +133,10 @@ class _ThemeCrossFadeLayer extends SingleChildRenderObjectWidget {
 
 class _RenderThemeCrossFade extends RenderProxyBox {
   _RenderThemeCrossFade({
-    ui.Image? snapshot,
-    Size? snapshotSize,
-    required Animation<double> progress,
-  }) : _snapshot = snapshot,
-       _snapshotSize = snapshotSize,
-       _progress = progress;
+    this._snapshot,
+    this._snapshotSize,
+    required this._progress,
+  });
 
   @override
   bool get isRepaintBoundary => true;

@@ -46,7 +46,7 @@ class _ProfilesPageState extends State<ProfilesPage> {
     final box = context.box;
     try {
       final content = await box.call('profiles.read', {'id': profile['id']});
-      await box.call('document.save', {'name': profile['name'].toString() + '.json', 'content': content});
+      await box.call('document.save', {'name': '${profile['name']}.json', 'content': content});
     } catch (error) { box.report(error); }
   }
   Future<void> _share(Json profile) async {
@@ -291,7 +291,7 @@ class _ProfileFormState extends State<ProfileForm> {
   bool _saving = false, _attempted = false;
 
   ({String field, String message})? get _issue {
-    if (_name.text.trim().isEmpty) return (field: 'name', message: context.tr('Name') + ': ' + context.tr('Required'));
+    if (_name.text.trim().isEmpty) return (field: 'name', message: '${context.tr('Name')}: ${context.tr('Required')}');
     if (!_remote) return null;
     final uri = Uri.tryParse(_url.text.trim());
     if (uri == null || !['http', 'https'].contains(uri.scheme) || uri.host.isEmpty) {
@@ -386,8 +386,11 @@ class _ProfileOrderPageState extends State<ProfileOrderPage> {
         setState(() => _saving = true);
         final saved = await context.box.act('profiles.reorder', {'ids': _profiles!.map((p) => p['id']).toList()});
         if (!context.mounted) return;
-        if (saved) context.safeNestedPop();
-        else setState(() => _saving = false);
+        if (saved) {
+          context.safeNestedPop();
+        } else {
+          setState(() => _saving = false);
+        }
       }),
       body: AbsorbPointer(absorbing: _saving, child: ReorderableListView.builder(
         buildDefaultDragHandles: false,

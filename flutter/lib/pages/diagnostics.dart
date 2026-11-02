@@ -62,7 +62,7 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
             ListItem.toggle(title: Text(context.tr('Serial test')), value: _serial, onChanged: running ? null : (value) => setState(() => _serial = value)),
             ListItem.toggle(title: const Text('HTTP/3'), value: _http3, onChanged: running ? null : (value) => setState(() => _http3 = value)),
             ListItem<int>.options(title: Text(context.tr('Duration')), options: const [30, 60], value: _seconds,
-              textBuilder: (value) => value.toString() + ' s', onChanged: (value) { if (!running) setState(() => _seconds = value); }),
+              textBuilder: (value) => '$value s', onChanged: (value) { if (!running) setState(() => _seconds = value); }),
           ],
         ]),
         Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: FilledButton(
@@ -71,13 +71,13 @@ class _DiagnosticsPageState extends State<DiagnosticsPage> {
         )),
         if (running) const LinearProgressIndicator(),
         if (phase >= 0) Padding(padding: const EdgeInsets.only(top: 16), child: DetailRows(widget.quality ? {
-          'Latency': (state['idleLatencyMs'] ?? 0).toString() + ' ms',
-          'Download': ((state['downloadCapacity'] as num? ?? 0) / 1000000).toStringAsFixed(2) + ' Mbps',
-          'Upload': ((state['uploadCapacity'] as num? ?? 0) / 1000000).toStringAsFixed(2) + ' Mbps',
+          'Latency': '${state['idleLatencyMs'] ?? 0} ms',
+          'Download': '${((state['downloadCapacity'] as num? ?? 0) / 1000000).toStringAsFixed(2)} Mbps',
+          'Upload': '${((state['uploadCapacity'] as num? ?? 0) / 1000000).toStringAsFixed(2)} Mbps',
           'Download RPM': state['downloadRPM'], 'Upload RPM': state['uploadRPM'],
         } : {
           'Address': state['externalAddr'],
-          'Latency': (state['latencyMs'] ?? 0).toString() + ' ms',
+          'Latency': '${state['latencyMs'] ?? 0} ms',
           if (state['natTypeSupported'] == true) ...{
             'NAT mapping': state['mapping'], 'NAT filtering': state['filtering'],
           },

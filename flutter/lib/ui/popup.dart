@@ -487,23 +487,16 @@ typedef _Opening = ({
 /// toward its anchor as it fades.
 class _RenderPopupMorph extends RenderProxyBox {
   _RenderPopupMorph({
-    required Rect anchor,
-    required Animation<double> animation,
-    required ValueListenable<bool> platter,
+    required this._anchor,
+    required this._animation,
+    required this._platter,
     required this.surface,
-    required Color sourceColor,
-    required ValueListenable<ui.Image?>? sourceImage,
-    required Color surfaceColor,
-    required List<BoxShadow> shadows,
-    required _PlatterGlass? glass,
-  }) : _anchor = anchor,
-       _animation = animation,
-       _platter = platter,
-       _sourceColor = sourceColor,
-       _sourceImage = sourceImage,
-       _surfaceColor = surfaceColor,
-       _shadows = shadows,
-       _glass = glass;
+    required this._sourceColor,
+    required this._sourceImage,
+    required this._surfaceColor,
+    required this._shadows,
+    required this._glass,
+  });
 
   late final _pane = LiquidGlassPane(markNeedsPaint);
 
@@ -2791,22 +2784,15 @@ class PopupMenuCard extends SingleChildRenderObjectWidget {
 
 class _RenderPopupMenuCard extends RenderProxyBox {
   _RenderPopupMenuCard({
-    required double grow,
-    required ({double top, double height})? origin,
-    required List<BoxShadow> shadows,
-    required Color fill,
-    required Color dim,
-    required LiquidGlassStyle? glass,
-    required LiquidGlassRim? rim,
-    required bool bare,
-  }) : _grow = grow,
-       _origin = origin,
-       _shadows = shadows,
-       _fill = fill,
-       _dim = dim,
-       _glass = glass,
-       _rim = rim,
-       _bare = bare;
+    required this._grow,
+    required this._origin,
+    required this._shadows,
+    required this._fill,
+    required this._dim,
+    required this._glass,
+    required this._rim,
+    required this._bare,
+  });
 
   late final _pane = LiquidGlassPane(markNeedsPaint);
   final _clip = LayerHandle<ClipPathLayer>();

@@ -198,7 +198,7 @@ class PanelTitle extends StatelessWidget {
     GlyphIcon(glyph, size: 18, color: context.colorScheme.onSurfaceVariant),
     const SizedBox(width: 8),
     Expanded(child: Text(context.tr(title), maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyle.subheadline.of(context, emphasized: true))),
-    if (trailing != null) trailing!,
+    ?trailing,
   ]));
 }
 

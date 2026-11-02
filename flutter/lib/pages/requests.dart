@@ -55,7 +55,8 @@ class _RequestsPageState extends State<RequestsPage> {
             padding: EdgeInsets.only(top: context.contentTopPadding, bottom: 24 + context.bottomInset),
             itemCount: entries.length + 2,
             itemBuilder: (context, index) {
-              if (index == 0) return Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (index == 0) {
+                return Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 generateGroup([
                   ListItem.toggle(key: const ValueKey('capture-toggle'), title: Text(context.tr('Capture requests')),
                     subtitle: Text(context.tr(active ? 'Capturing new connections' : 'Capture stopped')), value: active,
@@ -75,9 +76,12 @@ class _RequestsPageState extends State<RequestsPage> {
                 if (snapshot != null && entries.isEmpty) EmptyState(_query.isEmpty ? 'No captured requests' : 'No results',
                   message: _query.isEmpty ? 'HTTP capture follows the local service. HTTPS uses Root/eBPF on this device. Start capture, then reconnect the target app.' : null),
               ]));
-              if (index > entries.length) return (page['total'] as num? ?? 0) > entries.length
+              }
+              if (index > entries.length) {
+                return (page['total'] as num? ?? 0) > entries.length
                 ? TextButton(onPressed: () => setState(() => _limit = (_limit + 50).clamp(1, 300).toInt()), child: Text(context.tr('Show more')))
                 : const SizedBox.shrink();
+              }
               final item = entries[index - 1];
               final styles = RecordTextStyles.of(context);
               return Padding(padding: const EdgeInsets.only(bottom: recordListGap), child: RecordListItem(

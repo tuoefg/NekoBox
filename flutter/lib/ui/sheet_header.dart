@@ -195,9 +195,8 @@ class SheetOverhangLift extends SingleChildRenderObjectWidget {
 }
 
 class _RenderSheetOverhangLift extends RenderTransform {
-  _RenderSheetOverhangLift({required ValueListenable<double>? overhang})
-    : _overhang = overhang,
-      super(transform: Matrix4.identity(), transformHitTests: true) {
+  _RenderSheetOverhangLift({required this._overhang})
+    : super(transform: Matrix4.identity(), transformHitTests: true) {
     _overhang?.addListener(_syncTransform);
   }
 

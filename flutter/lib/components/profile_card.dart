@@ -56,7 +56,7 @@ String profileUpdateLabel(int? milliseconds, DateTime now, {required bool chines
     (elapsed.inDays ~/ 365, 'y', '年'), (elapsed.inDays ~/ 30, 'mo', '个月'),
     (elapsed.inDays, 'd', '天'), (elapsed.inHours, 'h', '小时'), (elapsed.inMinutes, 'm', '分钟'),
   ]) {
-    if (count > 0) return chinese ? '$count ${zh}前' : '$count$en ago';
+    if (count > 0) return chinese ? '$count $zh前' : '$count$en ago';
   }
   return chinese ? '刚刚' : 'Just now';
 }
@@ -75,7 +75,7 @@ class _ProfileUpdateTimeState extends State<ProfileUpdateTime> with WidgetsBindi
   @override void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); }
   @override void didChangeDependencies() {
     super.didChangeDependencies();
-    _active = PageActivityScope.isActiveOf(context) && TickerMode.of(context);
+    _active = PageActivityScope.isActiveOf(context) && TickerMode.valuesOf(context).enabled;
     _schedule();
   }
   void _schedule() {

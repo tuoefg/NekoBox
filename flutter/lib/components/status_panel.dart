@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:country_flags/country_flags.dart' as country_flags;
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:material_new_shapes/material_new_shapes.dart';
 import '../widgets.dart';
 import '../pages/profiles.dart';
@@ -142,9 +141,11 @@ class _StatusPanelState extends State<StatusPanel> with WidgetsBindingObserver {
             _qualityChecking = false;
             _qualityError = BoxController.describe(error);
             result['qualityError'] = _qualityError;
-            if (error is IpQualityLookupException) result['qualityFailures'] = [
+            if (error is IpQualityLookupException) {
+              result['qualityFailures'] = [
               for (final failure in error.failures) {'source': failure.source.label, 'status': failure.status.name},
             ];
+            }
           });
           _detailsRevision.value++;
         }

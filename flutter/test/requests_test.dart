@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:b_box_ui/main.dart';
 import 'package:b_box_ui/widgets.dart';
@@ -61,10 +60,12 @@ void main() {
     });
     messenger.setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
-      if (call.method == 'ready') return {
+      if (call.method == 'ready') {
+        return {
         'version': 'test', 'coreVersion': 'test', 'preferences': {'fontScale': scale, 'theme': dark ? 'dark' : 'light'},
         'dashboard': {'status': 'Started', if (remote) ...{'remote': 'Server', 'remoteConnected': true}},
       };
+      }
       if (extra != null) return extra!(call);
       if (call.method == 'capture.snapshot') return snapshot;
       if (call.method == 'capture.settings') return {'revision': 'saved-revision', 'config': snapshot['config']};

@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import '../widgets.dart';
 import '../components/data_subscription.dart';
-import 'throne.dart';
 
 /// The batch test panel over the bridge's `groups.testSession`: one scope (a group, a selection or
 /// the running connection), live progress with the latency histogram, the ranked best results, the
@@ -111,7 +110,7 @@ class _TestPanelPageState extends State<TestPanelPage> {
       return [((list[0] as num).toDouble()), ((list[1] as num).toDouble()), list[2] == true];
     }).toList();
     final peak = samples.fold<double>(1.0, (peak, sample) => math.max(peak, (sample[1] as num).toDouble()));
-    final bps = (value) => value > 1e6 ? '${(value / 1e6).toStringAsFixed(1)} Mbps' : '${(value / 1e3).toStringAsFixed(0)} kbps';
+    String bps(value) => value > 1e6 ? '${(value / 1e6).toStringAsFixed(1)} Mbps' : '${(value / 1e3).toStringAsFixed(0)} kbps';
     return generateSection(title: context.tr('Testing now'), items: [
       DecorationListItem(contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10), title: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch, spacing: 8,

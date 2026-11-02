@@ -79,17 +79,17 @@ class ConnectionRecord extends StatelessWidget {
       key: ValueKey(c['id']),
       onTap: () => openPage(context, ConnectionDetail(initial: c)),
       header: RecordHeader(
-        children: [
-          RecordTimestamp(recordTime(c['createdAt'])),
-          RecordLabel(label: c['network'].toString().toUpperCase(), onPressed: () => context.commonScaffoldState?.addKeyword(c['network'].toString())),
-          if (closed) RecordLabel(label: context.tr('Closed')),
-        ],
         trailing: !closed && box.running ? Tooltip(
           message: context.tr('Close this connection'), child: Semantics(button: true, child: InkWell(
             customBorder: AppShape.circle, onTap: () => box.act('connections.close', {'id': c['id']}),
             child: SizedBox.square(dimension: 28, child: Center(child: GlyphIcon(AppGlyphs.block, size: 16, color: context.colorScheme.onSurfaceVariant))),
           )),
         ) : null,
+        children: [
+          RecordTimestamp(recordTime(c['createdAt'])),
+          RecordLabel(label: c['network'].toString().toUpperCase(), onPressed: () => context.commonScaffoldState?.addKeyword(c['network'].toString())),
+          if (closed) RecordLabel(label: context.tr('Closed')),
+        ],
       ),
       body: Column(crossAxisAlignment: CrossAxisAlignment.start, spacing: 4, children: [
         Text(c['displayDestination']?.toString() ?? c['destination']?.toString() ?? '—', style: styles.title, maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -128,13 +128,14 @@ class _ConnectionDetailState extends State<ConnectionDetail> {
       'Created': localDate(c['createdAt']),
       if ((c['closedAt'] as num? ?? 0) > 0) 'Closed': localDate(c['closedAt']),
       'Upload': bytes(c['uploadTotal'] as num? ?? 0), 'Download': bytes(c['downloadTotal'] as num? ?? 0),
-      if (c['process'] != null) 'Process': json(c['process']).entries.map((e) => e.key + ': ' + e.value.toString()).join('\n'),
+      if (c['process'] != null) 'Process': json(c['process']).entries.map((e) => '${e.key}: ${e.value}').join('\n'),
     };
     return BoxPage(
       title: 'Details',
       actions: [
         IconButtonData(glyph: AppGlyphs.copy, tooltip: context.tr('Copy'), onPressed: () async {
-          await Clipboard.setData(ClipboardData(text: values.entries.map((e) => e.key + ': ' + e.value.toString()).join('\n')));
+          await Clipboard.setData(ClipboardData(text: values.entries.map((e) => '${e.key}: ${e.value}').join('\n')));
+          if (!context.mounted) return;
           box.messages.add(context.tr('Copied'));
         }),
         IconButtonData(glyph: AppGlyphs.close, tooltip: context.tr('Close this connection'),

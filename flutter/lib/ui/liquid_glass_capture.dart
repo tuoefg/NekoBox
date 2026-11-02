@@ -304,12 +304,10 @@ class _LiquidGlassHostBox extends SingleChildRenderObjectWidget {
 
 class _RenderLiquidGlassHost extends RenderProxyBox {
   _RenderLiquidGlassHost({
-    required bool enabled,
-    required double devicePixelRatio,
-    required LiquidGlassQuality quality,
-  }) : _enabled = enabled,
-       _devicePixelRatio = devicePixelRatio,
-       _quality = quality;
+    required this._enabled,
+    required this._devicePixelRatio,
+    required this._quality,
+  });
 
   final _layer = LayerHandle<_LiquidGlassHostLayer>();
 

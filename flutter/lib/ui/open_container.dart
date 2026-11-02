@@ -462,14 +462,11 @@ class _ContainerTransition
 class _RenderContainerTransition extends RenderBox
     with SlottedContainerRenderObjectMixin<_Slot, RenderBox> {
   _RenderContainerTransition({
-    required _OpenContainerRoute<dynamic> route,
-    required Color closedColor,
-    required Color openColor,
-    required Color settledColor,
-  }) : _route = route,
-       _closedColor = closedColor,
-       _openColor = openColor,
-       _settledColor = settledColor;
+    required this._route,
+    required this._closedColor,
+    required this._openColor,
+    required this._settledColor,
+  });
 
   _OpenContainerRoute<dynamic> get route => _route;
   _OpenContainerRoute<dynamic> _route;

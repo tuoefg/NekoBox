@@ -212,7 +212,7 @@ class _GroupSliverState extends State<_GroupSliver> with SingleTickerProviderSta
       }
     } else { _rows = null; }
     return SliverPadding(padding: EdgeInsets.only(bottom: widget.gap), sliver: SliverMainAxisGroup(slivers: [
-      _pinnedHeader(unfolded), if (rows != null) rows,
+      _pinnedHeader(unfolded), ?rows,
     ]));
   }
 

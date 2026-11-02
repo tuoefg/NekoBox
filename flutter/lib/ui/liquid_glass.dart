@@ -792,22 +792,15 @@ class _LiquidGlassPane extends SingleChildRenderObjectWidget {
 
 class _RenderLiquidGlass extends RenderProxyBox {
   _RenderLiquidGlass({
-    required Object? group,
-    required LiquidGlassStyle style,
-    required BorderRadius? borderRadius,
-    required CustomClipper<Path>? clipper,
-    required List<BoxShadow> shadows,
-    required double press,
-    required bool fading,
-    required LiquidGlassGlow? glow,
-  }) : _group = group,
-       _style = style,
-       _borderRadius = borderRadius,
-       _clipper = clipper,
-       _shadows = shadows,
-       _press = press,
-       _fading = fading,
-       _glow = glow;
+    required this._group,
+    required this._style,
+    required this._borderRadius,
+    required this._clipper,
+    required this._shadows,
+    required this._press,
+    required this._fading,
+    required this._glow,
+  });
 
   late final _pane = LiquidGlassPane(markNeedsPaint);
 

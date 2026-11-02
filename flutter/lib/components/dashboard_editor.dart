@@ -55,8 +55,9 @@ class DashboardEditorState extends State<DashboardEditor> with SingleTickerProvi
 
   @override void didChangeDependencies() {
     super.didChangeDependencies();
-    if (context.disableAnimations) _sway.stop();
-    else if (!_sway.isAnimating) _sway.repeat();
+    if (context.disableAnimations) {
+      _sway.stop();
+    } else if (!_sway.isAnimating) { _sway.repeat(); }
   }
   @override void didUpdateWidget(DashboardEditor oldWidget) {
     super.didUpdateWidget(oldWidget);

@@ -166,7 +166,7 @@ class _RemoteFormState extends State<RemoteForm> {
     confirmationAction: IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Save'), onPressed: _saving ? null : () async {
       setState(() => _saving = true);
       final saved = await context.box.act('remote.save', {...widget.initial, 'name': _name.text, 'url': _url.text, 'secret': _secret.text});
-      if (mounted) {
+      if (context.mounted) {
         setState(() => _saving = false);
         if (saved) context.safeNestedPop();
       }

@@ -471,8 +471,7 @@ class _RenderCenteredTitle extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, MultiChildLayoutParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, MultiChildLayoutParentData> {
-  _RenderCenteredTitle({required TextDirection textDirection})
-    : _textDirection = textDirection;
+  _RenderCenteredTitle({required this._textDirection});
 
   TextDirection _textDirection;
 
@@ -692,8 +691,7 @@ class _RenderAlertActions extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, _AlertActionsParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, _AlertActionsParentData> {
-  _RenderAlertActions({required TextDirection textDirection})
-    : _textDirection = textDirection;
+  _RenderAlertActions({required this._textDirection});
 
   TextDirection _textDirection;
   set textDirection(TextDirection value) {

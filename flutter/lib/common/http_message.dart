@@ -106,6 +106,8 @@ String capturedTextPrefix(String text, int limit) {
   if (text.length <= limit) return text;
   var end = limit;
   if (end > 0 && text.codeUnitAt(end - 1) >= 0xd800 && text.codeUnitAt(end - 1) <= 0xdbff &&
-      text.codeUnitAt(end) >= 0xdc00 && text.codeUnitAt(end) <= 0xdfff) end--;
+      text.codeUnitAt(end) >= 0xdc00 && text.codeUnitAt(end) <= 0xdfff) {
+    end--;
+  }
   return text.substring(0, end);
 }

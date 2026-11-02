@@ -22,14 +22,18 @@ void main() {
       final events = StreamController<dynamic>.broadcast();
       const channel = MethodChannel('test.dashboard-edit');
       final preferences = <String, dynamic>{'locale': 'en'};
-      if (scenario == 'add-remove') preferences.addAll({
+      if (scenario == 'add-remove') {
+        preferences.addAll({
         'dashboardCards': ['Status', 'Network speed', 'Outbound mode', 'Current profile', 'Connections', 'Proxy groups'],
         'hiddenCards': ['Connections', 'Memory', 'Intranet IP'],
       });
+      }
       final systemProxy = card == 'System HTTP proxy';
-      if (systemProxy && scenario != 'add-remove') preferences['dashboardCards'] = [
+      if (systemProxy && scenario != 'add-remove') {
+        preferences['dashboardCards'] = [
         'Status', card, 'Network speed', 'Outbound mode', 'Current profile', 'Proxy groups',
       ];
+      }
       final dashboard = <String, dynamic>{
         'status': 'Started', 'selectedProfileId': 1, 'modes': ['rule', 'global', 'direct'], 'mode': 'rule',
         'systemProxyAvailable': systemProxy, 'systemProxy': true,

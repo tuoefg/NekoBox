@@ -38,8 +38,12 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-      - name: Test
+      - name: Analyze
         working-directory: flutter
         run: |
           flutter pub get
+          flutter analyze --fatal-infos
+      - name: Test
+        working-directory: flutter
+        run: |
           flutter test

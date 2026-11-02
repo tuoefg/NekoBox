@@ -44,12 +44,14 @@ class _CaptureDomainsPageState extends State<CaptureDomainsPage> {
         ],
         body: ListView.builder(padding: EdgeInsets.fromLTRB(16, context.contentTopPadding, 16, 24 + context.bottomInset),
           itemCount: domains.length + 1, itemBuilder: (context, index) {
-            if (index == 0) return Column(children: [
+            if (index == 0) {
+              return Column(children: [
               ListFooter(text: context.tr('Domains are extracted from retained requests and visible TLS/QUIC names, using the current search filter. Encrypted hostnames cannot be recovered.')),
               if (snapshot.hasError) ErrorState(snapshot.error!, retry: () => setState(() => _domains = _load())),
               if (!snapshot.hasData && !snapshot.hasError) const Center(child: CircularProgressIndicator()),
               if (snapshot.hasData && domains.isEmpty) const EmptyState('No captured domains'),
             ]);
+            }
             final host = domains[index - 1];
             return widget.select ? ListItem.checkbox(title: Text(host), value: _selected.contains(host),
               onChanged: (_) => setState(() { if (!_selected.add(host)) _selected.remove(host); }))

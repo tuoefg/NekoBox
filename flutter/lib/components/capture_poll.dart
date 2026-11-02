@@ -36,7 +36,7 @@ class _CapturePollState extends State<CapturePoll> with WidgetsBindingObserver {
 
   void _sync() {
     final lifecycle = WidgetsBinding.instance.lifecycleState;
-    final visible = !_box!.remote && PageActivityScope.isActiveOf(context) && TickerMode.of(context) &&
+    final visible = !_box!.remote && PageActivityScope.isActiveOf(context) && TickerMode.valuesOf(context).enabled &&
         (lifecycle == null || lifecycle == AppLifecycleState.resumed);
     if (visible == _visible) return;
     _visible = visible;

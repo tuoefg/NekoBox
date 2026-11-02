@@ -19,7 +19,7 @@ double _morphTurn(double progress) => progress * 2 * math.pi / 9;
 /// A circle with a play glyph while stopped that grows the cookie-9 of a
 /// running tunnel, the way the M3 Expressive loader morphs between shapes.
 class StartToggle extends StatefulWidget {
-  const StartToggle({
+  const StartToggle({super.key, 
     required this.size,
     required this.enabled,
     required this.running,

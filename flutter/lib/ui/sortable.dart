@@ -360,12 +360,10 @@ class _RenderSortableSlot extends RenderBox
         ContainerRenderObjectMixin<RenderBox, _SlotParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, _SlotParentData> {
   _RenderSortableSlot({
-    required Animation<double> animation,
-    required bool sorting,
-    required TextDirection textDirection,
-  }) : _animation = animation,
-       _sorting = sorting,
-       _textDirection = textDirection;
+    required this._animation,
+    required this._sorting,
+    required this._textDirection,
+  });
 
   Animation<double> _animation;
   bool _sorting;

@@ -56,7 +56,9 @@ class _AccessPageState extends State<AccessPage> {
 
   List<Json> _display(List<Json> source, Set<String> selected) {
     if (identical(source, _displaySource) && _displayApps != null &&
-        (!_selectedOnly || const SetEquality<String>().equals(selected, _displaySelection))) return _displayApps!;
+        (!_selectedOnly || const SetEquality<String>().equals(selected, _displaySelection))) {
+      return _displayApps!;
+    }
     final words = _query.toLowerCase().trim().split(RegExp(r'\s+'));
     final apps = source.where((app) =>
       (_system || app['system'] != true) && (_nonInternet || app['internet'] != false) &&
@@ -194,8 +196,8 @@ class _AccessPageState extends State<AccessPage> {
           title: context.tr('Access control'), isLoading: _saving,
           searchInBar: true,
           searchState: AppBarSearchState(onSearch: (query) => _filter(() { _query = query; _pinned = _selected; })),
-          searchActions: [if (selectAll != null) selectAll],
-          iconActions: [if (selectAll != null) selectAll],
+          searchActions: [?selectAll],
+          iconActions: [?selectAll],
           confirmationAction: _hasChanges ? IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Save'), onPressed: _saving ? null : _save) : null,
           menuItems: [
             CommonPopupMenuItem(glyph: AppGlyphs.toggleOn, label: context.tr('Turn on'), checked: _enabled,

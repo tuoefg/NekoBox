@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:b_box_ui/main.dart';
-import 'package:b_box_ui/pages/throne.dart';
 import 'package:b_box_ui/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,8 +16,10 @@ void main() {
     final edits = <Json>[];
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'ready') return {'version': 'test', 'coreVersion': 'test',
+      if (call.method == 'ready') {
+        return {'version': 'test', 'coreVersion': 'test',
         'dashboard': {'status': 'Started'}, 'settings': settings};
+      }
       if (call.method == 'settings.set') {
         final args = json(call.arguments);
         edits.add(args);

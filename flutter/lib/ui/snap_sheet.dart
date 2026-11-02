@@ -234,11 +234,10 @@ class _SheetSpring extends Simulation {
   _SheetSpring({
     required double from,
     required this.to,
-    required double velocity,
+    required this._velocity,
     required this.ratio,
     super.tolerance,
-  }) : _start = from - to,
-       _velocity = velocity;
+  }) : _start = from - to;
 
   final double to;
   final double ratio;
@@ -960,16 +959,12 @@ class _SheetViewport extends SingleChildRenderObjectWidget {
 class _RenderSheetViewport extends RenderBox
     with RenderObjectWithChildMixin<RenderBox> {
   _RenderSheetViewport({
-    required _SheetModel model,
-    required double keyboard,
-    required Animation<double> presentation,
-    required Animation<double> cover,
-    required ValueListenable<SnapSheetRoute<dynamic>?> covering,
-  }) : _model = model,
-       _keyboard = keyboard,
-       _presentation = presentation,
-       _cover = cover,
-       _covering = covering;
+    required this._model,
+    required this._keyboard,
+    required this._presentation,
+    required this._cover,
+    required this._covering,
+  });
 
   _SheetModel _model;
   double _keyboard;

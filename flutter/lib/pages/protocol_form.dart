@@ -651,10 +651,12 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
 
   @override Widget build(BuildContext context) {
     if (_loading) return CommonScaffold(title: context.tr('Edit settings'), isLoading: true, body: const SizedBox.shrink());
-    if (!_supported) return CommonScaffold(title: context.tr('Edit settings'), body: NullStatus(
+    if (!_supported) {
+      return CommonScaffold(title: context.tr('Edit settings'), body: NullStatus(
       label: context.tr('No typed form for this protocol'),
       description: context.tr('Use the node editor to change the configuration text.'),
     ));
+    }
     final issue = _attempted ? _issue : null;
     final schemas = _schemas();
     return FormPage(

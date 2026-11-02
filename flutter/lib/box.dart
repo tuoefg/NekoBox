@@ -146,7 +146,7 @@ class BoxController extends ChangeNotifier {
     try {
       final value = json(await call('dashboard.lan.set', {
         'profileId': target, 'revision': revision ?? lan['revision'], 'enabled': enabled,
-        if (port != null) 'port': port,
+        'port': ?port,
       }));
       if (!_disposed && !remote && selectedProfileId == target) lan = value;
       return true;
@@ -231,8 +231,9 @@ class BoxController extends ChangeNotifier {
         if (restartService) 'restart': true}));
       if (!_disposed) {
         settings = saved;
-        if (restartService) applyRequired = null;
-        else if (restart && !autoRestart && running && !remote) applyRequired = 'Restart';
+        if (restartService) {
+          applyRequired = null;
+        } else if (restart && !autoRestart && running && !remote) { applyRequired = 'Restart'; }
         _notify([BoxAspect.state]);
       }
     } catch (error) {

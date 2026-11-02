@@ -21,7 +21,9 @@ class _CapturedBodyState extends State<CapturedBody> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.preview['text'] != widget.preview['text'] || oldWidget.preview['encoding'] != widget.preview['encoding'] ||
         oldWidget.preview['truncated'] != widget.preview['truncated'] || oldWidget.message['bodyComplete'] != widget.message['bodyComplete'] ||
-        oldWidget.message['bodyTruncated'] != widget.message['bodyTruncated']) _update();
+        oldWidget.message['bodyTruncated'] != widget.message['bodyTruncated']) {
+      _update();
+    }
   }
   void _update() {
     _text = widget.preview['text']?.toString() ?? '';

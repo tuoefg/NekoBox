@@ -79,8 +79,11 @@ class _ProxiesPageState extends State<ProxiesPage> {
       final columns = proxyColumns(constraints.maxWidth - 32, context.box.preferences);
       final metrics = ProxyCardMetrics.of(context, context.box.preferences);
       final selected = nodes.indexWhere((node) => node['tag'] == group['selected']);
-      if (selected < 0) _selectedOffsets.remove(group['tag']);
-      else _selectedOffsets[group['tag'].toString()] = (selected ~/ columns) * metrics.rowExtent;
+      if (selected < 0) {
+        _selectedOffsets.remove(group['tag']);
+      } else {
+        _selectedOffsets[group['tag'].toString()] = (selected ~/ columns) * metrics.rowExtent;
+      }
       return GridView.builder(
         key: PageStorageKey('proxy-grid:${group['tag']}'),
         controller: _scrolls.putIfAbsent(group['tag'].toString(), () => sheetScrollController(context)),

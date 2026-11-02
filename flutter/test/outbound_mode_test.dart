@@ -25,11 +25,13 @@ void main() {
       final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
       messenger.setMockMethodCallHandler(channel, (call) async {
         calls.add(call);
-        if (call.method == 'ready') return {
+        if (call.method == 'ready') {
+          return {
           'version': 'test', 'coreVersion': 'test',
           'preferences': {'fontScale': scale},
           'dashboard': {'status': 'Started', 'modes': provided, 'mode': cachedMode},
         };
+        }
         if (call.method == 'dashboard.egress') return {'ip': '203.0.113.1', 'country': 'CN'};
         return null;
       });

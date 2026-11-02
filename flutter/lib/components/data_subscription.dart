@@ -24,7 +24,7 @@ class _BoxDataSubscriptionState extends State<BoxDataSubscription> with WidgetsB
       _box?.setDataVisible(widget.data, this, false);
       _box = box;
     }
-    _pageActive = PageActivityScope.isActiveOf(context) && TickerMode.of(context);
+    _pageActive = PageActivityScope.isActiveOf(context) && TickerMode.valuesOf(context).enabled;
     _sync();
   }
 

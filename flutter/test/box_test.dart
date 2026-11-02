@@ -107,8 +107,10 @@ void main() {
   test('failed automatic restart reports the error and keeps the recovered native settings', () async {
     final reply = Completer<void>();
     messenger.setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'ready') return {'version': 'test', 'coreVersion': 'test',
+      if (call.method == 'ready') {
+        return {'version': 'test', 'coreVersion': 'test',
         'dashboard': {'status': 'Started'}, 'settings': {'allowBypass': false}};
+      }
       expect(call.method, 'settings.set');
       events.add({'type': 'settings', 'value': {'allowBypass': true}});
       await reply.future;

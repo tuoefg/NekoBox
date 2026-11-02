@@ -276,12 +276,10 @@ class _PageFade extends SingleChildRenderObjectWidget {
 
 class _RenderPageFade extends RenderProxyBox {
   _RenderPageFade({
-    required Animation<double> opacity,
-    required Color color,
-    required bool opaque,
-  }) : _opacity = opacity,
-       _color = color,
-       _opaque = opaque;
+    required this._opacity,
+    required this._color,
+    required this._opaque,
+  });
 
   Animation<double> _opacity;
   Color _color;

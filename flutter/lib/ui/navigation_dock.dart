@@ -790,12 +790,10 @@ class _PressTransform extends SingleChildRenderObjectWidget {
 
 class _RenderPressTransform extends RenderProxyBox {
   _RenderPressTransform({
-    required double lift,
-    required double press,
-    required Offset pull,
-  }) : _lift = lift,
-       _press = press,
-       _pull = pull;
+    required this._lift,
+    required this._press,
+    required this._pull,
+  });
 
   double _lift;
   double _press;
@@ -1807,24 +1805,16 @@ class _LensTint extends SingleChildRenderObjectWidget {
 
 class _RenderLensTint extends RenderProxyBox {
   _RenderLensTint({
-    required _LensPart part,
-    required _Spring lens,
-    required double lensWidth,
-    required ValueListenable<double> jelly,
-    required ValueListenable<double> lift,
-    required ValueListenable<double> parallax,
-    required int index,
-    required Color color,
-    required TextDirection textDirection,
-  }) : _part = part,
-       _lens = lens,
-       _lensWidth = lensWidth,
-       _jelly = jelly,
-       _lift = lift,
-       _parallax = parallax,
-       _index = index,
-       _color = color,
-       _textDirection = textDirection;
+    required this._part,
+    required this._lens,
+    required this._lensWidth,
+    required this._jelly,
+    required this._lift,
+    required this._parallax,
+    required this._index,
+    required this._color,
+    required this._textDirection,
+  });
 
   final _outside = LayerHandle<ClipPathLayer>();
   final _inside = LayerHandle<ClipPathLayer>();

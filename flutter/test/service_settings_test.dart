@@ -15,8 +15,10 @@ void main() {
     final edits = <Json>[];
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'ready') return {'version': 'test', 'coreVersion': 'test',
+      if (call.method == 'ready') {
+        return {'version': 'test', 'coreVersion': 'test',
         'dashboard': {'status': 'Started'}, 'settings': settings};
+      }
       if (call.method == 'settings.set') {
         final args = json(call.arguments);
         edits.add(args);
@@ -60,8 +62,10 @@ void main() {
     final edits = <Json>[];
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'ready') return {'version': 'test', 'coreVersion': 'test',
+      if (call.method == 'ready') {
+        return {'version': 'test', 'coreVersion': 'test',
         'dashboard': {'status': 'Started'}, 'settings': {'alwaysShowAddress': false, 'showDirectSpeed': false, 'meteredNetwork': false}};
+      }
       if (call.method == 'settings.set') { edits.add(json(call.arguments)); return reply.future; }
       return null;
     });
@@ -113,8 +117,10 @@ void main() {
     final edits = <Json>[];
     final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMethodCallHandler(channel, (call) async {
-      if (call.method == 'ready') return {'version': 'test', 'coreVersion': 'test',
+      if (call.method == 'ready') {
+        return {'version': 'test', 'coreVersion': 'test',
         'dashboard': {'status': 'Stopped'}, 'settings': settings};
+      }
       if (call.method == 'settings.set') {
         final args = json(call.arguments);
         edits.add(args);

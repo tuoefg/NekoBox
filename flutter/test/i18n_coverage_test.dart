@@ -42,7 +42,6 @@ void main() {
     }
 
     expect(missing, isEmpty,
-        reason: 'keys without zh entries:\n' +
-            [for (final entry in missing.entries) '${entry.key}  (${entry.value.join(', ')})'].join('\n'));
+        reason: 'keys without zh entries:\n${[for (final entry in missing.entries) '${entry.key}  (${entry.value.join(', ')})'].join('\n')}');
   });
 }
