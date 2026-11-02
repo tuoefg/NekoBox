@@ -1,3 +1,11 @@
+#### 3.0.6
+
+* The Tools page carries the settings entries themselves: General, Appearance, Inbound, TUN, Routing, DNS, Node presets, Testing, Subscriptions, Core, Access control and Backup are one tap away, with no Settings page in between
+* A node's menu gains a Speed test submenu (download and upload, download, upload): it tests that node and opens the test panel, whose new Speed test mode row picks the direction for batch runs too
+* The node's Edit opens the typed protocol editor, as Throne's does; the JSON document stays reachable as Edit as JSON
+* A setting row shows the configured value instead of the example; the example is the dialog's hint and only stands in while nothing is configured
+* The proxies page lands on the group that has nodes, and the test panel falls back to the first configuration for its scope
+
 #### 3.0.5
 
 * Settings follow Throne's own list: one Settings entry opens General, Appearance, Inbound, TUN, Routing, DNS, Node presets, Testing, Subscriptions, Core, Diagnostics and Backup directly, and WARP moves inside Routing
