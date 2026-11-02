@@ -52,7 +52,7 @@
 
 - BboxLogcat.kt 重写为可注入进程的 LogcatReader（Mutex 保护、带超时的 clear，JVM 可单测，新增 BboxLogcatTest 477 行）；logs.dart 导出 tri-state + 防重入 + 空列表禁用，logs_test 补三态/防重入用例；探针会话重构为 BboxProbeSession（close 取消在飞请求 + 释放资源），`respond` 补 CancellationException 语义（scope 已关/会话已关返回 "cancelled"）；routed_ip_probe 补 `_closed` 语义（close 等待延迟 open，防残留 session）；顺带 shape_badge 焦点环改为前景绘制（不透明子组件不再遮盖）
 - Flutter 226 测试全绿（+5）、analyze 167 存量不变；CI run 41485297569 成功，v3.0.12 已发（prerelease=false，latest 指向正确）
-- 遗留观察：`probeGet` 从 computeIfAbsent 自愈改为「缺 session = CancellationException」——依赖 Dart 侧 get 自开 session（`routed_ip_probe.get` 已保证）；若未来新增调用方必须沿用该约定（M5 通道审计脚本应加此校验）
+- 遗留观察（已闭合）：`probeGet` 从 computeIfAbsent 自愈改为「缺 session = CancellationException」——约定由传输层本身强制（`routed_ip_probe.get` 首次调用自开 session，native 侧对缺 session 一律 fail-closed 返回 cancelled），新调用方沿用 `RoutedIpProbe` 即无序额外校验
 
 ### W2 · 批次 M：技术债与身份理顺（v3.1.0）
 
@@ -117,8 +117,8 @@
 | 版本 | 内容 | 前置 | 发布动作 |
 |---|---|---|---|
 | **v3.0.12** | ✅ W1 日志轮收尾（2026-11-03 发，commit `41636a9`） | — | 已发，latest 已指向 |
-| **v3.1.0** | 批次 M（依赖收窄 + analyze 清零 + README/docs + 通道审计进 CI） | W1 合入 | 同上 + 双 agent review |
-| **v3.2.0** | 批次 N（噪音折叠 + 本地崩溃自捕获 + 设备清单首跑 + 自更新演练） | M5 脚本在 CI | 同上 |
+| **v3.1.0** | ✅ 批次 M + N 合并发版（含 analyze 清零、README/docs、通道审计、噪音折叠、崩溃存储、设备清单、更新拒绝测试；双 agent 评审 18 项） | — | 已发，latest 已指向 |
+| ~~v3.2.0~~ | 并入 v3.1.0（N 批次随 M 同轮落地） | — | — |
 | **v3.3.0** | 批次 O（quality 或 dnsObject，二选一） | 可行性侦察结论 | 同上 |
 | **v4.0.0** | 核心大版本跟随 + targetSdk 36 + 上游 schema 适配 | 上游 release 节奏 | 单独评审轮 |
 | 常驻 | W5 上游 pin 升级（每个安全修复） | 无 | patch 版 |

@@ -152,7 +152,7 @@ class _LogsPageState extends State<LogsPage> {
           child: SegmentedControl<bool>(
             segments: [(false, context.tr('Core log')), (true, 'Logcat')],
             value: _logcat,
-            onChanged: (value) => setState(() { _logcat = value; _paused = null; }),
+            onChanged: (value) => setState(() { _logcat = value; _paused = null; _showNoise = false; }),
           ),
         ),
         if (noiseCount > 0) Padding(

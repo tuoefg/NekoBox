@@ -602,6 +602,9 @@ class ThroneBoxBridge(
                 // The durable crash records: core.log rotates, these files survive until pruned.
                 "crashes.list" -> result.respond {
                     withContext(Dispatchers.IO) {
+                        // Prune on read too: records older than the window otherwise
+                        // survive until the next crash happens to fire.
+                        CrashStore.prune()
                         CrashStore.list().map { file ->
                             mapOf("name" to file.name, "size" to file.length(), "time" to file.lastModified())
                         }

@@ -35,7 +35,7 @@ line — is owned here.
 - URL, IP / country and speed tests, with a bulk-test panel (live progress, latency histogram, fastest servers, sort / remove unavailable / connect to fastest)
 - The sing-box dashboard built in (live traffic, connections, logs)
 - The home status card shows a vector country flag cropped to its animated badge; tap to show the country code, or long-press to refresh the exit IP
-- Core logs and Logcat support level filters, search, pause, clear and redacted export; cancelling the save dialog leaves the logs untouched; known-benign connection-reset errors fold behind a counter, and crashes keep their own seven-day record exportable as one file
+- Core logs and Logcat support level filters, search, pause, clear and redacted export; cancelling the save dialog leaves the logs untouched; known-benign connection-reset errors fold behind a counter, and uncaught app-layer exceptions keep their own seven-day record exportable as one file
 - JSON editor with sing-box schema checking, completion and formatting
 - Home-screen widgets, a quick settings tile, and server switching from the notification
 - Android TV: launcher banner, D-pad navigation, previous / next server

@@ -6,6 +6,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.os.Process
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -35,7 +36,7 @@ object CrashStore {
     /** Writes one crash record; returns the file, or null when the disk said no. */
     fun record(thread: Thread, throwable: Throwable): File? {
         val at = clock()
-        val name = "crash-${stamp(at)}-%04d.log".format(Locale.US, serial.incrementAndGet())
+        val name = "crash-%s-%05d-%04d.log".format(Locale.US, stamp(at), Process.myPid(), serial.incrementAndGet())
         val file = File(storage(), name)
         val written = runCatching {
             file.writeText(
