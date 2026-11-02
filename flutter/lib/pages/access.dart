@@ -89,6 +89,19 @@ class _AccessPageState extends State<AccessPage> {
     _set('perAppList', next.toList()..sort());
   }
 
+  /// The whole row is the control, not just the checkbox, so a tap anywhere either toggles the
+  /// app or says why it cannot.
+  void _tapRow(String package) {
+    if (_saving) return;
+    if (!_enabled) { _hint('Access control is disabled'); return; }
+    if (_managed) { _hint('Disable managed app list to edit selection'); return; }
+    _toggle(package);
+  }
+
+  void _hint(String message) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(context.tr(message))));
+
   Future<bool> _save() async {
     if (_saving) return false;
     setState(() => _saving = true);
@@ -228,11 +241,14 @@ class _AccessPageState extends State<AccessPage> {
                     padding: EdgeInsets.only(top: context.contentTopPadding, bottom: context.bottomInset),
                     itemBuilder: (context, index) {
                       final app = apps[index], package = app['package'] as String;
-                      return ListItem.checkbox(
+                      return ListItem(
                         key: ValueKey(package), leading: PackageIcon(package: package),
+                        padding: const EdgeInsets.only(left: 16, right: 8),
                         title: Text(app['name'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle: Text(package, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        value: selected.contains(package), onChanged: _enabled && !_managed && !_saving ? (_) => _toggle(package) : null,
+                        trailing: CommonCheckBox(value: selected.contains(package),
+                          onChanged: _enabled && !_managed && !_saving ? (_) => _toggle(package) : null),
+                        onTap: () => _tapRow(package),
                       );
                     },
                   ))),

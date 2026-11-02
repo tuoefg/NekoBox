@@ -74,9 +74,7 @@ object BboxBackup {
     }
 
     /** A preview: whatever was created or read most recently, since there is no on-device backup registry to list. */
-    fun read(): Map<String, Any?> = holder?.payload ?: lastPayload ?: mapOf(
-        "profiles" to emptyList<Map<String, Any?>>(),
-    )
+    fun read(): Map<String, Any?>? = holder?.payload ?: lastPayload
 
     /**
      * A .thrbackup the platform handed us (a VIEW or SEND of a "THRN" container). It becomes the same envelope

@@ -101,15 +101,19 @@ class _BackupPageState extends State<BackupPage> {
   Future<void> _restore(bool remote) async {
     if (_locked || context.box.remote) return;
     final box = context.box;
-    setState(() => _locked = true);
+    setState(() { _locked = true; _loading = true; });
     try {
-      // The scope narrows what the WebDAV download and the envelope read bring back.
+      // Read first: asking for a scope and then finding nothing to restore is the confusing order.
+      final data = await box.call(remote ? 'webdav.read' : 'backup.read');
+      _showLoading(false);
+      if (!mounted) return;
+      if (data == null) {
+        await _success('Restore', remote ? 'No remote backup found' : 'No backup to restore');
+        return;
+      }
+      // The scope narrows what the envelope read brings back.
       final scope = await showFloatingDialog<String>(context: context, child: const RestoreScopeDialog());
       if (scope == null || !mounted) return;
-      _showLoading(true);
-      final data = await box.call(remote ? 'webdav.read' : 'backup.read', {'scope': scope});
-      _showLoading(false);
-      if (data == null || !mounted) return;
       await restorePayload(context, json(data), scope: scope, onLoading: _showLoading);
       if (!mounted) return;
       // A restore that took the settings moved the WebDAV account under the page.
@@ -170,9 +174,19 @@ class _BackupPageState extends State<BackupPage> {
 /// same way whichever route brought the envelope in. The strategy is the page's stored preference.
 Future<void> restorePayload(BuildContext context, Json payload, {required String scope, ValueChanged<bool>? onLoading}) async {
   final box = context.box;
+  final count = rows(payload['profiles']).length;
+  // A backup with no profiles cannot fill a profiles-only restore; saying "Restore 0 profiles?"
+  // and then doing nothing is worse than saying so.
+  if (count == 0 && scope != 'all') {
+    await showFloatingDialog<void>(context: context, child: CommonDialog(
+      title: context.tr('Restore'), child: Text(context.tr('This backup holds no profiles')), actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close'))),
+      ]));
+    return;
+  }
   final strategy = box.preferences['restoreStrategy'] as String? ?? 'Compatible';
   final approved = await showFloatingDialog<bool>(context: context, child: _RestoreConfirm(
-    count: rows(payload['profiles']).length, scope: scope, destructive: strategy == 'Override'));
+    count: count, scope: scope, destructive: strategy == 'Override'));
   if (approved != true || !context.mounted) return;
   onLoading?.call(true);
   try {

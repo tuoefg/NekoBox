@@ -21,7 +21,7 @@ class _AboutPageState extends State<AboutPage> {
         title: Text(context.tr(result['available'] == true ? 'Update available' : 'Check for updates')),
         content: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: SingleChildScrollView(child: Column(
           mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: [
-            Text(result['available'] == true ? 'B-box ${result['version']}' : context.tr(result['hasMetadata'] == false ? 'No release metadata available' : 'You are up to date')),
+            Text(result['available'] == true ? 'flrone ${result['version']}' : context.tr(result['hasMetadata'] == false ? 'No release metadata available' : 'You are up to date')),
             if (result['available'] == true && result['notes'] is String && (result['notes'] as String).isNotEmpty) SelectableText(result['notes'] as String),
           ],
         ))),
@@ -52,7 +52,7 @@ class _AboutPageState extends State<AboutPage> {
           DecoratedBox(decoration: ShapeDecoration(color: context.raisedSurfaceLevel.colorOf(colors), shape: AppShape.all(AppCorner.fit(96))),
             child: Padding(padding: const EdgeInsets.all(14), child: Image.asset('assets/images/icon.png', width: 68, height: 68))),
           const SizedBox(height: 20),
-          Text('B-box', style: AppTextStyle.title2.of(context, emphasized: true)),
+          Text('flrone', style: AppTextStyle.title2.of(context, emphasized: true)),
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.center, children: [
             _Pill(label: 'v${box.version}', color: colors.primary, foreground: colors.onPrimary),
@@ -70,7 +70,7 @@ class _AboutPageState extends State<AboutPage> {
           _link(AppGlyphs.cpu, 'Core', 'sing-box ${box.coreVersion}', 'https://github.com/SagerNet/sing-box'),
           _link(AppGlyphs.paintbrush, 'FlClash interface', 'chen08209/FlClash · v0.9.2 · GPL-3.0', 'https://github.com/chen08209/FlClash/tree/7fd417fb9a9a277c6a9339a8ac87f907df7c25f7'),
           ListItem(leading: const _LinkBadge(glyph: AppGlyphs.info), title: Text(context.tr('Open-source licenses')),
-            onTap: () => showLicensePage(context: context, applicationName: 'B-box', applicationVersion: box.version)),
+            onTap: () => showLicensePage(context: context, applicationName: 'flrone', applicationVersion: box.version)),
         ]),
       ]),
     );

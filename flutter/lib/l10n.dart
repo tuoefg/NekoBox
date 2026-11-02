@@ -212,6 +212,8 @@ const _zh = <String, String>{
   'Restore strategy': '恢复策略', 'Compatible': '合并', 'Override': '覆盖', 'Options': '选项',
   'Restore profiles only': '仅恢复配置', 'Restore all data': '恢复全部数据',
   'Restore {count} profiles?': '恢复 {count} 个配置？',
+  'No backup to restore': '没有可恢复的备份', 'No remote backup found': 'WebDAV 上没有找到备份',
+  'This backup holds no profiles': '这个备份里没有配置',
   'Profiles missing from this backup will be removed.': '备份中没有的配置将被删除。',
   'Matching profiles will be replaced. Other profiles will be kept.': '匹配的配置将被替换，其他配置会保留。',
   'Application settings and remote servers will also be restored.': '同时恢复应用设置和远程服务器。',

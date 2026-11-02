@@ -46,6 +46,7 @@ void main() {
     await _mount(tester, (call) async {
       calls.add(call);
       if (call.method == 'backup.create') return _sample;
+      if (call.method == 'backup.read') return _sample;
       if (call.method == 'document.save') return false;
       return null;
     });
@@ -56,10 +57,48 @@ void main() {
     await _tapRow(tester, 'local-restore');
     await tester.tap(find.text('Restore profiles only'));
     await tester.pumpAndSettle();
-    expect(json(calls.singleWhere((call) => call.method == 'backup.read').arguments)['scope'], 'profiles');
+    // The read comes first now, so it carries no scope; the choice is what the dialog is for.
+    expect(calls.singleWhere((call) => call.method == 'backup.read').arguments, isNull);
+    expect(find.text('Restore 1 profiles?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
     expect(calls.where((call) => call.method == 'backup.restore'), isEmpty);
     expect(find.text('Restore complete'), findsNothing);
     expect(find.byType(BackupPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an empty local backup says so instead of asking to restore zero profiles', (tester) async {
+    final calls = <MethodCall>[];
+    await _mount(tester, (call) async {
+      calls.add(call);
+      if (call.method == 'backup.read') return null;
+      return null;
+    });
+    await _tapRow(tester, 'local-restore');
+    expect(find.text('No backup to restore'), findsOneWidget);
+    expect(find.text('Restore profiles only'), findsNothing);
+    expect(calls.where((call) => call.method == 'backup.restore'), isEmpty);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a backup without profiles refuses a profiles-only restore', (tester) async {
+    final calls = <MethodCall>[];
+    await _mount(tester, (call) async {
+      calls.add(call);
+      if (call.method == 'backup.read') return {'format': 'bbox-1', 'profiles': <Json>[]};
+      return null;
+    });
+    await _tapRow(tester, 'local-restore');
+    await tester.tap(find.text('Restore profiles only'));
+    await tester.pumpAndSettle();
+    expect(find.text('This backup holds no profiles'), findsOneWidget);
+    expect(find.text('Restore 0 profiles?'), findsNothing);
+    expect(calls.where((call) => call.method == 'backup.restore'), isEmpty);
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
