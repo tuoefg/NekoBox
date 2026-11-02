@@ -28,6 +28,23 @@ runs:
       with:
         distribution: temurin
         java-version: '17'
+    # The NDK the app's ndkVersion asks for, installed before the Flutter AAR: without it the
+    # first Gradle build auto-installs it mid-build, where a truncated dl.google.com download
+    # (seen 2026-11-02) fails the run with no retry. Three tries ride out a flaky CDN.
+    - name: Install NDK
+      shell: bash
+      run: |
+        set -euo pipefail
+        for attempt in 1 2 3; do
+          if yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358"; then
+            break
+          fi
+          if [ "$attempt" = "3" ]; then
+            echo "::error::NDK 28.2.13676358 failed to install three times"
+            exit 1
+          fi
+          sleep 20
+        done
     # The app links io.ericlee.bbox_ui:flutter_release:1.0 from flutter/build/host/outputs/repo, which the
     # repository ignores; without this step the Gradle build cannot resolve the B-box interface at all.
     - name: Setup Flutter
