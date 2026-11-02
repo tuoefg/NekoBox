@@ -1,3 +1,7 @@
+#### 3.0.2
+
+* Fix the proxies screen: a server can be picked and its latency measured before the service is started, instead of the two actions waiting for the VPN to be up
+
 #### 3.0.1
 
 * Fix group settings: saving a subscription group failed every time, opening the group could crash on the front/landing candidate list, the routing profile picker showed raw ids, and the update interval reset itself to 0
