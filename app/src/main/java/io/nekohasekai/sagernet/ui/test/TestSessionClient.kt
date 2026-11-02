@@ -79,19 +79,19 @@ object TestSessionClient {
         return true
     }
 
-    /** Tests every member of group [groupId] in list order. */
-    fun startGroup(kind: Int, groupId: Long): Boolean {
+    /** Tests every member of group [groupId] in list order; [speedMode] < 0 keeps the stored default. */
+    fun startGroup(kind: Int, groupId: Long, speedMode: Int = -1): Boolean {
         val m = begin(kind, "", groupId, false) ?: return false
         prepare(m) {
             val group = GroupRepo.get(groupId)
             val ids = if (group == null) emptyList() else ProfileManager.memberIds(groupId)
-            TestSpec(kind, ids.toLongArray(), scopeLabel = group?.displayName().orEmpty())
+            TestSpec(kind, ids.toLongArray(), scopeLabel = group?.displayName().orEmpty(), speedMode = speedMode)
         }
         return true
     }
 
     /** Tests [profileIds] (a selection or one profile); pass their [groupId] to offer "Sort" afterwards. */
-    fun startProfiles(kind: Int, profileIds: List<Long>, groupId: Long = 0L): Boolean {
+    fun startProfiles(kind: Int, profileIds: List<Long>, groupId: Long = 0L, speedMode: Int = -1): Boolean {
         val m = begin(kind, "", groupId, false) ?: return false
         prepare(m) {
             val ids = profileIds.distinct()
@@ -100,13 +100,13 @@ object TestSessionClient {
             } else {
                 app.getString(R.string.test_panel_scope_selected, ids.size)
             }
-            TestSpec(kind, ids.toLongArray(), scopeLabel = label)
+            TestSpec(kind, ids.toLongArray(), scopeLabel = label, speedMode = speedMode)
         }
         return true
     }
 
     /** Tests the running connection (URL or speed). */
-    fun startCurrent(kind: Int): Boolean {
+    fun startCurrent(kind: Int, speedMode: Int = -1): Boolean {
         val label = app.getString(R.string.test_panel_scope_current)
         val m = begin(kind, label, 0L, true) ?: return false
         prepare(m) {
@@ -114,7 +114,7 @@ object TestSessionClient {
             val runningId = ProfileManager.runningProfileId()
             TestSpec(
                 kind, if (runningId > 0) longArrayOf(runningId) else LongArray(0), testCurrent = true,
-                scopeLabel = label,
+                scopeLabel = label, speedMode = speedMode,
             )
         }
         return true

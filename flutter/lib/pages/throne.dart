@@ -44,11 +44,18 @@ class SettingText extends StatelessWidget {
   const SettingText(this.title, this.setting, {super.key, this.hint});
   final String title, setting;
   final String? hint;
-  @override Widget build(BuildContext context) => ListItem.input(
-    title: Text(context.tr(title)), subtitle: hint == null ? null : Text(context.tr(hint!)),
-    dialogTitle: context.tr(title), value: (context.box.settings[setting] ?? '').toString(),
-    onChanged: (value) { if (value != null) context.box.setSetting(setting, value); },
-  );
+  @override Widget build(BuildContext context) {
+    final value = (context.box.settings[setting] ?? '').toString();
+    // The row carries the stored value; the hint (an example, an "empty means…") is the dialog's
+    // placeholder, and only stands in on the row while nothing is configured yet.
+    return ListItem.input(
+      title: Text(context.tr(title)),
+      subtitle: value.isEmpty && hint != null ? Text(context.tr(hint!)) : null,
+      dialogTitle: context.tr(title), value: value,
+      hintText: hint == null ? null : context.tr(hint!),
+      onChanged: (value) { if (value != null) context.box.setSetting(setting, value); },
+    );
+  }
 }
 
 /// A setting Throne stores as one raw text: the custom inbound and the DNS object are JSON
@@ -665,7 +672,7 @@ class TestingPage extends StatelessWidget {
       SettingText('Direct test URL', 'directTestUrl'),
     ]),
     generateSection(title: context.tr('Speed test'), items: [
-      SettingChoice<int>('Speed test mode', 'speedTestMode', options: speedTestModes, text: _speedTestModeName),
+      SettingChoice<int>('Speed test mode', 'speedTestMode', options: speedTestModes, text: speedTestModeName),
       SettingNumber('Speed test timeout', 'speedTestTimeoutMs', min: 0, unit: 'ms'),
       if (context.box.settings['speedTestMode'] == 3)
         SettingText('Simple download URL', 'simpleDlUrl', hint: 'A file of known size used to measure throughput'),
@@ -677,7 +684,7 @@ class TestingPage extends StatelessWidget {
   ]);
 }
 
-String _speedTestModeName(int value) => switch (value) {
+String speedTestModeName(int value) => switch (value) {
   1 => 'Download', 2 => 'Upload', 3 => 'Simple download', 4 => 'Country', _ => 'Download and upload',
 };
 

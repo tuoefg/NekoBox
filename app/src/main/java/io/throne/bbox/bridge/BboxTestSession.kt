@@ -20,15 +20,15 @@ import kotlinx.coroutines.withContext
 object BboxTestSession {
 
     /** Starts testing every member of the group; false when another session is still running. */
-    suspend fun startGroup(kind: Int, groupId: Long): Boolean = withContext(Dispatchers.IO) {
-        TestSessionClient.startGroup(kind, groupId)
+    suspend fun startGroup(kind: Int, groupId: Long, speedMode: Int = -1): Boolean = withContext(Dispatchers.IO) {
+        TestSessionClient.startGroup(kind, groupId, speedMode)
     }
 
     /** Tests a selection (or the running connection with [testCurrent]); false when one is running. */
-    suspend fun startProfiles(kind: Int, profileIds: List<Long>, testCurrent: Boolean): Boolean =
+    suspend fun startProfiles(kind: Int, profileIds: List<Long>, testCurrent: Boolean, speedMode: Int = -1): Boolean =
         withContext(Dispatchers.IO) {
-            if (testCurrent) TestSessionClient.startCurrent(kind)
-            else TestSessionClient.startProfiles(kind, profileIds)
+            if (testCurrent) TestSessionClient.startCurrent(kind, speedMode)
+            else TestSessionClient.startProfiles(kind, profileIds, speedMode = speedMode)
         }
 
     fun stop() = TestSessionClient.stop()

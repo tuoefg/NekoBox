@@ -582,7 +582,7 @@ const _zh = <String, String>{
   'e.g. 30s, empty to use the core default': '如 30s，留空使用内核默认值',
   'Delete node?': '删除节点？',
   'Node name': '节点名称',
-  'Share link or JSON': '分享链接或 JSON',
+  'Share link or JSON': '分享链接或 JSON', 'Edit as JSON': '编辑 JSON',
   'Leave empty to keep the current configuration.': '留空则保持当前配置不变。',
   'Route profiles': '路由档',
   'Add route profile': '新建路由档',

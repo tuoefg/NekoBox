@@ -287,9 +287,11 @@ class ThroneBoxBridge(
                     val groupId = call.argument<Int>("groupId")?.toLong() ?: 0L
                     val ids = call.argument<List<Any>>("profileIds").orEmpty().mapNotNull { (it as? Number)?.toLong() }
                     val testCurrent = call.argument<Boolean>("testCurrent") == true
+                    // The speed session's direction; -1 keeps the Testing settings' mode.
+                    val speedMode = call.argument<Int>("speedMode") ?: -1
                     result.respond {
-                        if (groupId > 0) BboxTestSession.startGroup(kind, groupId)
-                        else BboxTestSession.startProfiles(kind, ids, testCurrent)
+                        if (groupId > 0) BboxTestSession.startGroup(kind, groupId, speedMode)
+                        else BboxTestSession.startProfiles(kind, ids, testCurrent, speedMode)
                     }
                 }
                 "groups.testSession.stop" -> {

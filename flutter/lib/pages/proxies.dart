@@ -114,7 +114,12 @@ class _ProxiesPageState extends State<ProxiesPage> {
       });
     }
     final list = box.preferences['proxyLayout'] == 'List';
-    if (!groups.any((group) => group['tag'] == _currentGroup)) _currentGroup = groups.firstOrNull?['tag'] as String?;
+    if (!groups.any((group) => group['tag'] == _currentGroup)) {
+      // Land on a group that has nodes. Otherwise an unselected configuration's empty group comes
+      // first and the page reads as if the import brought nothing.
+      final withNodes = groups.where((group) => rows(group['items']).isNotEmpty);
+      _currentGroup = (withNodes.isNotEmpty ? withNodes.first : groups.firstOrNull)?['tag'] as String?;
+    }
     return CommonScaffold(
       title: context.tr('Proxies'),
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),

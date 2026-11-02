@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import '../widgets.dart';
 import '../pages/protocol_form.dart';
 import '../pages/node_json_page.dart';
+import '../pages/test_panel.dart';
 
 // Metrics and card presentation from FlClash v0.9.2 proxies/common.dart and card.dart.
 class ProxyCardMetrics {
@@ -36,6 +37,24 @@ class ProxyNodeCard extends StatelessWidget {
   Future<String> _link(BuildContext context, {bool json = false}) async =>
       (await context.box.call('profiles.nodeLink', {'group': group['tag'], 'tag': node['tag'], 'json': json})).toString();
 
+  /// A speed session over this node alone (download, upload or both); the panel that opens shows
+  /// its live curve and the finished ranking, since a card only carries latency.
+  Future<void> _speedTest(BuildContext context, int speedMode) async {
+    final box = context.box;
+    try {
+      final started = await box.call('groups.testSession.start', {
+        'kind': 2, 'profileIds': [node['id']], 'speedMode': speedMode,
+      });
+      if (!context.mounted) return;
+      if (started == false) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('A test is already running'))));
+        return;
+      }
+      await openPage(context, const TestPanelPage());
+    } catch (error) { box.report(error); }
+  }
+
   @override Widget build(BuildContext context) {
     final metrics = ProxyCardMetrics.of(context, context.box.preferences);
     final selected = group['selected'] == node['tag'];
@@ -52,6 +71,16 @@ class ProxyNodeCard extends StatelessWidget {
             onPressed: onSelect),
         CommonPopupMenuItem(glyph: AppGlyphs.bolt, label: context.tr('Test latency'),
           onPressed: testing ? null : onTest),
+        // The download/upload speed test lives here, as a submenu of its modes; a session tests
+        // one node at a time and the panel reports the result.
+        CommonPopupMenuItem(glyph: AppGlyphs.speed, label: context.tr('Speed test'), subItems: [
+          CommonPopupMenuItem(glyph: AppGlyphs.dataUsage, label: context.tr('Download and upload'),
+            onPressed: () => _speedTest(context, 0)),
+          CommonPopupMenuItem(glyph: AppGlyphs.arrowDown, label: context.tr('Download'),
+            onPressed: () => _speedTest(context, 1)),
+          CommonPopupMenuItem(glyph: AppGlyphs.arrowUp, label: context.tr('Upload'),
+            onPressed: () => _speedTest(context, 2)),
+        ]),
         CommonPopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Copy link'), onPressed: () async {
           final box = context.box;
           try {
@@ -79,13 +108,14 @@ class ProxyNodeCard extends StatelessWidget {
             await openPage(context, AutoSelectorPage(id: (node['id'] as num?)?.toInt() ?? 0));
             return;
           }
-          await openForm(context, NodeJsonPage(id: (node['id'] as num?)?.toInt() ?? 0));
+          // Throne's node Edit opens the typed editor; the JSON document is the secondary entry.
+          await openForm(context, ProtocolFormPage(id: (node['id'] as num?)?.toInt() ?? 0));
         }),
         CommonPopupMenuItem(glyph: AppGlyphs.sliders, label: context.tr('Node tuning'), onPressed: () async {
           await openPage(context, NodeTuningPage(id: (node['id'] as num?)?.toInt() ?? 0));
         }),
-        CommonPopupMenuItem(glyph: AppGlyphs.customize, label: context.tr('Edit settings'),
-          onPressed: () => openForm(context, ProtocolFormPage(id: (node['id'] as num?)?.toInt() ?? 0))),
+        CommonPopupMenuItem(glyph: AppGlyphs.code, label: context.tr('Edit as JSON'),
+          onPressed: () => openForm(context, NodeJsonPage(id: (node['id'] as num?)?.toInt() ?? 0))),
         CommonPopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Delete'), danger: true, onPressed: () async {
           final box = context.box;
           try {

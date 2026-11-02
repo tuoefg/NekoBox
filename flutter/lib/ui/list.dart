@@ -90,6 +90,7 @@ final class _InputAction extends _ListItemAction {
   final String title;
   final String value;
   final String? suffixText;
+  final String? hintText;
   final ValueChanged<String?> onChanged;
   final FormFieldValidator<String>? validator;
   final int? maxLength;
@@ -100,6 +101,7 @@ final class _InputAction extends _ListItemAction {
     required this.title,
     required this.value,
     this.suffixText,
+    this.hintText,
     required this.onChanged,
     this.resetValue,
     this.validator,
@@ -209,6 +211,7 @@ class ListItem<T> extends StatelessWidget {
     required String dialogTitle,
     required String value,
     String? suffixText,
+    String? hintText,
     required ValueChanged<String?> onChanged,
     FormFieldValidator<String>? validator,
     int? maxLength,
@@ -223,6 +226,7 @@ class ListItem<T> extends StatelessWidget {
          title: dialogTitle,
          value: value,
          suffixText: suffixText,
+         hintText: hintText,
          onChanged: onChanged,
          validator: validator,
          maxLength: maxLength,
@@ -391,9 +395,19 @@ class ListItem<T> extends StatelessWidget {
           ),
         );
       case final _InputAction inputDelegate:
+        // The row carries what is stored, not only what the dialog would open with: a setting
+        // must be readable without opening every dialog. A caller that already shows the value
+        // in its subtitle (the backup file name) keeps that instead.
+        final stored = inputDelegate.value.isEmpty ? null : ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 180),
+          child: Text(
+            inputDelegate.suffixText == null ? inputDelegate.value : '${inputDelegate.value}\u2009${inputDelegate.suffixText}',
+            maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end,
+            style: context.listTitleStyle.copyWith(color: context.colorScheme.onSurfaceVariant)));
         return _buildListTile(
           context,
           position: position,
+          trailing: subtitle == null ? stored : null,
           onTap: () async {
             final value = await showFloatingDialog<String>(
               context: Navigator.of(context, rootNavigator: true).context,
@@ -401,6 +415,7 @@ class ListItem<T> extends StatelessWidget {
                 title: inputDelegate.title,
                 value: inputDelegate.value,
                 suffixText: inputDelegate.suffixText,
+                hintText: inputDelegate.hintText,
                 resetValue: inputDelegate.resetValue,
                 inputFormatters: inputDelegate.maxLength == null
                     ? null

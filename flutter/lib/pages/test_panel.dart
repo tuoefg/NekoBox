@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../widgets.dart';
 import '../components/data_subscription.dart';
+import 'throne.dart';
 
 /// The batch test panel over the bridge's `groups.testSession`: one scope (a group, a selection or
 /// the running connection), live progress with the latency histogram, the ranked best results, the
@@ -15,12 +16,25 @@ class _TestPanelPageState extends State<TestPanelPage> {
   int _kind = 0;
   int? _groupId;
   bool _starting = false;
+  // -1 follows the Testing settings' speed test mode until the picker changes it.
+  int _speedMode = -1;
 
   List<Json> get _scopes => context.box.profiles;
 
+  int get _effectiveSpeedMode {
+    if (_speedMode >= 0) return _speedMode;
+    final stored = context.box.settings['speedTestMode'];
+    return stored is num ? stored.toInt() : 0;
+  }
+
   int get _scopeId {
     if (_groupId != null) return _groupId!;
-    return context.box.selectedProfileId;
+    final selected = context.box.selectedProfileId;
+    if (selected > 0) return selected;
+    // Nothing is selected yet, and Start would send an empty scope. Fall back to the first
+    // configuration so the panel tests something; the Scope row names it.
+    final profiles = context.box.profiles;
+    return profiles.isEmpty ? 0 : ((profiles.first['id'] as num?)?.toInt() ?? 0);
   }
 
   Future<void> _start() async {
@@ -29,7 +43,10 @@ class _TestPanelPageState extends State<TestPanelPage> {
     final scopeId = _scopeId;
     final kind = _kind;
     try {
-      await context.box.act('groups.testSession.start', {'kind': kind, 'groupId': scopeId});
+      await context.box.act('groups.testSession.start', {
+        'kind': kind, 'groupId': scopeId,
+        'speedMode': kind == 2 ? _effectiveSpeedMode : -1,
+      });
     } finally {
       if (mounted) setState(() => _starting = false);
     }
@@ -161,6 +178,20 @@ class _TestPanelPageState extends State<TestPanelPage> {
               ));
               if (picked != null) setState(() => _kind = picked);
             }),
+            // A speed session measures one direction or both; the mode starts from the Testing
+            // setting so the panel and the stored default agree until it is changed here.
+            if (_kind == 2)
+              _menuRow(context.tr('Speed test mode'), context.tr(speedTestModeName(_effectiveSpeedMode)), () async {
+                final picked = await showDialog<int>(context: context, builder: (context) => SimpleDialog(
+                  title: Text(context.tr('Speed test mode')),
+                  children: [
+                    for (final value in speedTestModes) SimpleDialogOption(
+                      onPressed: () => Navigator.pop(context, value),
+                      child: Text(context.tr(speedTestModeName(value)))),
+                  ],
+                ));
+                if (picked != null) setState(() => _speedMode = picked);
+              }),
             _menuRow(context.tr('Scope'), scopes.where((profile) => profile['id'] == _scopeId)
                 .firstOrNull?['name']?.toString() ?? context.tr('None'), () async {
               final picked = await showDialog<int>(context: context, builder: (context) => SimpleDialog(
