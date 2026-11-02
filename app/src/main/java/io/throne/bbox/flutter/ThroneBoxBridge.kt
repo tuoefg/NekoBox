@@ -157,8 +157,7 @@ class ThroneBoxBridge(
         testSessionJob?.cancel()
         BboxLogs.stop()
         BboxLogcat.stop()
-        probes.values.forEach { runCatching { it.dispatcher.executorService.shutdown() } }
-        probes.clear()
+        probes.keys.forEach { closeProbe(it) }
         channel.setMethodCallHandler(null)
         events.setStreamHandler(null)
         sink = null
@@ -582,10 +581,13 @@ class ThroneBoxBridge(
                     setLogsVisible(call.argument<Boolean>("visible") == true)
                     result.success(null)
                 }
-                "logs.clear" -> {
-                    BboxLogs.clear()
-                    emit("logs", BboxLogs.wire(BboxLogs.Batch(reset = true)))
-                    result.success(null)
+                "logs.clear" -> result.respond {
+                    val batch = withContext(Dispatchers.IO) {
+                        BboxLogs.clear()
+                        BboxLogs.Batch(reset = true, defaultLogLevel = BboxLogs.level())
+                    }
+                    emit("logs", BboxLogs.wire(batch))
+                    null
                 }
                 // The system logcat tab: same shape as the core log's events, a different source.
                 "logs.logcat.visible" -> {
@@ -596,14 +598,9 @@ class ThroneBoxBridge(
                     }
                     result.success(null)
                 }
-                "logs.logcat.clear" -> {
-                    // logcat -c forks a child and waits for it; the channel thread is the main
-                    // thread, so the clear runs off it the way every other blocking call does.
-                    result.respond {
-                        withContext(Dispatchers.IO) { BboxLogcat.clear() }
-                        emit("logcat", BboxLogcat.wire(BboxLogcat.Batch(reset = true)))
-                        null
-                    }
+                "logs.logcat.clear" -> result.respond {
+                    withContext(Dispatchers.IO) { BboxLogcat.clear() }
+                    null
                 }
                 "dashboard.memory.visible" -> {
                     setMemoryVisible(call.argument<Boolean>("visible") == true)
@@ -617,12 +614,12 @@ class ThroneBoxBridge(
                 // --- diagnostics and the status card's probes
                 "dashboard.egress" -> result.respond { egressWire() }
                 "dashboard.probe.open" -> {
-                    probes[call.argument<String>("id").orEmpty()] = probeClient()
+                    probes.computeIfAbsent(call.argument<String>("id").orEmpty()) { probeClient() }
                     result.success(null)
                 }
                 "dashboard.probe.get" -> result.respond { probeGet(call) }
                 "dashboard.probe.close" -> {
-                    probes.remove(call.argument<String>("id").orEmpty())
+                    closeProbe(call.argument<String>("id").orEmpty())
                     result.success(null)
                 }
                 "dashboard.qualityCache.get" -> result.success(qualityCache(call.argument<String>("ip").orEmpty()))
@@ -896,7 +893,9 @@ class ThroneBoxBridge(
     }
 
     private suspend fun probeGet(call: MethodCall): Map<String, Any?> = withContext(Dispatchers.IO) {
-        val client = probes[call.argument<String>("id").orEmpty()] ?: error("No probe session is open")
+        // computeIfAbsent: a get for a session nobody opened still probes instead of failing the
+        // whole quality lookup with "No probe session is open".
+        val client = probes.computeIfAbsent(call.argument<String>("id").orEmpty()) { probeClient() }
         val url = call.argument<String>("url").orEmpty()
         val timeout = call.argument<Int>("timeoutMillis") ?: 8000
         val request = Request.Builder().url(url).build()
@@ -904,6 +903,14 @@ class ThroneBoxBridge(
             .newCall(request).execute().use { response ->
                 mapOf("status" to response.code, "body" to response.body?.string().orEmpty())
             }
+    }
+
+    /** Drops a probe session, releasing its executor threads and the connections pooled through the tunnel. */
+    private fun closeProbe(id: String) {
+        probes.remove(id)?.let { client ->
+            runCatching { client.dispatcher.executorService.shutdown() }
+            runCatching { client.connectionPool.evictAll() }
+        }
     }
 
     private suspend fun egressWire(): Map<String, Any?> = withContext(Dispatchers.IO) {
@@ -1018,14 +1025,14 @@ class ThroneBoxBridge(
 
     // ------------------------------------------------------------------------------------------------ documents
 
-    private suspend fun saveDocument(name: String, content: String): Boolean {
+    private suspend fun saveDocument(name: String, content: String): Boolean? {
         val host = activity as? BboxFlutterActivity ?: return false
         val mime = when {
             name.endsWith(".json", ignoreCase = true) -> "application/json"
             name.endsWith(".log", ignoreCase = true) -> "text/plain"
             else -> "application/octet-stream"
         }
-        val uri = host.pickSaveTarget(name, mime) ?: return false
+        val uri = host.pickSaveTarget(name, mime) ?: return null
         return withContext(Dispatchers.IO) {
             runCatching {
                 // A null stream means nothing was written; reporting success here would let the

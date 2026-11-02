@@ -123,7 +123,8 @@ class _StatusPanelState extends State<StatusPanel> with WidgetsBindingObserver {
       setState(() { _egress = result.isEmpty ? null : result; _checking = false; _qualityChecking = ip != null; });
       if (ip == null) return;
       try {
-        if (!readIp) await probe.open();
+        // The transport opens its native session on first get, so the lookup works on both the
+        // fresh-IP path (no session opened yet) and the quality-only path.
         final record = await box.ipQualities.lookup(probe, ip, refresh: !readIp || ip == retryQualityFor);
         if (!mounted || generation != _generation) return;
         setState(() {

@@ -146,6 +146,27 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a fresh-IP quality lookup opens its probe session before the first get', (tester) async {
+    final dashboard = _Dashboard()..autoQuality = true;
+    await dashboard.mount(tester);
+    await tester.pumpAndSettle();
+    final gets = dashboard.calls.where((call) => call.method == 'dashboard.probe.get').toList();
+    expect(gets, isNotEmpty);
+    // Every session that gets must have been opened, and opened before its first get:
+    // a get without a session used to fail the whole quality lookup with
+    // "No probe session is open" on the native side.
+    for (final get in gets) {
+      final id = json(get.arguments)['id'] as String;
+      expect(dashboard.opened, contains(id),
+        reason: 'session $id issued a get without ever being opened');
+      expect(dashboard.calls.indexWhere((call) =>
+        call.method == 'dashboard.probe.open' && json(call.arguments)['id'] == id),
+        lessThan(dashboard.calls.indexOf(get)),
+        reason: 'session $id got before it was opened');
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('stopped IP failures can be retried without starting the service', (tester) async {
     final dashboard = _Dashboard()..status = 'Stopped'..failIP = true;
     await dashboard.mount(tester);

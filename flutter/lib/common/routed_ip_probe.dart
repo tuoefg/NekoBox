@@ -12,10 +12,12 @@ class RoutedIpProbe implements IpProbeTransport {
   final BoxController box;
   final String id;
   bool _cancelled = false;
+  Future<void>? _opening;
   Future<void>? _closing;
   @override bool get cancelled => _cancelled;
 
-  Future<void> open() async {
+  Future<void> open() => _opening ??= _open();
+  Future<void> _open() async {
     if (cancelled) throw const IpProbeCancelled();
     await box.call('dashboard.probe.open', {'id': id});
     if (cancelled) throw const IpProbeCancelled();
@@ -30,6 +32,10 @@ class RoutedIpProbe implements IpProbeTransport {
 
   @override Future<IpProbeResponse> get(String url, Duration timeout) async {
     if (cancelled) throw const IpProbeCancelled();
+    // The native session must exist before the first get; opening here makes the lookup work
+    // no matter whether the caller opened the session up front (a cache-miss quality lookup
+    // used to hit the bridge without a session and fail every source).
+    await open();
     try {
       final result = json(await box.call('dashboard.probe.get', {'id': id, 'url': url, 'timeoutMillis': timeout.inMilliseconds}));
       if (cancelled) throw const IpProbeCancelled();

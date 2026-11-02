@@ -1,3 +1,8 @@
+#### 3.0.11
+
+* The status card's IP quality lookup no longer fails on a freshly read IP: the probe transport opens its native session before its first request, and the bridge answers a get for a session nobody opened by creating one instead of throwing "No probe session is open" — a quality-cache miss used to fail every quality source and spam that warning
+* Closing a probe session now releases its executor threads and the connections pooled through the tunnel instead of leaving them to the garbage collector
+
 #### 3.0.10
 
 * Logcat clear no longer forks and waits for `logcat -c` on the main thread: the clear runs on the IO dispatcher, so tapping Clear cannot stall the interface while the child process runs
