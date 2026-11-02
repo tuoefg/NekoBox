@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../widgets.dart';
 import '../components/form.dart';
 
-const defaultBackupFileName = 'B-box-backup.json';
+const defaultBackupFileName = 'flrone-backup.json';
 
 // Layout and dialogs adapted from FlClash v0.9.2 backup_and_restore.dart.
 class BackupPage extends StatefulWidget {
@@ -300,7 +300,7 @@ class _WebDAVFormState extends State<WebDAVForm> {
     final issue = _attempted ? _issue() : null;
     return BoxEditGuard(dirty: _dirty, busy: _saving, child: FormPage(title: 'WebDAV configuration', onSave: _save,
       saving: _saving, error: _error ?? (issue == null ? null : context.tr(issue)), children: [
-        generateSection(footer: context.tr('Enter the WebDAV directory URL. Backups are stored in its B-box folder.'), items: [
+        generateSection(footer: context.tr('Enter the WebDAV directory URL. Backups are stored in a folder on that server.'), items: [
           FormRow(title: context.tr('Address'), invalid: issue == 'Enter a WebDAV HTTP or HTTPS directory address',
             trailing: FormRowTextField(controller: _uri, hintText: context.tr('Required'), keyboardType: TextInputType.url,
               textInputAction: TextInputAction.next, autocorrect: false, enableSuggestions: false,

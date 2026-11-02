@@ -1700,12 +1700,12 @@
     <string name="backup_platform_linux">Linux</string>
     <string name="backup_platform_macos">macOS</string>
     <string name="backup_platform_unknown">unknown platform</string>
-    <string name="backup_restore_warning">Each selected part replaces the current data. This cannot be undone.\nThrone will restart to complete the restore.</string>
+    <string name="backup_restore_warning">Each selected part replaces the current data. This cannot be undone.\nflrone will restart to complete the restore.</string>
     <string name="backup_restore_select_part">Select at least one part to restore.</string>
     <string name="backup_reading">Reading the backup…</string>
     <string name="backup_restoring">Restoring…</string>
-    <string name="backup_restored">Backup restored successfully. Throne will now restart for the changes to take effect.</string>
-    <string name="backup_restored_warnings">Backup restored. Throne will now restart for the changes to take effect.\n\nNotes:\n%s</string>
+    <string name="backup_restored">Backup restored successfully. flrone will now restart for the changes to take effect.</string>
+    <string name="backup_restored_warnings">Backup restored. flrone will now restart for the changes to take effect.\n\nNotes:\n%s</string>
     <string name="backup_restore_failed">Restore failed: %s</string>
 
     <string name="backup_error_not_backup">Not a valid Throne backup file.</string>
@@ -1779,7 +1779,7 @@
     <string name="update_channel_stable">Channel: stable releases</string>
     <string name="update_channel_beta">Channel: stable and pre-releases</string>
     <string name="update_checking">Checking for updates…</string>
-    <string name="update_up_to_date">Throne is up to date</string>
+    <string name="update_up_to_date">flrone is up to date</string>
     <string name="update_check_failed">Could not check for updates</string>
     <string name="update_current_version">Current version: %s</string>
     <string name="update_new_version">New version: %s</string>
@@ -1797,7 +1797,7 @@
     <string name="update_action_close">Close</string>
     <string name="update_action_skip">Skip this version</string>
     <string name="update_downloading">Downloading the update</string>
-    <string name="update_downloading_x">Downloading Throne %s</string>
+    <string name="update_downloading_x">Downloading flrone %s</string>
     <string name="update_progress">%1$s / %2$s</string>
     <string name="update_verifying">Verifying the update…</string>
     <string name="update_installing">Installing the update…</string>
@@ -1813,9 +1813,9 @@
     <string name="update_install_cancelled">The installation was cancelled.</string>
     <string name="update_install_failed">The installation failed: %s</string>
     <string name="update_permission_title">Allow installing updates</string>
-    <string name="update_permission_message">To update itself, Throne needs the permission to install apps. Enable it for Throne on the next screen, then come back.</string>
+    <string name="update_permission_message">To update itself, flrone needs the permission to install apps. Enable it for flrone on the next screen, then come back.</string>
     <string name="update_notification_channel">App updates</string>
-    <string name="update_notification_available">Throne %s is available</string>
+    <string name="update_notification_available">flrone %s is available</string>
     <string name="update_notification_available_text">Tap to see the update</string>
     <string name="update_notification_ready">The update is ready</string>
     <string name="update_notification_tap_install">Tap to install</string>
@@ -1834,7 +1834,7 @@
     <string name="log_hide_destinations">Hide destinations</string>
     <string name="log_saved">Logs saved</string>
     <string name="log_export_failed">Log export failed: %s</string>
-    <string name="log_crash_title">Throne crashed</string>
+    <string name="log_crash_title">flrone crashed</string>
 
     <!-- platform: Wi-Fi rules, notification, battery, widgets, package pickers -->
     <string name="not_now">Not now</string>
@@ -1842,8 +1842,8 @@
 
     <!-- Wi-Fi rules -->
     <string name="wifi_permission_title">Wi-Fi rules</string>
-    <string name="wifi_permission_message">Rules that match a Wi-Fi name (SSID) or access point (BSSID) need precise location access: Android hides the connected Wi-Fi from apps without it. Throne only reads the connected network, never your location.</string>
-    <string name="wifi_permission_background_message">The VPN keeps running while Throne is closed, so Wi-Fi rules also need location access all the time. Choose \"Allow all the time\" on the next screen.</string>
+    <string name="wifi_permission_message">Rules that match a Wi-Fi name (SSID) or access point (BSSID) need precise location access: Android hides the connected Wi-Fi from apps without it. flrone only reads the connected network, never your location.</string>
+    <string name="wifi_permission_background_message">The VPN keeps running while flrone is closed, so Wi-Fi rules also need location access all the time. Choose \"Allow all the time\" on the next screen.</string>
     <string name="wifi_location_off_message">Location is turned off, and Android hides the Wi-Fi name while it is off. Turn location on for Wi-Fi rules to match.</string>
     <string name="wifi_permission_settings_message">Location access is denied. Allow it in the app settings for Wi-Fi rules to match.</string>
     <string name="wifi_permission_continue">Continue</string>
@@ -1862,11 +1862,11 @@
     <string name="notification_permission">Notifications</string>
     <string name="notification_permission_allowed">Allowed</string>
     <string name="notification_permission_blocked">Blocked: the service notification and its buttons are hidden. Tap to allow.</string>
-    <string name="notification_permission_rationale">Throne shows a notification while the VPN runs, with buttons to stop it and to switch servers. Allow notifications to see it.</string>
+    <string name="notification_permission_rationale">flrone shows a notification while the VPN runs, with buttons to stop it and to switch servers. Allow notifications to see it.</string>
 
     <!-- Battery -->
-    <string name="battery_prompt_title">Keep Throne running</string>
-    <string name="battery_prompt_message">Android may stop or delay apps in the background to save battery. Let Throne run without battery optimization so the VPN stays connected with the screen off and switching servers from the notification, tile or widget keeps working.</string>
+    <string name="battery_prompt_title">Keep flrone running</string>
+    <string name="battery_prompt_message">Android may stop or delay apps in the background to save battery. Let flrone run without battery optimization so the VPN stays connected with the screen off and switching servers from the notification, tile or widget keeps working.</string>
     <string name="battery_prompt_allow">Allow</string>
     <string name="battery_prompt_later">You can allow this later in Settings › General › Battery optimization</string>
     <string name="battery_optimization">Battery optimization</string>
@@ -1875,22 +1875,22 @@
     <string name="battery_state_restricted">Restricted by the system: background starts are blocked</string>
     <string name="battery_settings_missing">This device has no battery optimization settings</string>
     <string name="oem_background">Background &amp; auto-start</string>
-    <string name="oem_background_summary">Device-specific settings that can stop Throne in the background</string>
+    <string name="oem_background_summary">Device-specific settings that can stop flrone in the background</string>
 
     <!-- Always-on VPN -->
     <string name="always_on_vpn">Always-on VPN</string>
     <string name="always_on_vpn_off">Off. Set it in the system VPN settings</string>
-    <string name="always_on_vpn_on">On: Android starts Throne in VPN mode by itself</string>
+    <string name="always_on_vpn_on">On: Android starts flrone in VPN mode by itself</string>
     <string name="always_on_vpn_lockdown">On, blocking connections without VPN</string>
     <string name="always_on_vpn_unknown">Set it in the system VPN settings</string>
     <string name="always_on_vpn_no_profile">Always-on VPN has no profile</string>
-    <string name="always_on_vpn_no_profile_text">Select a profile in Throne; until then the always-on VPN cannot connect.</string>
+    <string name="always_on_vpn_no_profile_text">Select a profile in flrone; until then the always-on VPN cannot connect.</string>
     <string name="auto_connect_superseded">Superseded by the always-on VPN</string>
     <string name="vpn_settings_missing">This device has no VPN settings screen</string>
 
     <!-- VPN consent -->
     <string name="vpn_dialog_missing_title">VPN confirmation unavailable</string>
-    <string name="vpn_dialog_missing_message">This device has no screen to confirm VPN access, so Throne cannot ask for it. Grant it once over adb:\n\nadb shell appops set %1$s ACTIVATE_VPN allow\n\nor switch the service mode to \"Proxy only\".</string>
+    <string name="vpn_dialog_missing_message">This device has no screen to confirm VPN access, so flrone cannot ask for it. Grant it once over adb:\n\nadb shell appops set %1$s ACTIVATE_VPN allow\n\nor switch the service mode to \"Proxy only\".</string>
     <string name="vpn_dialog_use_proxy">Use proxy mode</string>
     <string name="vpn_dialog_copy_command">Copy command</string>
 
@@ -2046,7 +2046,7 @@
     <string name="diagnostics_contention">Lock contention</string>
     <string name="diagnostics_contention_sum">Records where goroutines wait on locks and channels.</string>
     <string name="diagnostics_trace">Execution trace (larger file)</string>
-    <string name="diagnostics_include_logs">Include Throne logs</string>
+    <string name="diagnostics_include_logs">Include flrone logs</string>
     <string name="diagnostics_include_logs_sum">Logs contain visited domains and server addresses.</string>
     <string name="diagnostics_start">Start</string>
     <string name="diagnostics_save">Save…</string>
@@ -2207,8 +2207,8 @@
         <item quantity="other">Only the first user of %1$d was imported.</item>
     </plurals>
     <string name="validation_import_xray_unstorable">A VLESS profile cannot store this setting, so it was ignored. Such an outbound is kept as written only when nothing else in it needs fixing.</string>
-    <string name="validation_import_xray_rename_protects">Rename this key to \"%1$s\": Throne reads only that spelling, and dropping its value would weaken the connection\'s security.</string>
-    <string name="validation_import_xray_rename">Rename this key to \"%1$s\": Throne reads only that spelling, so its value was ignored.</string>
+    <string name="validation_import_xray_rename_protects">Rename this key to \"%1$s\": flrone reads only that spelling, and dropping its value would weaken the connection\'s security.</string>
+    <string name="validation_import_xray_rename">Rename this key to \"%1$s\": flrone reads only that spelling, so its value was ignored.</string>
     <string name="validation_import_xray_verbatim">Imported as a custom Xray outbound to keep %1$s, which a VLESS profile would drop.</string>
     <string name="validation_import_json_syntax">Not valid JSON: %1$s at line %2$s, column %3$s.</string>
     <string name="validation_import_unparsed">Could not be parsed.</string>
@@ -2296,7 +2296,7 @@
     <string name="validation_quic_initial_packet_size">Must be 0 (the default) or from 1200 to 1452.</string>
     <string name="validation_dial_unmodelled">These dial options are not supported and were ignored: %1$s.</string>
     <string name="validation_dial_detour">To reach this server through another one, build a chain profile instead of a detour.</string>
-    <string name="validation_dial_domain_resolver">Throne picks the resolver for server names itself.</string>
+    <string name="validation_dial_domain_resolver">flrone picks the resolver for server names itself.</string>
     <string name="validation_xray_download_network">The download leg must use XHTTP too: write \"network\": \"xhttp\".</string>
     <string name="validation_xray_download_address">Add the download server\'s address, for example \"address\": \"dl.example.com\".</string>
     <string name="validation_xray_download_port">Must be a port number from 1 to 65535, written without quotes, for example \"port\": 443.</string>
@@ -2304,7 +2304,7 @@
     <string name="validation_xray_extra_invalid">The extra value is not a valid JSON object, so it was ignored.</string>
     <string name="validation_xray_finalmask_json">The finalmask value is not valid JSON (%1$s), so it was ignored.</string>
     <string name="validation_xray_finalmask_object">The finalmask value must be a JSON object, so it was ignored.</string>
-    <string name="validation_xray_network">Throne does not support the Xray transport \"%1$s\". Use raw, xhttp, ws, httpupgrade, grpc or xdrive.</string>
+    <string name="validation_xray_network">flrone does not support the Xray transport \"%1$s\". Use raw, xhttp, ws, httpupgrade, grpc or xdrive.</string>
     <string name="validation_xray_security">Xray does not support the security \"%1$s\". Use none, tls or reality.</string>
     <string name="validation_xray_reality_network">REALITY works only with the raw, xhttp or grpc transport.</string>
     <string name="validation_xray_reality_hellogolang">REALITY cannot use the hellogolang fingerprint; choose another one.</string>
@@ -2397,10 +2397,10 @@
     <string name="validation_wg_signature_hex">&lt;b&gt; needs an even number of hex digits, for example &lt;b 0x1a2b&gt;.</string>
     <string name="validation_wg_signature_length">&lt;%1$s&gt; needs a whole number of bytes, for example &lt;%1$s 16&gt;.</string>
     <string name="validation_wg_signature_unknown">Unknown tag &lt;%1$s&gt;. Use &lt;b 0x...&gt;, &lt;r N&gt;, &lt;rc N&gt;, &lt;rd N&gt;, &lt;dz N&gt;, &lt;t&gt;, &lt;d&gt; or &lt;ds&gt;.</string>
-    <string name="validation_wg_dns_ignored">Ignored; Throne resolves names with its own DNS settings.</string>
+    <string name="validation_wg_dns_ignored">Ignored; flrone resolves names with its own DNS settings.</string>
     <string name="validation_wg_unknown_setting">Unknown setting, ignored.</string>
     <string name="validation_wg_peer_sections">Only the last of the %1$s [Peer] sections is used.</string>
-    <string name="validation_wg_allowed_ips_ignored">Ignored; Throne sends all traffic of this profile through the tunnel.</string>
+    <string name="validation_wg_allowed_ips_ignored">Ignored; flrone sends all traffic of this profile through the tunnel.</string>
     <string name="validation_wg_no_endpoint">The [Peer] section has no Endpoint such as vpn.example.com:51820.</string>
     <string name="validation_wg_peers">Only the first of the %1$s peers is used.</string>
     <string name="validation_wg_address_required">At least one local address is required, for example 10.0.0.2/32.</string>
@@ -2434,7 +2434,7 @@
     <string name="validation_oc_reported_os_unknown">Unknown reported OS, ignored: %1$s</string>
     <string name="validation_oc_token_mode_unsupported">Unsupported token mode, ignored: %1$s</string>
     <string name="validation_oc_form_entry_format">Expected --form-entry=FORM:OPTION=VALUE, ignored: %1$s</string>
-    <string name="validation_oc_proxy_ignored">Configure a proxy through Throne\'s chain instead, ignored: %1$s</string>
+    <string name="validation_oc_proxy_ignored">Configure a proxy through flrone\'s chain instead, ignored: %1$s</string>
     <string name="validation_oc_option_unknown">Unknown OpenConnect option, ignored: %1$s</string>
     <string name="validation_oc_dpd_raised">Raised %1$s %2$s to 2s, the shortest interval the endpoint uses.</string>
     <string name="validation_oc_anyconnect_dtd">An AnyConnect profile carrying a DTD is not accepted.</string>
@@ -2523,10 +2523,10 @@
     <string name="validation_custom_xray_reverse">Removed the reverse proxy from the imported configuration: it would let the server reach this device and its network.</string>
     <string name="validation_custom_inbound_removed">Removed this inbound from the imported configuration: it could let other devices connect through this device. Only tun inbounds and local proxies that listen on 127.0.0.1 or ::1 are kept.</string>
     <string name="validation_custom_clash_api">Removed the Clash API from the imported configuration: web pages and programs on this device could use it to control the core, and its external_ui setting downloads files.</string>
-    <string name="validation_custom_v2ray_api">Removed the V2Ray API from the imported configuration: Throne\'s core is built without it and would not start, and it would open a statistics port on this device.</string>
-    <string name="validation_custom_xray_inbounds">Removed the inbounds from the imported configuration: Throne adds its own local inbound, and these could let other devices connect through this device.</string>
-    <string name="validation_custom_xray_env">Removed the environment variables from the imported configuration: they would apply to Throne\'s core and to the programs it starts.</string>
-    <string name="validation_custom_xray_geodata">Removed the geodata updater from the imported configuration: it would download files from addresses the sender chose and replace files in Throne\'s folder.</string>
+    <string name="validation_custom_v2ray_api">Removed the V2Ray API from the imported configuration: flrone\'s core is built without it and would not start, and it would open a statistics port on this device.</string>
+    <string name="validation_custom_xray_inbounds">Removed the inbounds from the imported configuration: flrone adds its own local inbound, and these could let other devices connect through this device.</string>
+    <string name="validation_custom_xray_env">Removed the environment variables from the imported configuration: they would apply to flrone\'s core and to the programs it starts.</string>
+    <string name="validation_custom_xray_geodata">Removed the geodata updater from the imported configuration: it would download files from addresses the sender chose and replace files in flrone\'s folder.</string>
     <string name="validation_custom_xray_webhook">Removed the webhook from this routing rule: it would send the details of every matching connection to an address the sender chose.</string>
     <string name="validation_autoselector_countries">Use two-letter country codes separated by commas, for example DE,NL,FR; put ! before a code to exclude that country, for example !RU.</string>
     <string name="validation_autoselector_build_limit">Cannot run more profiles than are ranked (%1$s).</string>

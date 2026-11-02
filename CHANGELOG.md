@@ -1,3 +1,7 @@
+#### 3.0.4
+
+* Finish the rename: the first-start prompts, the notification, battery, Wi-Fi and VPN explanations, the update dialogs and the import warnings now call the app flrone, and the suggested backup file name is `flrone-backup.json`
+
 #### 3.0.3
 
 * Rename the app to flrone and move the application id to `com.throneflclash`
