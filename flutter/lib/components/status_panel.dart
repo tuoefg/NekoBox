@@ -296,48 +296,60 @@ class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderS
   @override void dispose() { _turn.dispose(); super.dispose(); }
   @override Widget build(BuildContext context) {
     final color = widget.active ? context.colorScheme.onSurface : context.colorScheme.onSurfaceVariant;
-    final enabled = widget.onRefresh != null;
+    final canRefresh = widget.onRefresh != null;
     final country = widget.country?.trim();
     final code = country == null || country.isEmpty ? null : country.toUpperCase();
     final flagCode = code == null ? null : country_flags.FlagCode.fromCountryCode(code);
+    final canToggle = flagCode != null;
+    final enabled = canToggle || canRefresh;
+    final showFlag = canToggle && !_showCode;
     final background = Color.alphaBlend(color.withValues(alpha: enabled && _hovered ? .08 : 0), SurfaceLevel.inset.colorOf(context.colorScheme));
-    // Tap swaps the flag for the abbreviation; a long press still re-checks the IP.
-    final hint = code != null
+    // Display switching stays available while a refresh is in progress.
+    final hint = canToggle
         ? context.tr(_showCode ? 'Show the country icon' : 'Show the country code')
         : context.tr('Retry');
     return Tooltip(message: hint, child: Semantics(button: true, label: hint, enabled: enabled,
-      child: InkResponse(onTap: code != null ? () => setState(() => _showCode = !_showCode) : widget.onRefresh,
+      child: InkResponse(onTap: canToggle ? () => setState(() => _showCode = !_showCode) : widget.onRefresh,
         onLongPress: widget.onRefresh, onHover: (value) => setState(() => _hovered = value), onFocusChange: (value) => setState(() => _focused = value),
         overlayColor: const WidgetStatePropertyAll(Colors.transparent), splashFactory: NoSplash.splashFactory,
-        child: ElasticPress(enabled: enabled, child: AnimatedBuilder(animation: _turn, builder: (_, child) => ShapeBadge(
-          shape: MaterialShapes.clover4Leaf, color: background, size: 48,
-          rotation: _turn.value * 2 * math.pi, ring: _focused ? focusRingSide(context.colorScheme) : null, child: child), child: code != null
-          ? _showCode || flagCode == null
+        child: ElasticPress(enabled: enabled, child: AnimatedBuilder(animation: _turn, builder: (_, child) {
+          final rotation = _turn.value * 2 * math.pi;
+          return ShapeBadge(
+            shape: MaterialShapes.clover4Leaf, color: background, size: 48,
+            rotation: rotation, ring: _focused ? focusRingSide(context.colorScheme) : null,
+            child: showFlag ? ClipPath(
+              key: const Key('country-badge-flag-clip'),
+              clipper: _CountryBadgeClipper(rotation),
+              clipBehavior: Clip.antiAlias,
+              child: child,
+            ) : child);
+        }, child: code != null
+          ? !showFlag
               ? Text(code, maxLines: 1, style: AppTextStyle.footnote.of(context, emphasized: true)
                   .copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size))
-              // country_flags paints the vector .si flag with BoxFit.cover inside this 48x48
-              // box, so flags of any aspect ratio crop to fill before the clover clips them.
-              : ClipPath(
-                  key: const Key('country-badge-flag-clip'),
-                  clipper: const _CountryBadgeClipper(),
-                  clipBehavior: Clip.antiAlias,
-                  child: country_flags.CountryFlag.fromCountryCode(code,
-                    key: const Key('country-badge-flag'),
-                    theme: const country_flags.ImageTheme(width: 48, height: 48)))
+              // The image remains upright; only the cover-fitted flag's clip rotates.
+              : country_flags.CountryFlag.fromCountryCode(code,
+                  key: const Key('country-badge-flag'),
+                  theme: const country_flags.ImageTheme(width: 48, height: 48))
           : GlyphIcon(AppGlyphs.proxies, size: 48 * .42, color: color))))));
   }
 }
 
-/// Clips the cover-fitted vector flag to the same upright clover as the badge.
+/// Clips the upright flag to the same rotating clover as the badge's painter.
 class _CountryBadgeClipper extends CustomClipper<Path> {
-  const _CountryBadgeClipper();
+  const _CountryBadgeClipper(this.rotation);
+  final double rotation;
 
   @override
-  Path getClip(Size size) => shapePathOf(MaterialShapes.clover4Leaf)
-    .transform(Matrix4.diagonal3Values(size.width, size.height, 1).storage);
+  Path getClip(Size size) => shapePathOf(MaterialShapes.clover4Leaf).transform(
+    (Matrix4.identity()
+      ..translateByDouble(size.width / 2, size.height / 2, 0, 1)
+      ..rotateZ(rotation)
+      ..scaleByDouble(size.width, size.height, 1, 1)
+      ..translateByDouble(-0.5, -0.5, 0, 1)).storage);
 
   @override
-  bool shouldReclip(_CountryBadgeClipper oldClipper) => false;
+  bool shouldReclip(_CountryBadgeClipper oldClipper) => oldClipper.rotation != rotation;
 }
 
 TextStyle _statusLabelStyle(BuildContext context) => AppTextStyle.caption1.of(context).toTabular.copyWith(color: context.colorScheme.onSurfaceVariant);

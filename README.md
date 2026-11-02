@@ -25,6 +25,8 @@ Releases from v2.0.0 on are signed with a new key, so Android refuses to install
 - Cloudflare WARP: registration (WireGuard or MASQUE identity) and a built-in WARP mode for routing
 - URL, IP / country and speed tests, with a bulk-test panel (live progress, latency histogram, fastest servers, sort / remove unavailable / connect to fastest)
 - The sing-box dashboard built in (live traffic, connections, logs)
+- The home status card shows a vector country flag cropped to its animated badge; tap to show the country code, or long-press to refresh the exit IP
+- Core logs and Logcat support level filters, search, pause, clear and redacted export; cancelling the save dialog leaves the logs untouched
 - JSON editor with sing-box schema checking, completion and formatting
 - Home-screen widgets, a quick settings tile, and server switching from the notification
 - Android TV: launcher banner, D-pad navigation, previous / next server

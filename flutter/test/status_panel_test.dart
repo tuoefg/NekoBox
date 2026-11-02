@@ -1,11 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:b_box_ui/main.dart';
 import 'package:b_box_ui/widgets.dart';
 import 'package:b_box_ui/components/status_panel.dart';
+import 'package:b_box_ui/components/shape_badge.dart';
 import 'package:country_flags/country_flags.dart' as country_flags;
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_new_shapes/material_new_shapes.dart';
 import 'support/errors.dart';
 
 class _Dashboard {
@@ -19,11 +24,12 @@ class _Dashboard {
   final pendingIP = <String, Completer<Object?>>{};
   final pendingQuality = <String, Completer<Object?>>{};
   String ip = '203.0.113.9';
+  String? country = 'GB';
   String status = 'Started';
   DateTime? cachedQualityAt;
   bool holdIP = false, failIP = false, failQuality = false, autoQuality = false, lateOnClose = false, remote = false;
 
-  Map<String, Object?> ipInfo(String id) => {'ip': addresses[id], 'country': 'GB',
+  Map<String, Object?> ipInfo(String id) => {'ip': addresses[id], 'country': country,
     'ipSource': 'www.cloudflare.com', 'checkedAt': DateTime.now().millisecondsSinceEpoch};
   Map<String, Object?> quality(String id, {String organization = 'Example Business'}) => {
     'status': 200,
@@ -111,6 +117,113 @@ Future<void> _advance(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets('country display switches during quality checks without enabling refresh', (tester) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      final dashboard = _Dashboard();
+      await dashboard.mount(tester);
+      final showCode = find.byTooltip('Show the country code');
+      expect(tester.getSemantics(find.byKey(const Key('country-badge-flag'))), isSemantics(
+        isButton: true, isEnabled: true, hasTapAction: true, hasLongPressAction: false));
+      expect(tester.widget<ElasticPress>(find.descendant(of: showCode,
+        matching: find.byType(ElasticPress))).enabled, isTrue);
+      await tester.tap(showCode);
+      await tester.pump();
+      expect(find.text('GB'), findsOneWidget);
+      expect(find.byKey(const Key('country-badge-flag')), findsNothing);
+      await tester.longPress(find.byTooltip('Show the country icon'));
+      await tester.pump();
+      expect(dashboard.ids, hasLength(1), reason: 'Switching display must not start a concurrent refresh');
+      await tester.tap(find.byTooltip('Show the country icon'));
+      await tester.pump();
+      final flag = find.byKey(const Key('country-badge-flag'));
+      expect(flag, findsOneWidget);
+      Focus.of(tester.element(flag)).requestFocus();
+      await tester.pump();
+      expect(tester.widget<ShapeBadge>(find.ancestor(of: flag,
+        matching: find.byType(ShapeBadge)).first).ring, isNotNull);
+      dashboard.answerQuality(dashboard.ids.single);
+      await tester.pumpAndSettle();
+      expect(tester.getSemantics(find.byKey(const Key('country-badge-flag'))), isSemantics(
+        isEnabled: true, hasTapAction: true, hasLongPressAction: true));
+      expect(tester.takeException(), isNull);
+    } finally { semantics.dispose(); }
+  });
+
+  testWidgets('unknown country codes retain text fallback and a working retry', (tester) async {
+    final dashboard = _Dashboard()..country = ' zz '..autoQuality = true;
+    await dashboard.mount(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('ZZ'), findsOneWidget);
+    expect(find.byKey(const Key('country-badge-flag')), findsNothing);
+    await tester.tap(find.byTooltip('Retry'));
+    await tester.pumpAndSettle();
+    expect(dashboard.ids, hasLength(2));
+    expect(find.text('ZZ'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('flag clip follows the painted clover while its image stays upright', (tester) async {
+    final dashboard = _Dashboard();
+    await dashboard.mount(tester);
+    final clipFinder = find.byKey(const Key('country-badge-flag-clip'));
+    var oldClipper = tester.widget<ClipPath>(clipFinder).clipper!;
+    for (final elapsed in [137, 223]) {
+      await tester.pump(Duration(milliseconds: elapsed));
+      final clipper = tester.widget<ClipPath>(clipFinder).clipper!;
+      final badgeFinder = find.ancestor(of: clipFinder, matching: find.byType(ShapeBadge)).first;
+      final badge = tester.widget<ShapeBadge>(badgeFinder);
+      expect(math.sin(badge.rotation * 2).abs(), greaterThan(.1),
+        reason: 'Check a non-quarter-turn frame, not the symmetric resting shape');
+      expect(clipper.shouldReclip(oldClipper), isTrue);
+      oldClipper = clipper;
+      const size = Size.square(48);
+      final expectedRecorder = ui.PictureRecorder();
+      ShapePainter(path: shapePathOf(MaterialShapes.clover4Leaf), color: Colors.white,
+        rotation: badge.rotation).paint(Canvas(expectedRecorder), size);
+      final actualRecorder = ui.PictureRecorder();
+      Canvas(actualRecorder).drawPath(clipper.getClip(size), Paint()..color = Colors.white);
+      final expectedPicture = expectedRecorder.endRecording(), actualPicture = actualRecorder.endRecording();
+      final expected = expectedPicture.toImageSync(48, 48), actual = actualPicture.toImageSync(48, 48);
+      try { await expectLater(actual, matchesReferenceImage(expected)); }
+      finally {
+        actual.dispose(); expected.dispose(); actualPicture.dispose(); expectedPicture.dispose();
+      }
+      final flagBox = tester.renderObject<RenderBox>(find.byKey(const Key('country-badge-flag')));
+      final badgeBox = tester.renderObject<RenderBox>(badgeFinder);
+      expect(flagBox.getTransformTo(badgeBox).storage, orderedEquals(Matrix4.identity().storage),
+        reason: 'Rotate the clip only, not the flag pixels');
+    }
+    dashboard.answerQuality(dashboard.ids.single);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('badge focus ring paints above an opaque child', (tester) async {
+    final boundaryKey = GlobalKey();
+    await tester.pumpWidget(Directionality(textDirection: TextDirection.ltr, child: Center(
+      child: RepaintBoundary(key: boundaryKey, child: ShapeBadge(
+        shape: MaterialShapes.clover4Leaf, color: Colors.blue, size: 48,
+        ring: const BorderSide(color: Color(0xffff0000), width: 2, strokeAlign: BorderSide.strokeAlignInside),
+        child: const ColoredBox(color: Colors.white, child: SizedBox.expand()),
+      )),
+    )));
+    final boundary = boundaryKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final image = boundary.toImageSync();
+    try {
+      final data = (await tester.runAsync(() => image.toByteData(format: ui.ImageByteFormat.rawRgba)))!;
+      var redPixels = 0;
+      for (var i = 0; i < data.lengthInBytes; i += 4) {
+        if (data.getUint8(i) == 255 && data.getUint8(i + 1) == 0 && data.getUint8(i + 2) == 0) redPixels++;
+      }
+      expect(redPixels, greaterThan(50), reason: 'An opaque child must not hide the focus outline');
+      final center = (24 * image.width + 24) * 4;
+      expect([data.getUint8(center), data.getUint8(center + 1), data.getUint8(center + 2)], [255, 255, 255],
+        reason: 'Foreground painting must not refill the shape over its child');
+    } finally { image.dispose(); }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('start is disabled until a usable profile is selected', (tester) async {
     final dashboard = _Dashboard()..status = 'Stopped'..autoQuality = true;
     await dashboard.mount(tester);

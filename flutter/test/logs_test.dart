@@ -83,7 +83,7 @@ void main() {
   }
 
   Future<void> expectExport(WidgetTester tester, List<String> levels) async {
-    scaffold(tester).iconActions.single.onPressed!();
+    scaffold(tester).iconActions.first.onPressed!();
     await tester.pumpAndSettle();
     expect(exported, isNotNull);
     expect(exported!.split('\n').where((line) => line.isNotEmpty),
@@ -150,7 +150,7 @@ void main() {
     expect(calls.where((call) => call.method == 'logs.logcat.clear'), hasLength(1));
     expect(box.logcat, isEmpty);
     expect(find.text('No logs'), findsOneWidget);
-    expect(scaffold(tester).iconActions.single.onPressed, isNull);
+    expect(scaffold(tester).iconActions.first.onPressed, isNull);
 
     events.add({'type': 'logcat', 'value': {'reset': true, 'entries': [
       {'id': 9, 'level': 'info', 'message': 'after clear'},
@@ -172,35 +172,35 @@ void main() {
       saveResult = result;
       await expectExport(tester, ['Error', 'Fatal', 'Panic']);
       expect(messages, result == null ? isEmpty : [result ? 'Exported' : 'Export failed']);
-      expect(scaffold(tester).iconActions.single.onPressed, isNotNull);
+      expect(scaffold(tester).iconActions.first.onPressed, isNotNull);
       expect(tester.takeException(), isNull);
     });
   }
 
   testWidgets('export prevents reentry and reports platform errors without losing logs', (tester) async {
     await mount(tester);
-    expect(scaffold(tester).iconActions.single.onPressed, isNull);
+    expect(scaffold(tester).iconActions.first.onPressed, isNull);
     await emit(tester, 'Error');
     pendingSave = Completer<Object?>();
-    final export = scaffold(tester).iconActions.single.onPressed!;
+    final export = scaffold(tester).iconActions.first.onPressed!;
     export(); export();
     await tester.pumpAndSettle();
     expect(calls.where((call) => call.method == 'document.save'), hasLength(1));
-    expect(scaffold(tester).iconActions.single.onPressed, isNull);
+    expect(scaffold(tester).iconActions.first.onPressed, isNull);
     pendingSave!.complete(null);
     await tester.pumpAndSettle();
     expect(messages, isEmpty);
-    expect(scaffold(tester).iconActions.single.onPressed, isNotNull);
+    expect(scaffold(tester).iconActions.first.onPressed, isNotNull);
     pendingSave = null;
     saveResult = PlatformException(code: 'failed', message: 'Cannot write document');
-    scaffold(tester).iconActions.single.onPressed!();
+    scaffold(tester).iconActions.first.onPressed!();
     await tester.pumpAndSettle();
     expect(messages, ['Cannot write document']);
     expect(box.logs, hasLength(_levels.length));
-    expect(scaffold(tester).iconActions.single.onPressed, isNotNull);
+    expect(scaffold(tester).iconActions.first.onPressed, isNotNull);
     scaffold(tester).onKeywordsUpdate!(['no matching records']);
     await tester.pumpAndSettle();
-    expect(scaffold(tester).iconActions.single.onPressed, isNull);
+    expect(scaffold(tester).iconActions.first.onPressed, isNull);
     expect(tester.takeException(), isNull);
   });
 

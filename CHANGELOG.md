@@ -1,3 +1,10 @@
+#### 3.0.13
+
+* The home status card keeps its vector country flag upright while its crop follows the animated clover, filling the badge throughout a refresh
+* Flag/code switching remains accessible during a lookup, unknown country codes offer a working retry, and the keyboard focus ring stays visible above the flag
+* Includes the logcat main-thread blocking, stale-buffer and clear/cancellation fixes from 3.0.12, plus the IP-probe session and log-export fixes from 3.0.10–3.0.12
+* Adds regression coverage for native probe cancellation, concurrent first requests, delayed session opening, late replies, animated flag clipping and focus visibility; logcat thread assertions now also accept the coroutine debug suffix used by Gradle CI
+
 #### 3.0.12
 
 * Closing an IP-probe session now cancels its in-flight lookups and releases their threads and tunnel connections instead of stranding them; a lookup that races the close reports a clean cancellation, and a call landing after the activity closed answers "cancelled" instead of a stale failure
