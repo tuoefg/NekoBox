@@ -135,6 +135,9 @@ class BboxLogcatTest {
             runBlocking { withTimeout(5000) { root.cancelAndJoin() } }
             main.close()
             io.close()
+            // A bare "at line N" frame is all the Gradle console shows for this assert; print the
+            // whole stacks so a CI-only failure is diagnosable from the log alone.
+            failures.forEach { it.printStackTrace() }
             assertTrue("Unexpected worker failures: $failures", failures.isEmpty())
         }
     }
@@ -148,9 +151,13 @@ class BboxLogcatTest {
             f.start()
             eventually { f.batches.any { it.entries.isNotEmpty() } }
             assertEquals("Tag: hello  world", f.batches.flatMap { it.entries }.single().message)
-            assertTrue(process.pipe.readThreads.all { it == "logcat-test-io" })
-            assertTrue(f.spawnThreads.all { it == "logcat-test-io" })
-            assertTrue(f.emitThreads.all { it == "logcat-test-main" })
+            // Gradle enables coroutine debugging, which appends " @coroutine#N" to thread names.
+            assertTrue("Read threads: ${process.pipe.readThreads}",
+                process.pipe.readThreads.all { it.substringBefore(" @") == "logcat-test-io" })
+            assertTrue("Spawn threads: ${f.spawnThreads}",
+                f.spawnThreads.all { it.substringBefore(" @") == "logcat-test-io" })
+            assertTrue("Emit threads: ${f.emitThreads}",
+                f.emitThreads.all { it.substringBefore(" @") == "logcat-test-main" })
             withTimeout(1000) { withContext(f.main) { assertTrue(true) } }
             withTimeout(1000) { f.root.cancelAndJoin() }
             process.destroyed.awaitReady()
