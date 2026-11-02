@@ -1,3 +1,11 @@
+#### 3.0.3
+
+* Rename the app to flrone and move the application id to `com.throneflclash`
+* Fix the proxies screen: a latency test now reaches its card while the service is running, instead of only after a restart
+* Fix the entry points the walk-through found: saving a group's settings failed silently, a new auto selector had no group and no name, the node JSON editor opened blank, the log page sat under the status bar, the About source link pointed at the upstream repository, and the stopped dashboard probed the mixed inbound every 30 seconds
+* An empty backup now says "No backup to restore" instead of asking to restore zero profiles; a backup with no profiles says so too
+* The access-control row toggles the app wherever it is tapped, and says why when the selection cannot be edited
+
 #### 3.0.2
 
 * Fix the proxies screen: a server can be picked and its latency measured before the service is started, instead of the two actions waiting for the VPN to be up
