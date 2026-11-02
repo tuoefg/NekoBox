@@ -1,3 +1,10 @@
+#### 3.0.7
+
+* The network-speed card formats the session total ("12.3 MB") instead of printing the raw byte count
+* The status badge draws the exit's flag by default and swaps it for the country's abbreviation on tap; a long press still re-checks the IP
+* The core page follows Throne's settings_core categories and gains the Xray section's VLESS preference, which picks the core per protocol transport at import time
+* The app is Flrone wherever it names itself, and the Testing setting reads "测速" instead of "测速中"
+
 #### 3.0.6
 
 * The Tools page carries the settings entries themselves: General, Appearance, Inbound, TUN, Routing, DNS, Node presets, Testing, Subscriptions, Core, Access control and Backup are one tap away, with no Settings page in between
