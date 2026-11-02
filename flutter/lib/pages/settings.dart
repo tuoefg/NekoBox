@@ -24,33 +24,29 @@ class NativeToggle extends StatelessWidget {
   }
 }
 
-/// Throne's settings home: the entries of `global_preferences.xml`, in its order, one level deep.
+/// The settings entries in Throne's `global_preferences.xml` order. The Tools page lists them
+/// directly, so every setting is one tap from the drawer and there is no Settings page in between.
 ///
 /// Inbound, TUN, routing, DNS and the rest are pages of their own rather than items behind a
 /// "General" container; General is the connection/behaviour page upstream calls General.
-class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
-  @override Widget build(BuildContext context) {
-    final caps = context.box.capabilities;
-    return BoxPage(title: 'Settings', children: [
-      generateSection(items: [
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.settings), title: Text(context.tr('General')), widget: const GeneralPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.paintbrush), title: Text(context.tr('Appearance')), widget: const AppearancePage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.devices), title: Text(context.tr('Inbound')), widget: const InboundPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.split), title: Text(context.tr('TUN')), widget: const TunPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.rules), title: Text(context.tr('Routing')), widget: const RoutingPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.dns), title: Text(context.tr('DNS')), widget: const DnsPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.sliders), title: Text(context.tr('Node presets')), widget: const PresetsPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.speed), title: Text(context.tr('Testing')), widget: const TestingPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.profiles), title: Text(context.tr('Subscriptions')), widget: const SubscriptionPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.cpu), title: Text(context.tr('Core')), widget: const CorePage()),
-        if (caps.of('quality') || caps.of('stun'))
-          ListItem.open(leading: const GlyphIcon(AppGlyphs.target), title: Text(context.tr('Diagnostics')), widget: const DiagnosticsSettingsPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.appsList), title: Text(context.tr('Access control')), widget: const AccessPage()),
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.cloudSync), title: Text(context.tr('Backup and restore')), widget: const BackupPage()),
-      ]),
-    ]);
-  }
+List<ListItem> settingsEntries(BuildContext context) {
+  final caps = context.box.capabilities;
+  return [
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.settings), title: Text(context.tr('General')), widget: const GeneralPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.paintbrush), title: Text(context.tr('Appearance')), widget: const AppearancePage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.devices), title: Text(context.tr('Inbound')), widget: const InboundPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.split), title: Text(context.tr('TUN')), widget: const TunPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.rules), title: Text(context.tr('Routing')), widget: const RoutingPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.dns), title: Text(context.tr('DNS')), widget: const DnsPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.sliders), title: Text(context.tr('Node presets')), widget: const PresetsPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.speed), title: Text(context.tr('Testing')), widget: const TestingPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.profiles), title: Text(context.tr('Subscriptions')), widget: const SubscriptionPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.cpu), title: Text(context.tr('Core')), widget: const CorePage()),
+    if (caps.of('quality') || caps.of('stun'))
+      ListItem.open(leading: const GlyphIcon(AppGlyphs.target), title: Text(context.tr('Diagnostics')), widget: const DiagnosticsSettingsPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.appsList), title: Text(context.tr('Access control')), widget: const AccessPage()),
+    ListItem.open(leading: const GlyphIcon(AppGlyphs.cloudSync), title: Text(context.tr('Backup and restore')), widget: const BackupPage()),
+  ];
 }
 
 /// Throne puts the two network probes on the settings list itself; both pages answer a host method,

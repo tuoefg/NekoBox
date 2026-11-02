@@ -29,9 +29,7 @@ void main() {
     final box = BoxController(channel: channel, events: events.stream);
     await tester.pumpWidget(BoxApp(controller: box));
     await tester.pumpAndSettle();
-    openPage(tester.element(find.byType(HomePage)), const SettingsPage());
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('General'));
+    openPage(tester.element(find.byType(HomePage)), const GeneralPage());
     await tester.pumpAndSettle();
     expect(find.byType(GeneralPage), findsOneWidget);
     expect(find.text('Apply service changes'), findsNothing);

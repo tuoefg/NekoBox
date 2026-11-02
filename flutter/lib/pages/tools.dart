@@ -29,10 +29,8 @@ class ToolsPage extends StatelessWidget {
         if (caps.of('remote'))
           ListItem.open(leading: const GlyphIcon(AppGlyphs.proxies), title: Text(context.tr('Remote control')), widget: const RemotePage()),
       ]),
-      // One entry, as Throne's drawer has: every settings page lives behind it, in its own order.
-      _section(<ListItem>[
-        ListItem.open(leading: const GlyphIcon(AppGlyphs.settings), title: Text(context.tr('Settings')), widget: const SettingsPage()),
-      ]),
+      // The settings entries sit on this page, in Throne's order: no Settings page in between.
+      _section(settingsEntries(context), title: context.tr('Settings')),
       _section(<ListItem>[
         if (caps.of('reports'))
           for (final kind in ['crash', 'oom', 'power'])
