@@ -49,14 +49,15 @@ class CrashStoreTest {
     @Test
     fun theSerialIsPaddedSoNamesSortWithinOneSecond() {
         install()
-        // Two records in the same second: the unpadded serials 9 and 10 would sort 9 > 10.
-        assertTrue(CrashStore.record(Thread.currentThread(), RuntimeException("a"))!!.name.endsWith("-0001.log"))
-        assertTrue(CrashStore.record(Thread.currentThread(), RuntimeException("b"))!!.name.endsWith("-0002.log"))
-        val ninth = CrashStore.record(Thread.currentThread(), RuntimeException("i"))!!
-        val tenth = CrashStore.record(Thread.currentThread(), RuntimeException("x"))!!
-        assertTrue(ninth.name.endsWith("-0009.log"))
-        assertTrue(tenth.name.endsWith("-0010.log"))
-        assertEquals(listOf(tenth.name, ninth.name), CrashStore.list().map { it.name }.take(2))
+        // Ten records in the same second: the zero-padded serial keeps lexicographic order
+        // equal to creation order even across the 9→10 digit boundary (the counter itself
+        // is a process-wide singleton, so absolute values belong to no single test).
+        val names = (1..10).map { index ->
+            CrashStore.record(Thread.currentThread(), RuntimeException("n$index"))!!.name
+        }
+        assertTrue(names.all { it.removeSuffix(".log").takeLast(4).all(Char::isDigit) })
+        assertEquals(names, names.sorted())
+        assertEquals(names.asReversed(), CrashStore.list().map { it.name })
     }
 
     @Test
