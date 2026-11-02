@@ -35,7 +35,7 @@ object CrashStore {
     /** Writes one crash record; returns the file, or null when the disk said no. */
     fun record(thread: Thread, throwable: Throwable): File? {
         val at = clock()
-        val name = "crash-${stamp(at)}-%04d.log".format(serial.incrementAndGet())
+        val name = "crash-${stamp(at)}-%04d.log".format(Locale.US, serial.incrementAndGet())
         val file = File(storage(), name)
         val written = runCatching {
             file.writeText(

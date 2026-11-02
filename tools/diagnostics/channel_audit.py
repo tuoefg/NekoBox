@@ -40,8 +40,13 @@ DART_DISPATCH = FLUTTER_LIB / "box.dart"
 RECEIVER = r"\w*box\s*!?\??\s*\.\s*(?:call|act)"
 CALL_RE = re.compile(rf"(?<!\?)(?:{RECEIVER}|(?<![\w?.])(?:call|act))\(\s*'([a-zA-Z][a-zA-Z0-9_.:]*)'", re.IGNORECASE)
 # An interpolated method name (`act('${widget.kind}.submit')`) is a dispatch the
-# literal regex cannot name: the quote-with-$ form lands here instead.
-DYNAMIC_CALL_RE = re.compile(rf"(?<!\?)(?:{RECEIVER}|(?<![\w?.])(?:call|act))\(\s*(?!['\s)])|(?<!\?)(?:{RECEIVER}|(?<![\w?.])(?:call|act))\(\s*'(?:[^'\\]|\\.)*\$", re.IGNORECASE)
+# literal regex cannot name. The second alternative is a ZERO-WIDTH lookahead right
+# after the paren: a consuming match would backtrack to the last `$` and leave
+# first_argument() starting mid-string, silently disabling the tail check below.
+DYNAMIC_CALL_RE = re.compile(
+    rf"(?<!\?)(?:{RECEIVER}|(?<![\w?.])(?:call|act))\(\s*(?!['\s)])"
+    rf"|(?<!\?)(?:{RECEIVER}|(?<![\w?.])(?:call|act))\(\s*(?='(?:[^'\\]|\\.)*\$)",
+    re.IGNORECASE)
 KOTLIN_METHOD_RE = re.compile(r'"([a-zA-Z][a-zA-Z0-9_.:]*)"\s*->')
 EMIT_RE = re.compile(r'\bemit\(\s*"([a-zA-Z][a-zA-Z0-9_]*)"')
 DART_CASE_RE = re.compile(r"case\s+'([a-zA-Z][a-zA-Z0-9_]*)'")
@@ -112,7 +117,10 @@ def kotlin_handlers() -> set[str]:
         return set()
     # The when block runs to the next member function: brace matching cannot be used
     # here, because Kotlin's nested string interpolations ("${if (x) "a" else "b"}")
-    # defeat every regular-expression counter.
+    # defeat every regular-expression counter. The boundary assumes member functions
+    # sit at exactly four spaces of indentation — a nested `fun` at that depth inside
+    # the when block would truncate the slice (fail-closed: handlers after it would
+    # surface as missing, never silently excused).
     tail = text[start:]
     next_fun = re.search(r"\n    (?:private |internal |override )?(?:suspend )?fun ", tail)
     end = start + (next_fun.start() if next_fun else len(tail))

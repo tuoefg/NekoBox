@@ -36,9 +36,10 @@ runs:
       run: |
         set -euo pipefail
         for attempt in 1 2 3; do
-          # echo, not yes: `yes |` dies of a broken pipe when sdkmanager stops reading,
-          # and with pipefail that reads as a failure even after a clean install.
-          if echo y | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358"; then
+          # printf, not yes: `yes |` dies of a broken pipe when sdkmanager stops reading,
+          # and with pipefail that reads as a failure even after a clean install. Four y's
+          # cover a runner image that ever ships more than one unaccepted license.
+          if printf 'y\ny\ny\ny\n' | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;28.2.13676358"; then
             break
           fi
           if [ "$attempt" = "3" ]; then
