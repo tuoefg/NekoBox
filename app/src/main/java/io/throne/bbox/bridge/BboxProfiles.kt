@@ -259,7 +259,10 @@ object BboxProfiles {
         // The form always sends url; an absent key keeps the stored one rather than clearing it.
         val url = if (values.containsKey("url")) (values["url"] as? String)?.trim().orEmpty() else group.url
         val newUrl = if (type == "subscription") url else ""
-        subscriptionUrlError(newUrl).takeIf { it.isNotEmpty() }?.let { error(it) }
+        // A basic group carries no URL, so requiring one here refused every save of a local profile.
+        if (type == "subscription") {
+            subscriptionUrlError(newUrl).takeIf { it.isNotEmpty() }?.let { error(it) }
+        }
 
         fun text(key: String) = (sent[key] as? String).orEmpty().trim()
         fun flag(key: String) = sent[key] as? Boolean ?: false
@@ -496,6 +499,13 @@ object BboxProfiles {
     suspend fun createAutoSelector(groupId: Long?): Map<String, Any?> = withContext(Dispatchers.IO) {
         val gid = groupId?.takeIf { it > 0L } ?: GroupRepo.all().firstOrNull()?.id ?: error("No proxy group")
         val entity = ProfileManager.addProfile(AutoSelector(), gid)
+        // A new selector starts on the group it was made from and carries a name: with an empty list it
+        // tracked nothing (so it could never pick a node) and rendered as "no group" on the proxies screen.
+        AutoSelectorProfiles.load(entity.id)?.let { selector ->
+            selector.gids = arrayListOf(gid)
+            if (selector.name.isBlank()) selector.name = "Auto Selector"
+            AutoSelectorProfiles.save(entity.id, selector)
+        }
         BboxBridge.scheduleRefresh(immediate = true)
         autoSelectorInfo(entity.id)
     }

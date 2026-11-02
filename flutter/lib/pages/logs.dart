@@ -71,7 +71,9 @@ class _LogsPageState extends State<LogsPage> {
             section: level == 'Default' ? CommonPopupMenuSection(title: context.tr('Log level')) : null,
             onPressed: () => setState(() => _level = level)),
       ],
-      body: Column(children: [
+      // The body starts at the top of the window with the app bar floating over it, so the switch needs the
+      // same inset every other page's content takes — without it the segments drew across the status bar.
+      body: Padding(padding: EdgeInsets.only(top: context.contentTopPadding), child: Column(children: [
         Padding(
           padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: SegmentedControl<bool>(
@@ -93,7 +95,7 @@ class _LogsPageState extends State<LogsPage> {
               onCancelToEnd: _pause, onResumeToEnd: _resume,
               child: SuperListView.separated(
                 controller: _scroll, physics: _physics, reverse: true, shrinkWrap: true,
-                padding: EdgeInsets.only(top: context.contentTopPadding, bottom: 16 + context.bottomInset),
+                padding: EdgeInsets.only(top: 8, bottom: 16 + context.bottomInset),
                 extentEstimation: recordListExtentEstimation,
                 itemCount: logs.length,
                 separatorBuilder: (_, _) => const SizedBox(height: recordListGap),
@@ -116,7 +118,7 @@ class _LogsPageState extends State<LogsPage> {
           ),
         ),
         ))],
-      ),
+      )),
     ));
   }
 }

@@ -901,6 +901,9 @@ class ThroneBoxBridge(
     }
 
     private suspend fun egressWire(): Map<String, Any?> = withContext(Dispatchers.IO) {
+        // The probe reaches the internet through the mixed inbound, which nothing answers until the core is
+        // up: with the service stopped it only logged a connection refusal against the dashboard's own check.
+        if (!DataStore.serviceState.connected) return@withContext emptyMap()
         var failure: String? = null
         val info = BboxEgress.probe(force = false) { failure = it }
         if (info.isEmpty && failure != null) error(failure!!)

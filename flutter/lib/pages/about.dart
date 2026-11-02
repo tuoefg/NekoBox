@@ -29,7 +29,7 @@ class _AboutPageState extends State<AboutPage> {
           TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close'))),
           if (result['available'] == true || result['hasMetadata'] == false) TextButton(onPressed: () {
             Navigator.pop(context);
-            box.act('url.open', {'url': result['downloadUrl'] ?? result['url'] ?? 'https://github.com/giturass/B-box/releases'});
+            box.act('url.open', {'url': result['downloadUrl'] ?? result['url'] ?? 'https://github.com/yuedaochangmendian/throne-flclash-ui/releases'});
           }, child: Text(context.tr(result['downloadUrl'] == null ? 'Releases' : 'Download'))),
         ],
       ));
@@ -66,7 +66,7 @@ class _AboutPageState extends State<AboutPage> {
         ])),
         const SizedBox(height: 8),
         generateSection(title: context.tr('More'), items: [
-          _link(AppGlyphs.code, 'Source code', 'github.com/giturass/B-box', 'https://github.com/giturass/B-box'),
+          _link(AppGlyphs.code, 'Source code', 'yuedaochangmendian/throne-flclash-ui', 'https://github.com/yuedaochangmendian/throne-flclash-ui'),
           _link(AppGlyphs.cpu, 'Core', 'sing-box ${box.coreVersion}', 'https://github.com/SagerNet/sing-box'),
           _link(AppGlyphs.paintbrush, 'FlClash interface', 'chen08209/FlClash · v0.9.2 · GPL-3.0', 'https://github.com/chen08209/FlClash/tree/7fd417fb9a9a277c6a9339a8ac87f907df7c25f7'),
           ListItem(leading: const _LinkBadge(glyph: AppGlyphs.info), title: Text(context.tr('Open-source licenses')),

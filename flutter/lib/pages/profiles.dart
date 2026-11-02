@@ -211,7 +211,8 @@ class _AddProfileMenuState extends State<AddProfileMenu> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final info = json(await context.box.call('profiles.autoSelectorCreate', {}));
+      // The new selector tracks the group the user is looking at, not whichever group happens to be first.
+      final info = json(await context.box.call('profiles.autoSelectorCreate', {'groupId': context.box.selectedProfileId}));
       if (mounted) await openPage(context, AutoSelectorPage(id: (info['id'] as num?)?.toInt() ?? 0));
     } catch (error) { if (mounted) context.box.report(error); }
     finally { if (mounted) setState(() => _busy = false); }
@@ -247,7 +248,8 @@ class _AddProfilePageState extends State<AddProfilePage> {
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      final info = json(await context.box.call('profiles.autoSelectorCreate', {}));
+      // The new selector tracks the group the user is looking at, not whichever group happens to be first.
+      final info = json(await context.box.call('profiles.autoSelectorCreate', {'groupId': context.box.selectedProfileId}));
       if (mounted) await openPage(context, AutoSelectorPage(id: (info['id'] as num?)?.toInt() ?? 0));
     } catch (error) { if (mounted) context.box.report(error); }
     finally { if (mounted) setState(() => _loading = false); }

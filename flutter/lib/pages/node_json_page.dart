@@ -44,7 +44,9 @@ class _NodeJsonPageState extends State<NodeJsonPage> {
   }
 
   Future<void> _load({bool confirmDiscard = false}) async {
-    if (_saving || _loading) return;
+    // _loading starts true and only the load itself clears it, so guarding on it here made the first
+    // load return before doing anything and the editor stayed an empty sheet.
+    if (_saving) return;
     if (confirmDiscard && _dirty && !await confirm(context, 'Discard changes?', action: 'Discard')) return;
     if (!mounted) return;
     setState(() { _loadError = null; _loading = true; });

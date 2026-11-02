@@ -260,8 +260,9 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
       ((candidate['id'] as num).toInt().toString(), candidate['label'].toString())).toList();
     final routeChoices = rows(_data?['routeChoices']).map((choice) =>
       (choice['id']?.toString() ?? '-1', choice['label']?.toString() ?? '')).toList();
+    // A refused save says why: without this the sheet stayed open and looked like a dead button.
     return FormPage(
-      title: 'Group settings', saving: _saving, onSave: _save, error: issue?.message,
+      title: 'Group settings', saving: _saving, onSave: _save, error: issue?.message ?? _error,
       children: [
         generateSection(items: [
           FormRow(title: context.tr('Name'), invalid: issue?.field == 'name',
