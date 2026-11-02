@@ -1,5 +1,7 @@
 # B-box's interface on Throne
 
+> Status 2026-11-03: current. `Capabilities.kt` is the source of truth for what exists; `tools/diagnostics/channel_audit.py` (wired into CI) enforces the Dart/Kotlin contract on every push.
+
 The app runs **B-box's own Flutter interface** over Throne's backend. `flutter/` starts as a copy of
 `giturass/B-box`'s `flutter/` module (FlClash 0.9.2 presentation, M3 Expressive) — 99 files vendored
 unchanged and 33 adapted, all recorded with hashes in `flclash-manifest.json`. On top of that the

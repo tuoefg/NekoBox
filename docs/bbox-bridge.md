@@ -1,5 +1,7 @@
 # The B-box bridge
 
+> Status 2026-11-03: current. `Capabilities.kt` is the source of truth for what exists; `tools/diagnostics/channel_audit.py` (wired into CI) enforces the Dart/Kotlin contract on every push.
+
 The ported interface (`:bboxui`) renders one immutable snapshot and sends every gesture through one object. Throne's
 backend does not work that way: its state lives in four places and the old fragments read each of them directly. This
 document describes the layer in `app/src/main/java/io/throne/bbox/bridge` that reconciles the two, replacing the
