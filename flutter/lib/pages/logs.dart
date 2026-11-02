@@ -10,7 +10,7 @@ class LogsPage extends StatefulWidget {
 
 class _LogsPageState extends State<LogsPage> {
   String _query = '', _level = 'Default';
-  bool _logcat = false, _exporting = false;
+  bool _logcat = false, _exporting = false, _showNoise = false;
   static const _priorities = {
     'panic': 0, 'fatal': 1, 'error': 2, 'warn': 3, 'warning': 3,
     'info': 4, 'debug': 5, 'trace': 6,
@@ -41,6 +41,15 @@ class _LogsPageState extends State<LogsPage> {
     return _level == 'All' || level == _level.toLowerCase();
   }
 
+  /// The sing-box lazy handshake reports an ERROR when the local app resets a
+  /// connection before the remote dial finished; the connection was dead anyway,
+  /// so the log line is noise a VPN always produces (analysis of 2026-11-03).
+  /// Only the core log carries it — Logcat noise is the system's own.
+  bool _isNoise(Json item) => !_logcat &&
+    item['level'].toString().toLowerCase() == 'error' &&
+    item['message'].toString().contains('report handshake success') &&
+    item['message'].toString().contains('connection reset by peer');
+
   Future<void> _export(List<Json> logs) async {
     if (_exporting || logs.isEmpty) return;
     final box = context.box;
@@ -64,10 +73,12 @@ class _LogsPageState extends State<LogsPage> {
     final box = context.watchBox(BoxAspect.logs);
     if (_logcat) context.watchBox(BoxAspect.logcat);
     final words = _query.toLowerCase().trim().split(RegExp(r'\s+'));
-    final logs = (_paused ?? (_logcat ? box.logcat : box.logs)).where((item) =>
+    final matches = (_paused ?? (_logcat ? box.logcat : box.logs)).where((item) =>
       _matchesLevel(item, box.defaultLogLevel) &&
       words.every(([item['level'], item['message']].join(' ').toLowerCase()).contains),
-    ).toList();
+    );
+    final noiseCount = matches.where(_isNoise).length;
+    final logs = (_showNoise ? matches : matches.where((item) => !_isNoise(item))).toList();
     return BoxDataSubscription(data: _logcat ? BoxData.logcat : BoxData.logs, child: CommonScaffold(
       title: context.tr('Logs'),
       onKeywordsUpdate: (words) => setState(() => _query = words.join(' ')),
@@ -98,6 +109,16 @@ class _LogsPageState extends State<LogsPage> {
             onChanged: (value) => setState(() { _logcat = value; _paused = null; }),
           ),
         ),
+        if (noiseCount > 0) Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          child: Align(alignment: AlignmentDirectional.centerStart, child: _NoiseChip(
+            label: _showNoise
+              ? context.tr('Hide connection-reset noise')
+              : context.tr('Folded {count} connection resets').replaceAll('{count}', '$noiseCount'),
+            active: _showNoise,
+            onPressed: () => setState(() => _showNoise = !_showNoise),
+          )),
+        ),
         Expanded(child: NullStatusSwitcher(
         isEmpty: logs.isEmpty, isSearching: _query.trim().isNotEmpty || !['Default', 'All'].contains(_level),
         nullStatus: NullStatus(label: context.tr('No logs'), illustration: NullStatusIllustration.logs),
@@ -126,7 +147,7 @@ class _LogsPageState extends State<LogsPage> {
                       if ((log['receivedAt'] as num? ?? 0) > 0) RecordTimestamp(recordTime(log['receivedAt'])),
                       RecordLabel(label: level, tone: tone, onPressed: () => context.commonScaffoldState?.addKeyword(level)),
                     ]),
-                    body: SelectableText(log['message'].toString(), style: RecordTextStyles.of(context).primary),
+                    body: Text(log['message'].toString(), style: RecordTextStyles.of(context).primary),
                   );
                 },
               ),
@@ -136,5 +157,34 @@ class _LogsPageState extends State<LogsPage> {
         ))],
       )),
     ));
+  }
+}
+
+/// The fold toggle for the core log's known-benign connection-reset errors: a quiet
+/// pill that states the count while folded and asks nothing while expanded.
+class _NoiseChip extends StatelessWidget {
+  const _NoiseChip({required this.label, required this.active, required this.onPressed});
+  final String label;
+  final bool active;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = context.colorScheme;
+    return Material(
+      color: active ? scheme.secondaryContainer : SurfaceLevel.card.colorOf(scheme),
+      shape: AppShape.all(20),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: AppTextStyle.caption1.of(context))),
+          ]),
+        ),
+      ),
+    );
   }
 }

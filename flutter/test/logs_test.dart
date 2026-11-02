@@ -225,4 +225,49 @@ void main() {
     expect(find.text('No logs'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  const noiseMessage = 'connection: report handshake success: connection reset by peer';
+
+  testWidgets('benign connection-reset errors fold behind a counting chip on the core tab', (tester) async {
+    await mount(tester);
+    await emit(tester, null, [..._records,
+      {'id': 8, 'level': 'Error', 'message': noiseMessage},
+      {'id': 9, 'level': 'Error', 'message': noiseMessage},
+      {'id': 10, 'level': 'Error', 'message': 'real failure: denied'},
+    ]);
+    // Folded by default: the chip counts the noise, the list keeps only real failures.
+    expect(find.text('Folded 2 connection resets'), findsOneWidget);
+    expect(find.textContaining('report handshake success'), findsNothing);
+    expect(find.text('real failure: denied'), findsOneWidget);
+    // Expanding shows every record and asks nothing.
+    await tester.tap(find.text('Folded 2 connection resets'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hide connection-reset noise'), findsOneWidget);
+    expect(find.textContaining('report handshake success'), findsNWidgets(2));
+    // Collapsing again hides them.
+    await tester.tap(find.text('Hide connection-reset noise'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('report handshake success'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the logcat tab never folds: system noise is the system\'s own', (tester) async {
+    await mount(tester);
+    expect(tester.takeException(), isNull, reason: 'after mount');
+    await emit(tester, null, [..._records, {'id': 8, 'level': 'Error', 'message': noiseMessage}]);
+    expect(tester.takeException(), isNull, reason: 'after core emit');
+    expect(find.text('Folded 1 connection resets'), findsOneWidget);
+    // Switching to Logcat keeps the record and offers no fold chip.
+    await tester.tap(find.text('Logcat'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull, reason: 'after tab switch');
+    events.add({'type': 'logcat', 'value': {'entries': [
+      {'id': 1, 'level': 'Error', 'message': noiseMessage},
+    ]}});
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull, reason: 'after logcat emit');
+    expect(find.text('Folded 1 connection resets'), findsNothing);
+    expect(find.textContaining('report handshake success'), findsOneWidget);
+    expect(tester.takeException(), isNull, reason: 'final');
+  });
 }
