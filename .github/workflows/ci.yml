@@ -20,6 +20,11 @@ jobs:
         uses: ./.github/actions/android-build
         with:
           tasks: app:testOssDebugUnitTest app:assembleOssDebug
+      - name: Scan the Flutter AAR for unbacked API references
+        run: |
+          AAR=$(find flutter/build/host/outputs/repo -name "*.aar" | head -1)
+          test -n "$AAR"
+          python3 tools/diagnostics/scan_aar_apis.py "$AAR"
 
   flutter-tests:
     name: Flutter module tests

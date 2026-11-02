@@ -109,9 +109,11 @@ dependencies {
 }
 
 // `mobile_scanner` (pulled in by the B-box Flutter module, used by profiles.dart's QR scanner) asks for
-// androidx.camera 1.6.1, whose aar metadata demands compileSdk 36 and AGP 8.9.1. This project builds with
-// compileSdk 35 and AGP 8.8.1, so pin CameraX to the newest line that still accepts them (1.5.3 declares
-// minCompileSdk=35 / minAndroidGradlePluginVersion=8.6.0). Same pattern as pinning rosemoe editor to 0.23.7.
+// androidx.camera 1.6.1, whose aar metadata demands minCompileSdk=36 and minAndroidGradlePluginVersion=8.9.1.
+// compileSdk is already 36 (the Flutter AAR forces it, see Helpers.setupCommon), but the project still builds
+// with AGP 8.8.1, so CameraX stays pinned to the newest line that accepts it (1.5.3 declares minCompileSdk=35 /
+// minAGP=8.6.0). Removing these pins rides with the next AGP upgrade, not before. Same pattern as pinning the
+// rosemoe editor to 0.23.7.
 configurations.configureEach {
     resolutionStrategy {
         // CameraX: see the comment above.
@@ -122,7 +124,9 @@ configurations.configureEach {
         // The B-box AARs were published alongside libraries whose POMs still ask for newer Kotlin artifacts
         // (mobile_scanner declares kotlin-stdlib 2.2.10 and kotlinx-coroutines 1.11.0, both metadata 2.2+).
         // Publishing does not rewrite those declarations, so pin them here to what this project's Kotlin 2.0.21
-        // compiler can actually read — same idea as excluding kotlin-stdlib from rosemoe editor above.
+        // compiler can actually read — same idea as excluding kotlin-stdlib from rosemoe editor above. CI runs
+        // tools/diagnostics/scan_aar_apis.py against the freshly built AAR to prove every kotlin*/coroutines*
+        // reference the AAR makes is backed by these pinned versions (a miss would be a runtime NoSuchMethodError).
         force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
         force("org.jetbrains.kotlin:kotlin-stdlib-common:2.0.21")
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.21")
