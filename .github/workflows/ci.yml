@@ -1,0 +1,49 @@
+name: CI
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  build:
+    name: Unit tests and debug build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Build
+        uses: ./.github/actions/android-build
+        with:
+          tasks: app:testOssDebugUnitTest app:assembleOssDebug
+      - name: Scan the Flutter AAR for unbacked API references
+        run: |
+          AAR=$(find flutter/build/host/outputs/repo -name "*.aar" | head -1)
+          test -n "$AAR"
+          python3 tools/diagnostics/scan_aar_apis.py "$AAR"
+
+  flutter-tests:
+    name: Flutter module tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Channel contract audit
+        run: python3 tools/diagnostics/channel_audit.py
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Analyze
+        working-directory: flutter
+        run: |
+          flutter pub get
+          flutter analyze --fatal-infos
+      - name: Test
+        working-directory: flutter
+        run: |
+          flutter test
