@@ -1,0 +1,75 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the release v<VERSION_NAME> at this commit (otherwise the APKs are only uploaded as a workflow artifact)
+        type: boolean
+        default: true
+concurrency:
+  group: release
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  release:
+    name: Build and publish a release
+    runs-on: ubuntu-latest
+    env:
+      SIGNING_KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_B64 }}
+      SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
+      SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
+      SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      # The tag is v<VERSION_NAME>; a published release never reuses an existing tag.
+      - name: Version
+        id: version
+        env:
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          VERSION_NAME=$(sed -n 's/^VERSION_NAME=//p' nb4a.properties | tr -d '\r[:space:]')
+          test -n "$VERSION_NAME"
+          TAG="v$VERSION_NAME"
+          if [ "$PUBLISH" = "true" ] && git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            echo "::error::$TAG already exists: raise VERSION_NAME in nb4a.properties for a new release"
+            exit 1
+          fi
+          echo "version=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      # The release notes are the version's CHANGELOG.md section; a missing one fails before the build.
+      - name: Changelog
+        if: ${{ inputs.publish }}
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.version }}
+        run: bash buildScript/release_notes.sh "$VERSION_NAME" > /dev/null
+      - name: Build
+        uses: ./.github/actions/android-build
+        with:
+          tasks: app:assembleOssRelease
+          channel: stable
+          build-number: '999'
+          sign: 'true'
+      - name: Release assets
+        run: python3 buildScript/release_assets.py app/build/outputs/apk/oss/release dist stable
+      - name: Upload artifact
+        if: ${{ !inputs.publish }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: Throne-${{ steps.version.outputs.tag }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION_NAME: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          bash buildScript/release_notes.sh "$VERSION_NAME" > "$RUNNER_TEMP/release.md"
+          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG" --notes-file "$RUNNER_TEMP/release.md"
