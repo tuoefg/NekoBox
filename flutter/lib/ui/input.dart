@@ -242,7 +242,7 @@ class _InputDialogState extends State<InputDialog> {
                   widget.inputFormatters,
                   widget.maxLength,
                 ),
-                keyboardType: widget.keyboardType ?? TextInputType.url,
+                keyboardType: widget.keyboardType ?? TextInputType.text,
                 maxLines: null,
                 minLines: 1,
                 controller: _textController,

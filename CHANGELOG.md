@@ -3,6 +3,7 @@
 * The remote link field and the rule editor's inputs no longer pull up the system's password keyboard: Flutter maps `enableSuggestions: false` to Android's `TYPE_TEXT_VARIATION_VISIBLE_PASSWORD` (several IMEs ignore the plain no-suggestions flag), so the system classified them as password boxes, switched to its secure keyboard and took the clipboard away. Ordinary fields now keep suggestions on and only disable autocorrect; genuinely secret inputs (the obscured ones) still opt out
 * Applies to every non-secret input, not just those two: profile URL, routing profile name/URL/endpoint ids, rule name and every domain/keyword/CIDR/port/process row, subscription and group settings, WebDAV address and account, node tuning, request header editors, the terminal prompt and both code editors
 * New `input_keyboard_test` pins the contract: a field that is not obscured may not disable suggestions or ask for the visible-password keyboard
+* Every URL field asks for the ordinary text keyboard instead of the URL one: the remote link, the routing profile's remote URL, the WebDAV address, subscription URLs, the test/connectivity URLs, DNS server entries and the generic input dialog. The `/` and `.com` shortcut keys go away with it, but so does the URI-specific IME layout that some ROMs refuse to paste into
 
 #### 3.1.3
 

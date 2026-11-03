@@ -25,8 +25,9 @@ Map<String, Object?> rule({String name = '', String type = 'custom', String acti
 };
 
 /// Android turns `enableSuggestions: false` into TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, because several IMEs
-/// ignore TYPE_TEXT_FLAG_NO_SUGGESTIONS. The system then treats the field as a password box, switches to its
-/// secure keyboard and drops the clipboard, so no ordinary field may ask for it.
+/// ignore TYPE_TEXT_FLAG_NO_SUGGESTIONS, and `TextInputType.url` into TYPE_TEXT_VARIATION_URI. Both variations
+/// hand the field to a specialised IME layout that drops the clipboard strip on some ROMs, so the app's ordinary
+/// fields ask for neither.
 void expectOrdinaryKeyboard(WidgetTester tester, String where) {
   final fields = tester.widgetList<EditableText>(find.byType(EditableText)).toList();
   expect(fields, isNotEmpty, reason: '$where: expected at least one text field');
@@ -36,6 +37,8 @@ void expectOrdinaryKeyboard(WidgetTester tester, String where) {
       reason: '$where: enableSuggestions false reads as a password field on Android and blocks paste');
     expect(field.keyboardType, isNot(TextInputType.visiblePassword),
       reason: '$where: a visible-password keyboard is the password IME');
+    expect(field.keyboardType, isNot(TextInputType.url),
+      reason: '$where: the URI variation is handed to a URL-only IME layout, which cannot paste on some ROMs');
   }
 }
 
@@ -91,9 +94,14 @@ void main() {
 
   testWidgets('the remote link field keeps a keyboard that can paste', (tester) async {
     await mount(tester);
-    openPage(tester.element(find.byType(HomePage)), const ProfileForm(initial: {'remote': true}));
+    openPage(tester.element(find.byType(HomePage)),
+      const ProfileForm(initial: {'remote': true, 'url': 'https://example.com/sub'}));
     await tester.pumpAndSettle();
     expect(find.text('URL'), findsOneWidget);
+    final link = tester.widgetList<EditableText>(find.byType(EditableText))
+      .firstWhere((field) => field.controller.text.startsWith('http'));
+    expect(link.keyboardType, TextInputType.text,
+      reason: 'A pasted subscription link needs the ordinary text keyboard, not the URL-only one');
     expectOrdinaryKeyboard(tester, 'profile remote URL');
     expect(tester.takeException(), isNull);
   });

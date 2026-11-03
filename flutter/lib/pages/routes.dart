@@ -339,7 +339,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
             }),
           ),
           if (_isRemote) FormRow(title: context.tr('URL'), trailing: FormRowTextField(
-            controller: _url, hintText: 'https://', keyboardType: TextInputType.url,
+            controller: _url, hintText: 'https://', keyboardType: TextInputType.text,
             autocorrect: false,
           )),
           if (_isRemote) ListItem.toggle(

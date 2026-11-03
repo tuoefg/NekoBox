@@ -175,7 +175,7 @@ class _DnsServerDialogState extends State<_DnsServerDialog> {
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         TextField(
           controller: _controller, autocorrect: false,
-          keyboardType: TextInputType.url,
+          keyboardType: TextInputType.text,
           decoration: const InputDecoration(border: OutlineInputBorder()),
         ),
         if (widget.suggestions.isNotEmpty) Flexible(

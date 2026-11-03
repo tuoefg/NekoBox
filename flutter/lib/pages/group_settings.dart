@@ -273,7 +273,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
           ListItem(title: Text(context.tr('Type')), trailing: Text(context.tr(_subscription ? 'Subscription' : 'Basic'))),
           if (_subscription) FormRow(title: context.tr('URL'), invalid: issue?.field == 'url',
             trailing: FormRowTextField(controller: _url, hintText: context.tr('Required'),
-              keyboardType: TextInputType.url, textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.text, textInputAction: TextInputAction.next,
               autocorrect: false, onChanged: _changed)),
           FormRow(title: context.tr('Auto clear unavailable'), onPressed: () => setState(() => _autoClearUnavailable = !_autoClearUnavailable),
             trailing: CommonSwitch(value: _autoClearUnavailable, onChanged: (value) => setState(() => _autoClearUnavailable = value))),

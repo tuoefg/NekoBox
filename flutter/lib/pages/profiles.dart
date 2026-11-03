@@ -337,7 +337,7 @@ class _ProfileFormState extends State<ProfileForm> {
             trailing: CommonSwitch(value: _remote, onChanged: (value) => setState(() => _remote = value))),
           if (_remote) FormRow(title: context.tr('URL'), invalid: issue?.field == 'url',
             trailing: FormRowTextField(controller: _url, hintText: context.tr('Required'),
-              keyboardType: TextInputType.url, textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.text, textInputAction: TextInputAction.next,
               autocorrect: false, onChanged: _changed)),
         ], footer: _remote
             ? context.tr('This URL must serve a sing-box JSON configuration.')

@@ -151,13 +151,13 @@ class _AutoSelectorPageState extends State<AutoSelectorPage> {
           FormRow(title: context.tr('Test URL'), trailing: FormRowTextField(
             initialValue: '${_info['testURL'] ?? ''}',
             hintText: context.tr('Empty uses the Testing page URL'),
-            keyboardType: TextInputType.url, autocorrect: false,
+            keyboardType: TextInputType.text, autocorrect: false,
             onChanged: (value) => _set('testURL', value),
           )),
           FormRow(title: context.tr('Connectivity URL'), trailing: FormRowTextField(
             initialValue: '${_info['connectivityURL'] ?? ''}',
             hintText: context.tr('Empty uses the test URL'),
-            keyboardType: TextInputType.url, autocorrect: false,
+            keyboardType: TextInputType.text, autocorrect: false,
             onChanged: (value) => _set('connectivityURL', value),
           )),
           _number('Tolerance', 'toleranceMs', unit: 'ms'),
