@@ -1,3 +1,12 @@
+#### 3.1.3
+
+* The home badge shows the exit's region as its vector flag again instead of the two-letter code, cropped to the animated clover; a code the flag set does not know still falls back to its text, and an unknown exit keeps the proxy glyph
+* With the service stopped the card now reports the address the phone itself appears as: the egress probe skips the mixed inbound (nothing answers it while the core is down) and asks over the device's own connection, so the card no longer sits on "—" until the tunnel starts
+* The tunnel answer and the direct answer keep separate caches and both are invalidated on start and stop, so the card cannot show the previous session's exit after a reconnect
+* A direct answer skips the IP quality lookup — grading the phone's uplink says nothing about an exit — while the address, region and carrier still show
+* Tapping the badge or a route change asks the bridge for a fresh probe instead of the 30-second cache, so switching networks while stopped updates the address immediately
+* country_flags returns to the build for the flag set
+
 #### 3.1.2
 
 * The status badge and the IP card are back to their first version: the exit's country code on the clover and a tap that re-checks the IP, with no flag icon and none of the crop/rotation machinery behind it

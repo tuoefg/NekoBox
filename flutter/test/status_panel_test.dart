@@ -25,9 +25,9 @@ class _Dashboard {
   String? country = 'GB';
   String status = 'Started';
   DateTime? cachedQualityAt;
-  bool holdIP = false, failIP = false, failQuality = false, autoQuality = false, lateOnClose = false, remote = false;
+  bool holdIP = false, failIP = false, failQuality = false, autoQuality = false, lateOnClose = false, remote = false, direct = false;
 
-  Map<String, Object?> ipInfo(String id) => {'ip': addresses[id], 'country': country,
+  Map<String, Object?> ipInfo(String id) => {'ip': addresses[id], 'country': country, 'direct': direct,
     'ipSource': 'www.cloudflare.com', 'checkedAt': DateTime.now().millisecondsSinceEpoch};
   Map<String, Object?> quality(String id, {String organization = 'Example Business'}) => {
     'status': 200,
@@ -127,6 +127,26 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('a known country renders its region flag instead of the code', (tester) async {
+    final dashboard = _Dashboard()..autoQuality = true;
+    await dashboard.mount(tester);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('country-badge-flag')), findsOneWidget);
+    expect(find.text('GB'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a direct answer skips the quality check', (tester) async {
+    final dashboard = _Dashboard()..status = 'Stopped'..direct = true..autoQuality = true;
+    await dashboard.mount(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('203.0.113.9'), findsOneWidget);
+    expect(dashboard.calls.where((call) => call.method == 'dashboard.probe.open'), isEmpty,
+      reason: 'A direct address is the device uplink, not an exit worth grading');
+    expect(dashboard.calls.where((call) => call.method == 'dashboard.probe.get'), isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('badge focus ring paints above an opaque child', (tester) async {
     final boundaryKey = GlobalKey();
     await tester.pumpWidget(Directionality(textDirection: TextDirection.ltr, child: Center(
@@ -162,7 +182,7 @@ void main() {
     expect(dashboard.calls.where((call) => call.method == 'service.start'), isEmpty);
     expect(dashboard.ids, hasLength(1));
     expect(find.text('203.0.113.9'), findsOneWidget);
-    expect(find.text('GB'), findsOneWidget);
+    expect(find.byKey(const Key('country-badge-flag')), findsOneWidget);
     expect(find.text('Example Business'), findsOneWidget);
     expect(find.text('Business'), findsOneWidget);
     expect(find.text('Quality Good'), findsOneWidget);

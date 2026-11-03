@@ -6,6 +6,7 @@
 
 import 'dart:math' as math;
 import 'package:b_box_ui/widgets.dart';
+import 'package:country_flags/country_flags.dart' as country_flags;
 import 'package:material_new_shapes/material_new_shapes.dart';
 
 const _ipMask = '*****';
@@ -476,7 +477,10 @@ class _CountryBadgeState extends State<_CountryBadge>
         : colorScheme.onSurfaceVariant;
     final enabled = !widget.checking;
     final size = widget.size;
-    final code = widget.countryCode;
+    final code = widget.countryCode?.trim();
+    final showsFlag = code != null &&
+        code.isNotEmpty &&
+        country_flags.FlagCode.fromCountryCode(code.toUpperCase()) != null;
     final tooltip = context.appLocalizations.retry;
     final color = Color.alphaBlend(
       foreground.withValues(alpha: enabled && _hovered ? 0.08 : 0),
@@ -498,30 +502,47 @@ class _CountryBadgeState extends State<_CountryBadge>
             enabled: enabled,
             child: AnimatedBuilder(
               animation: _turns,
-              builder: (_, child) => ShapeBadge(
-                shape: MaterialShapes.clover4Leaf,
-                color: color,
-                size: size,
-                rotation: _turns.value * 2 * math.pi,
-                ring: _focused ? focusRingSide(colorScheme) : null,
-                child: child,
-              ),
+              builder: (_, child) {
+                final rotation = _turns.value * 2 * math.pi;
+                return ShapeBadge(
+                  shape: MaterialShapes.clover4Leaf,
+                  color: color,
+                  size: size,
+                  rotation: rotation,
+                  ring: _focused ? focusRingSide(colorScheme) : null,
+                  child: showsFlag
+                      ? ClipPath(
+                          clipper: _ReferenceCountryBadgeClipper(rotation),
+                          clipBehavior: Clip.antiAlias,
+                          child: child,
+                        )
+                      : child,
+                );
+              },
               child: code == null || code.isEmpty
                   ? GlyphIcon(
                       AppGlyphs.proxies,
                       size: size * 0.42,
                       color: foreground,
                     )
-                  : Text(
-                      code.toUpperCase(),
-                      maxLines: 1,
-                      style: AppTextStyle.footnote
-                          .of(context, emphasized: true)
-                          .copyWith(
-                            color: foreground,
-                            letterSpacing: 0.04 * AppTextStyle.footnote.size,
+                  : showsFlag
+                      ? country_flags.CountryFlag.fromCountryCode(
+                          code.toUpperCase(),
+                          theme: country_flags.ImageTheme(
+                            width: size,
+                            height: size,
                           ),
-                    ),
+                        )
+                      : Text(
+                          code.toUpperCase(),
+                          maxLines: 1,
+                          style: AppTextStyle.footnote
+                              .of(context, emphasized: true)
+                              .copyWith(
+                                color: foreground,
+                                letterSpacing: 0.04 * AppTextStyle.footnote.size,
+                              ),
+                        ),
             ),
           ),
         ),
@@ -899,6 +920,25 @@ class _MorphClipper extends CustomClipper<Path> {
   @override
   bool shouldReclip(_MorphClipper oldClipper) =>
       oldClipper.progress != progress;
+}
+
+/// The clover the badge paints, so the flag inside it is trimmed to the same outline.
+class _ReferenceCountryBadgeClipper extends CustomClipper<Path> {
+  const _ReferenceCountryBadgeClipper(this.rotation);
+
+  final double rotation;
+
+  @override
+  Path getClip(Size size) => shapePathOf(MaterialShapes.clover4Leaf).transform(
+    (Matrix4.identity()
+      ..translateByDouble(size.width / 2, size.height / 2, 0, 1)
+      ..rotateZ(rotation)
+      ..scaleByDouble(size.width, size.height, 1, 1)
+      ..translateByDouble(-0.5, -0.5, 0, 1)).storage);
+
+  @override
+  bool shouldReclip(_ReferenceCountryBadgeClipper oldClipper) =>
+      oldClipper.rotation != rotation;
 }
 
 EdgeInsets dashboardCardPadding(DashboardDensity density) => switch (density) {

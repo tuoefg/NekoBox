@@ -25,9 +25,9 @@ class RoutedIpProbe implements IpProbeTransport {
     await box.call('dashboard.probe.open', {'id': id});
   }
 
-  Future<Json> egress() async {
+  Future<Json> egress({bool force = false}) async {
     if (cancelled || _closed) throw const IpProbeCancelled();
-    final result = json(await box.call('dashboard.egress', {'id': id}));
+    final result = json(await box.call('dashboard.egress', {'id': id, if (force) 'force': true}));
     if (cancelled || _closed) throw const IpProbeCancelled();
     return result;
   }

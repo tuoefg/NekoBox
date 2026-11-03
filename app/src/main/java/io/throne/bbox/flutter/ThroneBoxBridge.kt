@@ -640,7 +640,7 @@ class ThroneBoxBridge(
                 }
 
                 // --- diagnostics and the status card's probes
-                "dashboard.egress" -> result.respond { egressWire() }
+                "dashboard.egress" -> result.respond { egressWire(force = call.argument<Boolean>("force") == true) }
                 "dashboard.probe.open" -> {
                     probes.computeIfAbsent(call.argument<String>("id").orEmpty()) { BboxProbeSession(probeClient()) }
                     result.success(null)
@@ -909,15 +909,17 @@ class ThroneBoxBridge(
     // -------------------------------------------------------------------------------------------- probes and egress
 
     private fun probeClient(): OkHttpClient {
-        val host = DataStore.inboundAddress.ifBlank { SettingsRegistry.LOOPBACK_ADDRESS }
-        val port = DataStore.inboundSocksPort
-        return OkHttpClient.Builder()
-            .proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(host, port)))
+        val builder = OkHttpClient.Builder()
             .connectTimeout(6, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .callTimeout(16, TimeUnit.SECONDS)
             .retryOnConnectionFailure(false)
-            .build()
+        // Same route as the egress probe: the mixed inbound only while the core answers it, the device network
+        // otherwise, so a session opened while stopped still reaches the quality sources.
+        if (!DataStore.serviceState.connected) return builder.build()
+        val host = DataStore.inboundAddress.ifBlank { SettingsRegistry.LOOPBACK_ADDRESS }
+        val port = DataStore.inboundSocksPort
+        return builder.proxy(Proxy(Proxy.Type.HTTP, InetSocketAddress(host, port))).build()
     }
 
     private suspend fun probeGet(call: MethodCall): Map<String, Any?> {
@@ -933,12 +935,13 @@ class ThroneBoxBridge(
         probes.remove(id)?.close()
     }
 
-    private suspend fun egressWire(): Map<String, Any?> = withContext(Dispatchers.IO) {
-        // The probe reaches the internet through the mixed inbound, which nothing answers until the core is
-        // up: with the service stopped it only logged a connection refusal against the dashboard's own check.
-        if (!DataStore.serviceState.connected) return@withContext emptyMap()
+    private suspend fun egressWire(force: Boolean = false): Map<String, Any?> = withContext(Dispatchers.IO) {
+        // The probe reaches the internet through the mixed inbound, which nothing answers until the core is up. Rather
+        // than leaving the card blank while stopped, ask over the phone's own connection: the answer is the address
+        // this device appears as without the tunnel, and `direct` tells the screen which of the two it is looking at.
+        val direct = !DataStore.serviceState.connected
         var failure: String? = null
-        val info = BboxEgress.probe(force = false) { failure = it }
+        val info = BboxEgress.probe(force = force, direct = direct) { failure = it }
         if (info.isEmpty && failure != null) error(failure!!)
         mapOf(
             "ip" to info.ip,
@@ -946,6 +949,7 @@ class ThroneBoxBridge(
             "organization" to info.organization,
             "asn" to info.asn,
             "type" to info.type,
+            "direct" to direct,
             "ipSource" to "ip.sb",
             "checkedAt" to System.currentTimeMillis(),
         )

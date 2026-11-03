@@ -115,6 +115,8 @@ object BboxBridge : SagerConnection.Callback, GroupRepo.Listener, ProfileManager
         lastProfileName = profileName.orEmpty()
         when (state) {
             BaseService.State.Connected -> if (connectedAt == null) connectedAt = System.currentTimeMillis()
+            // A start invalidates the exit the previous session reported; a stop makes the direct answer stale.
+            BaseService.State.Connecting, BaseService.State.Stopping -> BboxEgress.invalidate()
             BaseService.State.Stopped, BaseService.State.Idle -> {
                 connectedAt = null
                 meter.reset()

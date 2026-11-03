@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:country_flags/country_flags.dart' as country_flags;
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:flutter/services.dart';
 import 'package:material_new_shapes/material_new_shapes.dart';
@@ -104,6 +105,8 @@ class _StatusPanelState extends State<StatusPanel> with WidgetsBindingObserver {
   Future<void> _refresh({required bool readIp, required bool manual}) async {
     final box = context.box;
     final retryQualityFor = manual && _qualityError != null ? (_egress?['ip']) : null;
+    // A tap, or a route the card already knows changed, must not be answered from the native cache.
+    final force = manual || _routeChanged;
     _ipDue = false; _qualityDue = false; _manual = false; _routeChanged = false;
     if (readIp) {
       _cooldown?.cancel();
@@ -115,11 +118,14 @@ class _StatusPanelState extends State<StatusPanel> with WidgetsBindingObserver {
     _probe?.cancel(); _probe = probe;
     setState(() { _checking = readIp; _qualityChecking = !readIp; _error = null; _qualityError = null; });
     try {
-      final result = readIp ? await probe.egress() : _egress!;
+      final result = readIp ? await probe.egress(force: force) : _egress!;
       if (!mounted || generation != _generation) return;
       final ip = result['ip'] as String?;
-      setState(() { _egress = result.isEmpty ? null : result; _checking = false; _qualityChecking = ip != null; });
-      if (ip == null) return;
+      // A direct answer is this device's own address: the quality sources would grade the phone's uplink
+      // rather than an exit, so the card keeps the address, region and carrier and skips the check.
+      final direct = result['direct'] == true;
+      setState(() { _egress = result.isEmpty ? null : result; _checking = false; _qualityChecking = ip != null && !direct; });
+      if (ip == null || direct) return;
       try {
         // The transport opens its native session on first get, so the lookup works on both the
         // fresh-IP path (no session opened yet) and the quality-only path.
@@ -295,16 +301,53 @@ class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderS
   @override Widget build(BuildContext context) {
     final color = widget.active ? context.colorScheme.onSurface : context.colorScheme.onSurfaceVariant;
     final enabled = widget.onRefresh != null;
+    final country = widget.country?.trim();
+    final code = country == null || country.isEmpty ? null : country.toUpperCase();
+    // The badge carries the region itself; a code the flag set does not know keeps its text.
+    final showsFlag = code != null && country_flags.FlagCode.fromCountryCode(code) != null;
     final background = Color.alphaBlend(color.withValues(alpha: enabled && _hovered ? .08 : 0), SurfaceLevel.inset.colorOf(context.colorScheme));
     return Tooltip(message: context.tr('Retry'), child: Semantics(button: true, label: context.tr('Retry'), enabled: enabled,
       child: InkResponse(onTap: widget.onRefresh, onHover: (value) => setState(() => _hovered = value), onFocusChange: (value) => setState(() => _focused = value),
         overlayColor: const WidgetStatePropertyAll(Colors.transparent), splashFactory: NoSplash.splashFactory,
-        child: ElasticPress(enabled: enabled, child: AnimatedBuilder(animation: _turn, builder: (_, child) => ShapeBadge(
-          shape: MaterialShapes.clover4Leaf, color: background, size: 48,
-          rotation: _turn.value * 2 * math.pi, ring: _focused ? focusRingSide(context.colorScheme) : null, child: child), child: widget.country?.isNotEmpty == true
-          ? Text(widget.country!.toUpperCase(), maxLines: 1, style: AppTextStyle.footnote.of(context, emphasized: true).copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size))
-          : GlyphIcon(AppGlyphs.proxies, size: 48 * .42, color: color))))));
+        child: ElasticPress(enabled: enabled, child: AnimatedBuilder(animation: _turn, builder: (_, child) {
+          final rotation = _turn.value * 2 * math.pi;
+          return ShapeBadge(
+            shape: MaterialShapes.clover4Leaf, color: background, size: 48,
+            rotation: rotation, ring: _focused ? focusRingSide(context.colorScheme) : null,
+            child: showsFlag ? ClipPath(
+              key: const Key('country-badge-flag-clip'),
+              clipper: _CountryBadgeClipper(rotation),
+              clipBehavior: Clip.antiAlias,
+              child: child,
+            ) : child);
+        }, child: code == null
+          ? GlyphIcon(AppGlyphs.proxies, size: 48 * .42, color: color)
+          : showsFlag
+              // country_flags paints the vector flag with BoxFit.cover inside this 48x48 box, so any
+              // aspect ratio crops to fill; the clipper trims it to the clover the badge paints.
+              ? country_flags.CountryFlag.fromCountryCode(code,
+                  key: const Key('country-badge-flag'),
+                  theme: const country_flags.ImageTheme(width: 48, height: 48))
+              : Text(code, maxLines: 1, style: AppTextStyle.footnote.of(context, emphasized: true)
+                  .copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size)))))));
   }
+}
+
+/// Clips the upright flag to the same rotating clover the badge's painter draws.
+class _CountryBadgeClipper extends CustomClipper<Path> {
+  const _CountryBadgeClipper(this.rotation);
+  final double rotation;
+
+  @override
+  Path getClip(Size size) => shapePathOf(MaterialShapes.clover4Leaf).transform(
+    (Matrix4.identity()
+      ..translateByDouble(size.width / 2, size.height / 2, 0, 1)
+      ..rotateZ(rotation)
+      ..scaleByDouble(size.width, size.height, 1, 1)
+      ..translateByDouble(-0.5, -0.5, 0, 1)).storage);
+
+  @override
+  bool shouldReclip(_CountryBadgeClipper oldClipper) => oldClipper.rotation != rotation;
 }
 
 TextStyle _statusLabelStyle(BuildContext context) => AppTextStyle.caption1.of(context).toTabular.copyWith(color: context.colorScheme.onSurfaceVariant);
