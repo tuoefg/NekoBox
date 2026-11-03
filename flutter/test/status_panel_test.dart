@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:b_box_ui/main.dart';
 import 'package:b_box_ui/widgets.dart';
 import 'package:b_box_ui/components/status_panel.dart';
 import 'package:b_box_ui/components/shape_badge.dart';
-import 'package:country_flags/country_flags.dart' as country_flags;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -117,85 +115,15 @@ Future<void> _advance(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('country display switches during quality checks without enabling refresh', (tester) async {
-    final semantics = tester.ensureSemantics();
-    try {
-      final dashboard = _Dashboard();
-      await dashboard.mount(tester);
-      final showCode = find.byTooltip('Show the country code');
-      expect(tester.getSemantics(find.byKey(const Key('country-badge-flag'))), isSemantics(
-        isButton: true, isEnabled: true, hasTapAction: true, hasLongPressAction: false));
-      expect(tester.widget<ElasticPress>(find.descendant(of: showCode,
-        matching: find.byType(ElasticPress))).enabled, isTrue);
-      await tester.tap(showCode);
-      await tester.pump();
-      expect(find.text('GB'), findsOneWidget);
-      expect(find.byKey(const Key('country-badge-flag')), findsNothing);
-      await tester.longPress(find.byTooltip('Show the country icon'));
-      await tester.pump();
-      expect(dashboard.ids, hasLength(1), reason: 'Switching display must not start a concurrent refresh');
-      await tester.tap(find.byTooltip('Show the country icon'));
-      await tester.pump();
-      final flag = find.byKey(const Key('country-badge-flag'));
-      expect(flag, findsOneWidget);
-      Focus.of(tester.element(flag)).requestFocus();
-      await tester.pump();
-      expect(tester.widget<ShapeBadge>(find.ancestor(of: flag,
-        matching: find.byType(ShapeBadge)).first).ring, isNotNull);
-      dashboard.answerQuality(dashboard.ids.single);
-      await tester.pumpAndSettle();
-      expect(tester.getSemantics(find.byKey(const Key('country-badge-flag'))), isSemantics(
-        isEnabled: true, hasTapAction: true, hasLongPressAction: true));
-      expect(tester.takeException(), isNull);
-    } finally { semantics.dispose(); }
-  });
-
-  testWidgets('unknown country codes retain text fallback and a working retry', (tester) async {
-    final dashboard = _Dashboard()..country = ' zz '..autoQuality = true;
+  testWidgets('a country code renders as text and the badge still retries', (tester) async {
+    final dashboard = _Dashboard()..country = 'zz'..autoQuality = true;
     await dashboard.mount(tester);
     await tester.pumpAndSettle();
     expect(find.text('ZZ'), findsOneWidget);
-    expect(find.byKey(const Key('country-badge-flag')), findsNothing);
     await tester.tap(find.byTooltip('Retry'));
     await tester.pumpAndSettle();
     expect(dashboard.ids, hasLength(2));
     expect(find.text('ZZ'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('flag clip follows the painted clover while its image stays upright', (tester) async {
-    final dashboard = _Dashboard();
-    await dashboard.mount(tester);
-    final clipFinder = find.byKey(const Key('country-badge-flag-clip'));
-    var oldClipper = tester.widget<ClipPath>(clipFinder).clipper!;
-    for (final elapsed in [137, 223]) {
-      await tester.pump(Duration(milliseconds: elapsed));
-      final clipper = tester.widget<ClipPath>(clipFinder).clipper!;
-      final badgeFinder = find.ancestor(of: clipFinder, matching: find.byType(ShapeBadge)).first;
-      final badge = tester.widget<ShapeBadge>(badgeFinder);
-      expect(math.sin(badge.rotation * 2).abs(), greaterThan(.1),
-        reason: 'Check a non-quarter-turn frame, not the symmetric resting shape');
-      expect(clipper.shouldReclip(oldClipper), isTrue);
-      oldClipper = clipper;
-      const size = Size.square(48);
-      final expectedRecorder = ui.PictureRecorder();
-      ShapePainter(path: shapePathOf(MaterialShapes.clover4Leaf), color: Colors.white,
-        rotation: badge.rotation).paint(Canvas(expectedRecorder), size);
-      final actualRecorder = ui.PictureRecorder();
-      Canvas(actualRecorder).drawPath(clipper.getClip(size), Paint()..color = Colors.white);
-      final expectedPicture = expectedRecorder.endRecording(), actualPicture = actualRecorder.endRecording();
-      final expected = expectedPicture.toImageSync(48, 48), actual = actualPicture.toImageSync(48, 48);
-      try { await expectLater(actual, matchesReferenceImage(expected)); }
-      finally {
-        actual.dispose(); expected.dispose(); actualPicture.dispose(); expectedPicture.dispose();
-      }
-      final flagBox = tester.renderObject<RenderBox>(find.byKey(const Key('country-badge-flag')));
-      final badgeBox = tester.renderObject<RenderBox>(badgeFinder);
-      expect(flagBox.getTransformTo(badgeBox).storage, orderedEquals(Matrix4.identity().storage),
-        reason: 'Rotate the clip only, not the flag pixels');
-    }
-    dashboard.answerQuality(dashboard.ids.single);
-    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 
@@ -234,15 +162,7 @@ void main() {
     expect(dashboard.calls.where((call) => call.method == 'service.start'), isEmpty);
     expect(dashboard.ids, hasLength(1));
     expect(find.text('203.0.113.9'), findsOneWidget);
-    final flag = tester.widget<country_flags.CountryFlag>(find.byKey(const Key('country-badge-flag')));
-    expect(flag.flagCode, 'gb');
-    expect(flag.theme, isA<country_flags.ImageTheme>()
-      .having((theme) => theme.width, 'width', 48)
-      .having((theme) => theme.height, 'height', 48));
-    // The vector .si flag (not the emoji fallback) fills the badge: country_flags' image
-    // widget paints with BoxFit.cover, and the clover clip below crops the overflow.
-    expect(find.byKey(const Key('svgFlag')), findsOneWidget);
-    expect(find.byKey(const Key('country-badge-flag-clip')), findsOneWidget);
+    expect(find.text('GB'), findsOneWidget);
     expect(find.text('Example Business'), findsOneWidget);
     expect(find.text('Business'), findsOneWidget);
     expect(find.text('Quality Good'), findsOneWidget);
@@ -412,7 +332,7 @@ void main() {
     expect(find.byType(EgressDetails), findsNothing);
 
     dashboard.failQuality = false;
-    await tester.longPress(find.byTooltip('Show the country code'));
+    await tester.tap(find.byTooltip('Retry'));
     await tester.pump();
     await tester.pump();
     expect(dashboard.ids, hasLength(2));

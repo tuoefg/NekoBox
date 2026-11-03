@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:country_flags/country_flags.dart' as country_flags;
 import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:flutter/services.dart';
 import 'package:material_new_shapes/material_new_shapes.dart';
@@ -279,8 +278,6 @@ class _CountryBadge extends StatefulWidget {
 class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderStateMixin {
   late final _turn = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
   bool _hovered = false, _focused = false;
-  // The badge shows the flag by default and the country's abbreviation on tap.
-  bool _showCode = false;
   @override void didChangeDependencies() { super.didChangeDependencies(); _spin(); }
   @override void didUpdateWidget(_CountryBadge oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -297,60 +294,17 @@ class _CountryBadgeState extends State<_CountryBadge> with SingleTickerProviderS
   @override void dispose() { _turn.dispose(); super.dispose(); }
   @override Widget build(BuildContext context) {
     final color = widget.active ? context.colorScheme.onSurface : context.colorScheme.onSurfaceVariant;
-    final canRefresh = widget.onRefresh != null;
-    final country = widget.country?.trim();
-    final code = country == null || country.isEmpty ? null : country.toUpperCase();
-    final flagCode = code == null ? null : country_flags.FlagCode.fromCountryCode(code);
-    final canToggle = flagCode != null;
-    final enabled = canToggle || canRefresh;
-    final showFlag = canToggle && !_showCode;
+    final enabled = widget.onRefresh != null;
     final background = Color.alphaBlend(color.withValues(alpha: enabled && _hovered ? .08 : 0), SurfaceLevel.inset.colorOf(context.colorScheme));
-    // Display switching stays available while a refresh is in progress.
-    final hint = canToggle
-        ? context.tr(_showCode ? 'Show the country icon' : 'Show the country code')
-        : context.tr('Retry');
-    return Tooltip(message: hint, child: Semantics(button: true, label: hint, enabled: enabled,
-      child: InkResponse(onTap: canToggle ? () => setState(() => _showCode = !_showCode) : widget.onRefresh,
-        onLongPress: widget.onRefresh, onHover: (value) => setState(() => _hovered = value), onFocusChange: (value) => setState(() => _focused = value),
+    return Tooltip(message: context.tr('Retry'), child: Semantics(button: true, label: context.tr('Retry'), enabled: enabled,
+      child: InkResponse(onTap: widget.onRefresh, onHover: (value) => setState(() => _hovered = value), onFocusChange: (value) => setState(() => _focused = value),
         overlayColor: const WidgetStatePropertyAll(Colors.transparent), splashFactory: NoSplash.splashFactory,
-        child: ElasticPress(enabled: enabled, child: AnimatedBuilder(animation: _turn, builder: (_, child) {
-          final rotation = _turn.value * 2 * math.pi;
-          return ShapeBadge(
-            shape: MaterialShapes.clover4Leaf, color: background, size: 48,
-            rotation: rotation, ring: _focused ? focusRingSide(context.colorScheme) : null,
-            child: showFlag ? ClipPath(
-              key: const Key('country-badge-flag-clip'),
-              clipper: _CountryBadgeClipper(rotation),
-              clipBehavior: Clip.antiAlias,
-              child: child,
-            ) : child);
-        }, child: code != null
-          ? !showFlag
-              ? Text(code, maxLines: 1, style: AppTextStyle.footnote.of(context, emphasized: true)
-                  .copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size))
-              // The image remains upright; only the cover-fitted flag's clip rotates.
-              : country_flags.CountryFlag.fromCountryCode(code,
-                  key: const Key('country-badge-flag'),
-                  theme: const country_flags.ImageTheme(width: 48, height: 48))
+        child: ElasticPress(enabled: enabled, child: AnimatedBuilder(animation: _turn, builder: (_, child) => ShapeBadge(
+          shape: MaterialShapes.clover4Leaf, color: background, size: 48,
+          rotation: _turn.value * 2 * math.pi, ring: _focused ? focusRingSide(context.colorScheme) : null, child: child), child: widget.country?.isNotEmpty == true
+          ? Text(widget.country!.toUpperCase(), maxLines: 1, style: AppTextStyle.footnote.of(context, emphasized: true).copyWith(color: color, letterSpacing: .04 * AppTextStyle.footnote.size))
           : GlyphIcon(AppGlyphs.proxies, size: 48 * .42, color: color))))));
   }
-}
-
-/// Clips the upright flag to the same rotating clover as the badge's painter.
-class _CountryBadgeClipper extends CustomClipper<Path> {
-  const _CountryBadgeClipper(this.rotation);
-  final double rotation;
-
-  @override
-  Path getClip(Size size) => shapePathOf(MaterialShapes.clover4Leaf).transform(
-    (Matrix4.identity()
-      ..translateByDouble(size.width / 2, size.height / 2, 0, 1)
-      ..rotateZ(rotation)
-      ..scaleByDouble(size.width, size.height, 1, 1)
-      ..translateByDouble(-0.5, -0.5, 0, 1)).storage);
-
-  @override
-  bool shouldReclip(_CountryBadgeClipper oldClipper) => oldClipper.rotation != rotation;
 }
 
 TextStyle _statusLabelStyle(BuildContext context) => AppTextStyle.caption1.of(context).toTabular.copyWith(color: context.colorScheme.onSurfaceVariant);

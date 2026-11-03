@@ -1,3 +1,9 @@
+#### 3.1.2
+
+* The status badge and the IP card are back to their first version: the exit's country code on the clover and a tap that re-checks the IP, with no flag icon and none of the crop/rotation machinery behind it
+* Editing a route rule no longer opens a white screen: the editor read reject_method (a scalar field) as a list, and the cast error kept the whole page from building, so a rule could not be edited or added
+* country_flags leaves the build: its .si flag assets were 34 MB that nothing referenced any more
+
 #### 3.1.1
 
 * Log export works again: the redaction patterns used nested possessive quantifiers that the desktop JVM accepts but Android's ICU regex engine rejects while the class initializes, so "Export" crashed the app on every device (and the crash screen crashed again, restarting in a loop). Every pattern is now plain, compiled defensively one by one, and each redaction pass is contained: a rule that cannot compile or apply leaves the line alone instead of taking the export down

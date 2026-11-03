@@ -524,8 +524,16 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
 
   void _set(String key, Object? value) => setState(() => _rule = {..._rule, key: value});
 
-  List<String> _listOf(String key) =>
-      (_rule[key] as List? ?? const []).map((e) => '$e').toList();
+  /// A rule field as display strings. The bridge emits list fields as lists and scalar fields as
+  /// strings; a scalar reaching a list row must not take the whole editor down with a cast error,
+  /// so anything non-list renders as its single value.
+  List<String> _listOf(String key) {
+    final value = _rule[key];
+    if (value == null) return const [];
+    if (value is List) return value.map((e) => '$e').toList();
+    final text = '$value';
+    return text.isEmpty ? const [] : [text];
+  }
 
   void _setList(String key, String text) => _set(key, text
       .split(',')
@@ -734,7 +742,9 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
               if (picked != null) _set('action', picked);
             },
           ),
-          _csvRow('Reject method', 'reject_method', hint: 'default / drop / reply'),
+          // reject_method is a scalar string on RouteRule (STRING_FIELDS), not a list like the
+          // match conditions above: a csv row here saved it as "[drop]" through ruleFromMap's str().
+          _textRow('Reject method', 'reject_method', hint: 'default / drop / reply'),
           ListItem.toggle(
             title: Text(context.tr('No drop')),
             value: _rule['no_drop'] == true,
