@@ -119,19 +119,19 @@ class _AutoSelectorPageState extends State<AutoSelectorPage> {
           FormRow(title: context.tr('Name'), trailing: FormRowTextField(
             initialValue: '${_info['name'] ?? ''}',
             hintText: context.tr('Optional'),
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false,
             onChanged: (value) => _set('name', value),
           )),
           FormRow(title: context.tr('Name filter'), trailing: FormRowTextField(
             initialValue: '${_info['nameFilter'] ?? ''}',
             hintText: context.tr('Regex on the node name'),
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false,
             onChanged: (value) => _set('nameFilter', value),
           )),
           FormRow(title: context.tr('Country filter'), trailing: FormRowTextField(
             initialValue: '${_info['countryFilter'] ?? ''}',
             hintText: context.tr('Comma-separated country codes'),
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false,
             onChanged: (value) => _set('countryFilter', value),
           )),
           ListItem.toggle(
@@ -151,13 +151,13 @@ class _AutoSelectorPageState extends State<AutoSelectorPage> {
           FormRow(title: context.tr('Test URL'), trailing: FormRowTextField(
             initialValue: '${_info['testURL'] ?? ''}',
             hintText: context.tr('Empty uses the Testing page URL'),
-            keyboardType: TextInputType.url, autocorrect: false, enableSuggestions: false,
+            keyboardType: TextInputType.url, autocorrect: false,
             onChanged: (value) => _set('testURL', value),
           )),
           FormRow(title: context.tr('Connectivity URL'), trailing: FormRowTextField(
             initialValue: '${_info['connectivityURL'] ?? ''}',
             hintText: context.tr('Empty uses the test URL'),
-            keyboardType: TextInputType.url, autocorrect: false, enableSuggestions: false,
+            keyboardType: TextInputType.url, autocorrect: false,
             onChanged: (value) => _set('connectivityURL', value),
           )),
           _number('Tolerance', 'toleranceMs', unit: 'ms'),

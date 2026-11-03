@@ -70,7 +70,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
             onChanged: (value) => setState(() => _values[field['submissionKey'].toString()] = value),
           ) else Padding(padding: const EdgeInsets.all(16), child: TextField(
             controller: _controllers[field['submissionKey']], obscureText: field['kind'] == 'password',
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false, enableSuggestions: field['kind'] != 'password',
             decoration: InputDecoration(labelText: (field['label'] ?? field['name']).toString()),
           )),
       ] else if (challenge['kind'] == 'open-url') ListItem(
@@ -88,7 +88,7 @@ class _AuthenticationPageState extends State<AuthenticationPage> {
     ]);
   }
   Widget _field(String key, String label, {bool secret = false}) => Padding(padding: const EdgeInsets.all(16), child: TextField(
-    controller: _controllers[key], obscureText: secret, autocorrect: false, enableSuggestions: false,
+    controller: _controllers[key], obscureText: secret, autocorrect: false, enableSuggestions: !secret,
     decoration: InputDecoration(labelText: context.tr(label)),
   ));
 }

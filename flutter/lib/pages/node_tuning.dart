@@ -164,7 +164,7 @@ class _NodeTuningPageState extends State<NodeTuningPage> {
           FormRow(title: context.tr('Fragment fallback delay'), trailing: FormRowTextField(
             initialValue: '${_info['fragmentFallbackDelay'] ?? ''}',
             hintText: 'e.g. 200ms',
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false,
             onChanged: (value) => _set('fragmentFallbackDelay', value),
           )),
           ListItem.toggle(

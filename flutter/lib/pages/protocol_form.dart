@@ -618,7 +618,7 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
         final controller = TextEditingController(text: _text(field.path));
         return FormRow(title: context.tr(field.label), invalid: invalid,
           trailing: FormRowTextField(controller: controller, hintText: field.hint,
-            obscureText: isPassword, autocorrect: false, enableSuggestions: false,
+            obscureText: isPassword, autocorrect: false, enableSuggestions: !isPassword,
             onChanged: (value) { _set(field.path, value.trim().isEmpty ? null : value); _changed(value); }));
     }
   }

@@ -309,7 +309,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
         generateSection(items: [
           FormRow(title: context.tr('Name'), trailing: FormRowTextField(
             controller: _name, hintText: context.tr('Required'),
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false,
           )),
           ListItem(
             title: Text(context.tr('Default outbound')),
@@ -340,7 +340,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
           ),
           if (_isRemote) FormRow(title: context.tr('URL'), trailing: FormRowTextField(
             controller: _url, hintText: 'https://', keyboardType: TextInputType.url,
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false,
           )),
           if (_isRemote) ListItem.toggle(
             title: Text(context.tr('Auto update')),
@@ -353,7 +353,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
             initialValue: _endpointIds,
             hintText: '1, 2, 3',
             keyboardType: TextInputType.number,
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false,
             onChanged: (value) => _endpointIds = value,
           )),
         ], footer: context.tr('Profile ids whose endpoints this route can prefer; used by preferred-by rules.')),
@@ -609,7 +609,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
         generateSection(title: context.tr('Rule'), items: [
           FormRow(title: context.tr('Name'), trailing: FormRowTextField(
             initialValue: '${_rule['name'] ?? ''}', hintText: context.tr('Optional'),
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false,
             onChanged: (value) => _set('name', value),
           )),
           ListItem.toggle(
@@ -782,7 +782,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
     trailing: FormRowTextField(
       initialValue: _listOf(key).join(', '),
       hintText: hint ?? context.tr('Comma-separated'),
-      autocorrect: false, enableSuggestions: false,
+      autocorrect: false,
       onChanged: (value) => _setList(key, value),
     ),
   );
@@ -831,7 +831,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
     trailing: FormRowTextField(
       initialValue: '${_rule[key] ?? ''}',
       hintText: hint,
-      autocorrect: false, enableSuggestions: false,
+      autocorrect: false,
       onChanged: (value) => _set(key, value),
     ),
   );
@@ -1034,7 +1034,7 @@ class _RuleSetDialogState extends State<_RuleSetDialog> {
       width: 420, height: 420,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         TextField(
-          controller: _values, autocorrect: false, enableSuggestions: false,
+          controller: _values, autocorrect: false,
           minLines: 1, maxLines: 2,
           decoration: InputDecoration(
             labelText: context.tr('Rule set'),
@@ -1044,7 +1044,7 @@ class _RuleSetDialogState extends State<_RuleSetDialog> {
         ),
         const SizedBox(height: 8),
         TextField(
-          controller: _query, autocorrect: false, enableSuggestions: false,
+          controller: _query, autocorrect: false,
           decoration: InputDecoration(
             labelText: context.tr('Search'),
             border: const OutlineInputBorder(),

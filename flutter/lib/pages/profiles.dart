@@ -338,7 +338,7 @@ class _ProfileFormState extends State<ProfileForm> {
           if (_remote) FormRow(title: context.tr('URL'), invalid: issue?.field == 'url',
             trailing: FormRowTextField(controller: _url, hintText: context.tr('Required'),
               keyboardType: TextInputType.url, textInputAction: TextInputAction.next,
-              autocorrect: false, enableSuggestions: false, onChanged: _changed)),
+              autocorrect: false, onChanged: _changed)),
         ], footer: _remote
             ? context.tr('This URL must serve a sing-box JSON configuration.')
             : imported == null ? null : imported == 1

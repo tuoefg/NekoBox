@@ -86,10 +86,10 @@ class _TerminalPageState extends State<TerminalPage> {
       ],
       body: Padding(padding: EdgeInsets.only(top: context.appBarInset, bottom: MediaQuery.paddingOf(context).bottom), child:
         _loading ? const SizedBox() : _prompt ? ListView(padding: const EdgeInsets.all(20), children: [
-          TextField(controller: _username, autocorrect: false, enableSuggestions: false,
+          TextField(controller: _username, autocorrect: false,
             decoration: InputDecoration(labelText: context.tr('Username'))),
           const SizedBox(height: 16),
-          TextField(controller: _terminalType, autocorrect: false, enableSuggestions: false,
+          TextField(controller: _terminalType, autocorrect: false,
             decoration: InputDecoration(labelText: context.tr('Terminal type')), onSubmitted: (_) => _start()),
           const SizedBox(height: 16),
           ListItem.toggle(title: Text(context.tr('Quick connect')), subtitle: Text(context.tr('Remember options and connect directly next time')),

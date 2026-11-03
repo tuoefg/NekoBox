@@ -196,7 +196,7 @@ class _TerminalConfigEditorState extends State<TerminalConfigEditor> {
       body: Padding(padding: EdgeInsets.only(top: context.appBarInset, bottom: MediaQuery.paddingOf(context).bottom), child: Column(children: [
         Padding(padding: const EdgeInsets.all(16), child: Text(context.tr('Supported Ghostty options: foreground, background, cursor-color, selection-background, selection-foreground, palette, font-family.'), style: context.listCaptionStyle)),
         Expanded(child: TextField(controller: _text, undoController: _undo, expands: true, maxLines: null, minLines: null, readOnly: _saving,
-          autocorrect: false, enableSuggestions: false, smartDashesType: SmartDashesType.disabled, smartQuotesType: SmartQuotesType.disabled,
+          autocorrect: false, smartDashesType: SmartDashesType.disabled, smartQuotesType: SmartQuotesType.disabled,
           textAlignVertical: TextAlignVertical.top, keyboardType: TextInputType.multiline,
           style: const TextStyle(fontFamily: 'JetBrainsMono', fontSize: 13, height: 1.6),
           decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.all(16)))),

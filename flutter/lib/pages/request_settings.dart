@@ -63,7 +63,7 @@ class _RequestSettingsPageState extends State<RequestSettingsPage> {
       key: ValueKey(label), controller: controller, minLines: multiline ? 2 : 1, maxLines: multiline ? 4 : 2,
       keyboardType: multiline ? TextInputType.multiline : TextInputType.text,
       textInputAction: multiline ? TextInputAction.newline : TextInputAction.done,
-      inputFormatters: [LengthLimitingTextInputFormatter(65536)], autocorrect: false, enableSuggestions: false,
+      inputFormatters: [LengthLimitingTextInputFormatter(65536)], autocorrect: false,
       style: AppTextStyle.body.of(context),
       decoration: InputDecoration.collapsed(border: const NoInputBorder(), hintText: hint),
       onChanged: (_) => setState(() => _dirty = true),

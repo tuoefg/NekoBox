@@ -305,10 +305,10 @@ class _WebDAVFormState extends State<WebDAVForm> {
         generateSection(footer: context.tr('Enter the WebDAV directory URL. Backups are stored in a folder on that server.'), items: [
           FormRow(title: context.tr('Address'), invalid: issue == 'Enter a WebDAV HTTP or HTTPS directory address',
             trailing: FormRowTextField(controller: _uri, hintText: context.tr('Required'), keyboardType: TextInputType.url,
-              textInputAction: TextInputAction.next, autocorrect: false, enableSuggestions: false,
+              textInputAction: TextInputAction.next, autocorrect: false,
               inputFormatters: [LengthLimitingTextInputFormatter(4096)], onChanged: _changed)),
           FormRow(title: context.tr('Account'), trailing: FormRowTextField(controller: _user, hintText: context.tr('Optional'),
-            textInputAction: TextInputAction.next, autocorrect: false, enableSuggestions: false,
+            textInputAction: TextInputAction.next, autocorrect: false,
             inputFormatters: [LengthLimitingTextInputFormatter(4096)], onChanged: _changed)),
           FormRow(title: context.tr('Password'), trailing: FormRowSecretTextField(controller: _password, hintText: context.tr('Optional'),
             textInputAction: TextInputAction.done, inputFormatters: [LengthLimitingTextInputFormatter(4096)],

@@ -274,7 +274,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
           if (_subscription) FormRow(title: context.tr('URL'), invalid: issue?.field == 'url',
             trailing: FormRowTextField(controller: _url, hintText: context.tr('Required'),
               keyboardType: TextInputType.url, textInputAction: TextInputAction.next,
-              autocorrect: false, enableSuggestions: false, onChanged: _changed)),
+              autocorrect: false, onChanged: _changed)),
           FormRow(title: context.tr('Auto clear unavailable'), onPressed: () => setState(() => _autoClearUnavailable = !_autoClearUnavailable),
             trailing: CommonSwitch(value: _autoClearUnavailable, onChanged: (value) => setState(() => _autoClearUnavailable = value))),
         ]),
@@ -305,7 +305,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
             trailing: CommonSwitch(value: _skipAutoUpdate, onChanged: (value) => setState(() => _skipAutoUpdate = value))),
           FormRow(title: context.tr('User agent'), invalid: issue?.field == 'userAgent',
             trailing: FormRowTextField(controller: _userAgent, hintText: _defaults['userAgent']?.toString(),
-              autocorrect: false, enableSuggestions: false, onChanged: _changed)),
+              autocorrect: false, onChanged: _changed)),
           _menuRow(context.tr('TLS version'), switch (_options['tlsVersion']) {
             1 => 'TLS 1.2', 2 => 'TLS 1.3',
             _ => '${context.tr('Keep default')} (${switch (_defaults['tlsVersion'] as num? ?? 0) { 1 => 'TLS 1.2', 2 => 'TLS 1.3', _ => 'Auto' }})',
@@ -350,16 +350,16 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
           if (_hwidSent) ...[
             FormRow(title: context.tr('HWID'), invalid: issue?.field == 'hwid',
               trailing: FormRowTextField(controller: _hwid, hintText: _defaults['hwid']?.toString(),
-                autocorrect: false, enableSuggestions: false, onChanged: _changed)),
+                autocorrect: false, onChanged: _changed)),
             FormRow(title: context.tr('HWID OS'), invalid: issue?.field == 'hwidOs',
               trailing: FormRowTextField(controller: _hwidOs, hintText: _defaults['hwidOs']?.toString(),
-                autocorrect: false, enableSuggestions: false, onChanged: _changed)),
+                autocorrect: false, onChanged: _changed)),
             FormRow(title: context.tr('HWID OS version'), invalid: issue?.field == 'hwidOsVersion',
               trailing: FormRowTextField(controller: _hwidOsVersion, hintText: _defaults['hwidOsVersion']?.toString(),
-                autocorrect: false, enableSuggestions: false, onChanged: _changed)),
+                autocorrect: false, onChanged: _changed)),
             FormRow(title: context.tr('HWID model'), invalid: issue?.field == 'hwidModel',
               trailing: FormRowTextField(controller: _hwidModel, hintText: _defaults['hwidModel']?.toString(),
-                autocorrect: false, enableSuggestions: false, onChanged: _changed)),
+                autocorrect: false, onChanged: _changed)),
           ],
         ]),
         if (_subscription) generateSection(title: context.tr('After update'), items: [
@@ -380,10 +380,10 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
         if (_subscription) generateSection(title: context.tr('Name filters'), items: [
           FormRow(title: context.tr('Only names matching'), invalid: issue?.field == 'nameInclude',
             trailing: FormRowTextField(controller: _nameInclude, hintText: context.tr('Regular expression'),
-              autocorrect: false, enableSuggestions: false, onChanged: _changed)),
+              autocorrect: false, onChanged: _changed)),
           FormRow(title: context.tr('Remove names matching'), invalid: issue?.field == 'nameExclude',
             trailing: FormRowTextField(controller: _nameExclude, hintText: context.tr('Regular expression'),
-              autocorrect: false, enableSuggestions: false, onChanged: _changed)),
+              autocorrect: false, onChanged: _changed)),
         ], footer: context.tr('Two regular expressions the server names must match, and must not match.')),
         generateSection(title: context.tr('Sorting and display'), items: [
           _menuRow(context.tr('Sort method'), switch (_sortMethod) {

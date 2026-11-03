@@ -260,7 +260,7 @@ class _CodeEditorState extends State<CodeEditor> {
           }, child: TextField(
             controller: widget.controller, undoController: widget.undoController, scrollController: _scroll,
             expands: true, maxLines: null, minLines: null, readOnly: widget.readOnly,
-            autocorrect: false, enableSuggestions: false,
+            autocorrect: false,
             smartDashesType: SmartDashesType.disabled, smartQuotesType: SmartQuotesType.disabled,
             keyboardType: TextInputType.multiline, textDirection: TextDirection.ltr,
             textAlignVertical: TextAlignVertical.top, style: style, strutStyle: strut, cursorWidth: 2,
