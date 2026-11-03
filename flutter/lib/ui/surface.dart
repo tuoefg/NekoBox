@@ -1,5 +1,9 @@
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/typography.dart';
+import 'package:b_box_ui/ui/context.dart';
+import 'package:flutter/rendering.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 import 'package:b_box_ui/ui/color.dart';
-import 'package:material_ui/material_ui.dart';
 
 /// `.agents/surfaces.md` explains the levels and why dark mode never steps
 /// back down.
@@ -90,25 +94,6 @@ extension ElevatedSurfaceExt on ColorScheme {
   }
 }
 
-/// The scheme sheets present with; `.agents/surfaces.md` has the reason.
-class ElevatedColorScheme extends ThemeExtension<ElevatedColorScheme> {
-  const ElevatedColorScheme(this.colorScheme);
-
-  final ColorScheme colorScheme;
-
-  @override
-  ElevatedColorScheme copyWith({ColorScheme? colorScheme}) =>
-      ElevatedColorScheme(colorScheme ?? this.colorScheme);
-
-  @override
-  ElevatedColorScheme lerp(ElevatedColorScheme? other, double t) =>
-      other == null
-      ? this
-      : ElevatedColorScheme(
-          ColorScheme.lerp(colorScheme, other.colorScheme, t),
-        );
-}
-
 class ElevatedSurfaceTheme extends StatelessWidget {
   const ElevatedSurfaceTheme({super.key, required this.child});
 
@@ -134,73 +119,16 @@ class _ElevatedSurfaceScope extends InheritedWidget {
 
 extension AppSurfaceThemeExt on ThemeData {
   ThemeData get elevated {
-    final scheme = extension<ElevatedColorScheme>()?.colorScheme;
-    if (scheme == null) {
-      return this;
-    }
-    return copyWith(
-      colorScheme: scheme,
-      canvasColor: scheme.surface,
-    ).withAppSurfaces;
-  }
-
-  ThemeData get withAppSurfaces {
-    final page = SurfaceLevel.page.colorOf(colorScheme);
-    final card = SurfaceLevel.card.colorOf(colorScheme);
-    final floatingLevel = SurfaceLevel.floatingOf(colorScheme);
-    final floating = floatingLevel.colorOf(colorScheme);
-    final ring = focusRingStyle(colorScheme);
-    final standingRing = focusRingStyle(colorScheme, standsOff: true);
-    return copyWith(
-      dividerTheme: dividerTheme.copyWith(
-        color: colorScheme.onSurface.withValues(alpha: 0.14),
-      ),
-      scaffoldBackgroundColor: page,
-      cardTheme: cardTheme.copyWith(color: card, elevation: 0),
-      dialogTheme: dialogTheme.copyWith(backgroundColor: floating),
-      popupMenuTheme: popupMenuTheme.copyWith(color: floating),
-      menuTheme: MenuThemeData(
-        style: (menuTheme.style ?? const MenuStyle()).copyWith(
-          backgroundColor: WidgetStatePropertyAll(floating),
-        ),
-      ),
-      navigationBarTheme: navigationBarTheme.copyWith(
-        backgroundColor: floating,
-        indicatorColor: floatingLevel.next.colorOf(colorScheme),
-        iconTheme: WidgetStateProperty.resolveWith(
-          (states) => IconThemeData(
-            size: 24,
-            color: states.contains(WidgetState.selected)
-                ? colorScheme.primary
-                : colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-      bottomSheetTheme: bottomSheetTheme.copyWith(
-        backgroundColor: page,
-        modalBackgroundColor: page,
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: standingRing.merge(filledButtonTheme.style),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: ring.merge(textButtonTheme.style),
-      ),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-        style: ring.merge(outlinedButtonTheme.style),
-      ),
-      iconButtonTheme: IconButtonThemeData(
-        style: ring.merge(iconButtonTheme.style),
-      ),
-    );
+    final scheme = elevatedColorScheme;
+    return scheme == null ? this : copyWith(colorScheme: scheme);
   }
 }
 
+/// The focus ring of `.agents/surfaces.md`; one that [standsOff] clears the
+/// edge, which a primary fill or a button's own glass would hide it on.
 const _focusRingWidth = 2.0;
 const _focusRingGap = 1.0;
 
-/// The focus ring of `.agents/surfaces.md`; one that [standsOff] clears the
-/// edge, which a primary fill or a button's own glass would hide it on.
 BorderSide focusRingSide(ColorScheme colorScheme, {bool standsOff = false}) =>
     BorderSide(
       color: colorScheme.primary,
@@ -208,13 +136,6 @@ BorderSide focusRingSide(ColorScheme colorScheme, {bool standsOff = false}) =>
       strokeAlign: standsOff
           ? 1 + 2 * _focusRingGap / _focusRingWidth
           : BorderSide.strokeAlignInside,
-    );
-
-ButtonStyle focusRingStyle(ColorScheme colorScheme, {bool standsOff = false}) =>
-    ButtonStyle(
-      side: WidgetStateProperty<BorderSide?>.fromMap({
-        WidgetState.focused: focusRingSide(colorScheme, standsOff: standsOff),
-      }),
     );
 
 /// [focusRingSide] on [shape] while focus is in [child], for ink not a button.
@@ -266,4 +187,118 @@ class _FocusRingState extends State<FocusRing> {
       ),
     );
   }
+}
+
+/// A fill that holds what lands on it: it paints [color] in [shape] with its
+/// shadow, sets the text style beneath it, and takes the hits nothing on it does.
+class Surface extends StatelessWidget {
+  const Surface({
+    super.key,
+    this.color = const Color(0x00000000),
+    this.shape,
+    this.clipBehavior = Clip.none,
+    this.elevation = 0,
+    this.shadowColor,
+    this.textStyle,
+    required this.child,
+  }) : _absorbsHits = true;
+
+  /// Paints nothing but [shape]'s side, and lets hits through.
+  const Surface.transparent({
+    super.key,
+    this.shape,
+    this.clipBehavior = Clip.none,
+    this.textStyle,
+    required this.child,
+  }) : color = null,
+       elevation = 0,
+       shadowColor = null,
+       _absorbsHits = false;
+
+  final Color? color;
+  final ShapeBorder? shape;
+  final Clip clipBehavior;
+  final double elevation;
+  final Color? shadowColor;
+  final TextStyle? textStyle;
+  final bool _absorbsHits;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final textDirection = Directionality.maybeOf(context);
+    Widget contents = DefaultTextStyle(
+      style: textStyle ?? AppTextStyle.subheadline.of(context),
+      child: child,
+    );
+    if (_absorbsHits) {
+      contents = _HitAbsorber(child: contents);
+    }
+    final shape = this.shape;
+    if (shape != null) {
+      contents = CustomPaint(
+        foregroundPainter: _ShapeSidePainter(shape, textDirection),
+        child: contents,
+      );
+    }
+    final color = this.color;
+    if (color == null) {
+      return shape == null || clipBehavior == Clip.none
+          ? contents
+          : ClipPath(
+              clipper: ShapeBorderClipper(
+                shape: shape,
+                textDirection: textDirection,
+              ),
+              clipBehavior: clipBehavior,
+              child: contents,
+            );
+    }
+    final shadow = shadowColor ?? context.colorScheme.shadow;
+    if (shape == null) {
+      return PhysicalModel(
+        clipBehavior: clipBehavior,
+        elevation: elevation,
+        color: color,
+        shadowColor: shadow,
+        child: contents,
+      );
+    }
+    return PhysicalShape(
+      clipper: ShapeBorderClipper(shape: shape, textDirection: textDirection),
+      clipBehavior: clipBehavior,
+      elevation: elevation,
+      color: color,
+      shadowColor: shadow,
+      child: contents,
+    );
+  }
+}
+
+class _HitAbsorber extends SingleChildRenderObjectWidget {
+  const _HitAbsorber({required Widget super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderHitAbsorber();
+}
+
+class _RenderHitAbsorber extends RenderProxyBox {
+  @override
+  bool hitTestSelf(Offset position) => true;
+}
+
+class _ShapeSidePainter extends CustomPainter {
+  const _ShapeSidePainter(this.shape, this.textDirection);
+
+  final ShapeBorder shape;
+  final TextDirection? textDirection;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    shape.paint(canvas, Offset.zero & size, textDirection: textDirection);
+  }
+
+  @override
+  bool shouldRepaint(_ShapeSidePainter oldDelegate) =>
+      oldDelegate.shape != shape || oldDelegate.textDirection != textDirection;
 }

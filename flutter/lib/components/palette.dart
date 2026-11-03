@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -508,17 +509,17 @@ class _GradientSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SliderTheme(
-      data: SliderDefaultsM3(context).copyWith(
+    return material.SliderTheme(
+      data: material.SliderThemeData(
         trackShape: _GradientTrackShape(
           colors: colors,
           outlineColor: Theme.of(context).colorScheme.outlineVariant,
         ),
         trackHeight: _trackHeight,
         thumbShape: _ColorThumbShape(color: thumbColor),
-        overlayShape: SliderComponentShape.noOverlay,
+        overlayShape: material.SliderComponentShape.noOverlay,
       ),
-      child: Slider(
+      child: material.Slider(
         padding: EdgeInsets.zero,
         value: value,
         min: 0,

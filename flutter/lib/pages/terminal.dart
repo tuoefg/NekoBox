@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import 'package:flutter/services.dart';
 import '../widgets.dart';
 import 'terminal_settings.dart';
@@ -77,7 +78,7 @@ class _TerminalPageState extends State<TerminalPage> {
     Json? active;
     for (final session in sessions) { if (session['id'] == snapshot['activeId']) active = session; }
     final progress = json(active?['progress']);
-    return CommonScaffold(title: _prompt ? 'SSH · ${widget.name ?? ''}' : active?['name'] as String? ?? context.tr('Terminal'),
+    return Scaffold(title: _prompt ? 'SSH · ${widget.name ?? ''}' : active?['name'] as String? ?? context.tr('Terminal'),
       isLoading: _loading || _busy,
       iconActions: [
         IconButtonData(glyph: AppGlyphs.add, tooltip: context.tr('New session'), onPressed: _newSession),
@@ -98,7 +99,7 @@ class _TerminalPageState extends State<TerminalPage> {
           const SizedBox(height: 20), FilledButton(onPressed: _busy ? null : _start, child: Text(context.tr('Connect'))),
         ]) : active == null ? EmptyState('No terminal sessions',
           message: _error, action: FilledButton(onPressed: _newSession, child: Text(context.tr('New session')))) : Column(children: [
-          if (active['phase'] == 'CONNECTING' || progress.isNotEmpty) LinearProgressIndicator(
+          if (active['phase'] == 'CONNECTING' || progress.isNotEmpty) material.LinearProgressIndicator(
             value: active['phase'] == 'CONNECTING' || progress['percent'] == null ? null : (progress['percent'] as num).toDouble() / 100,
             color: progress['state'] == 'ERROR' ? context.colorScheme.error : null),
           if (active['banner'] != null) Padding(padding: const EdgeInsets.all(12), child: SelectableText(active['banner'].toString())),
@@ -143,7 +144,7 @@ class _GhosttySurfaceState extends State<GhosttySurface> {
         case 'modifiers': setState(() => _modifiers = json(call.arguments)); return null;
         case 'unsafePaste': return confirm(context, 'Paste multiple lines?', message: 'Pasted text may execute commands in this terminal.', action: 'Paste');
         case 'clipboardRead': return confirm(context, 'Allow terminal to read clipboard?', action: 'Allow');
-        case 'link': return showDialog<String>(context: context, builder: (context) => AlertDialog(
+        case 'link': return showDialog<String>(context: context, builder: (context) => material.AlertDialog(
           title: Text(context.tr('Link')), content: SelectableText(call.arguments.toString()), actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
             TextButton(onPressed: () => Navigator.pop(context, 'copy'), child: Text(context.tr('Copy'))),
@@ -165,9 +166,9 @@ class _GhosttySurfaceState extends State<GhosttySurface> {
       creationParamsCodec: const StandardMessageCodec(), onPlatformViewCreated: _created)),
     if (!widget.preview) SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
       for (final key in const ['Esc', 'Tab', 'Ctrl', 'Alt', '↑', '↓', '←', '→', 'Home', 'End', 'PgUp', 'PgDn', 'Paste', 'Keyboard'])
-        TextButton(onPressed: _channel == null ? null : () => _key(key),
+        material.TextButton(onPressed: _channel == null ? null : () => _key(key),
           style: _modifiers[key.toLowerCase()] == 'ARMED' || _modifiers[key.toLowerCase()] == 'LOCKED'
-            ? TextButton.styleFrom(backgroundColor: context.colorScheme.primaryContainer) : null,
+            ? material.TextButton.styleFrom(backgroundColor: context.colorScheme.primaryContainer) : null,
           child: Text(context.tr(key) + (_modifiers[key.toLowerCase()] == 'LOCKED' ? ' •' : ''))),
     ])),
   ]);

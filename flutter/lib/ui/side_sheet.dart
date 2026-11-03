@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/l10n.dart';
 import 'package:b_box_ui/ui/color.dart';
 import 'package:b_box_ui/ui/drag_back.dart';
 import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/sheet_navigator.dart';
 import 'package:b_box_ui/ui/surface.dart';
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter/rendering.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
 const Duration _sideSheetEnterDuration = Duration(milliseconds: 300);
 const Duration _sideSheetExitDuration = Duration(milliseconds: 200);
@@ -45,7 +47,7 @@ class _SideSheetState extends State<SideSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return Surface(
       key: _childKey,
       color:
           widget.backgroundColor ??
@@ -95,10 +97,13 @@ class _SideSheetLayoutWithSizeListener extends SingleChildRenderObjectWidget {
 class _RenderSideSheetLayoutWithSizeListener extends RenderShiftedBox {
   _RenderSideSheetLayoutWithSizeListener({
     RenderBox? child,
-    required this._onChildSizeChanged,
-    required this._animationValue,
-    required this._width,
-  }) : super(child);
+    required _SizeChangeCallback<Size> onChildSizeChanged,
+    required double animationValue,
+    required double width,
+  }) : _onChildSizeChanged = onChildSizeChanged,
+       _animationValue = animationValue,
+       _width = width,
+       super(child);
 
   Size _lastSize = Size.zero;
 
@@ -242,7 +247,7 @@ class _ModalSideSheet<T> extends StatefulWidget {
 }
 
 class _ModalSideSheetState<T> extends State<_ModalSideSheet<T>> {
-  String _getRouteLabel(MaterialLocalizations localizations) {
+  String _getRouteLabel(UiLocalizations localizations) {
     switch (Theme.of(context).platform) {
       case TargetPlatform.iOS:
       case TargetPlatform.macOS:
@@ -251,7 +256,7 @@ class _ModalSideSheetState<T> extends State<_ModalSideSheet<T>> {
       case TargetPlatform.fuchsia:
       case TargetPlatform.linux:
       case TargetPlatform.windows:
-        return localizations.dialogLabel;
+        return localizations.dialog;
     }
   }
 
@@ -262,10 +267,7 @@ class _ModalSideSheetState<T> extends State<_ModalSideSheet<T>> {
   @override
   Widget build(BuildContext context) {
     assert(debugCheckHasMediaQuery(context));
-    assert(debugCheckHasMaterialLocalizations(context));
-    final MaterialLocalizations localizations = MaterialLocalizations.of(
-      context,
-    );
+    final localizations = UiLocalizations.of(context);
     final String routeLabel = _getRouteLabel(localizations);
     final width = _widthFor(MediaQuery.sizeOf(context).width);
 
@@ -418,20 +420,16 @@ Future<T?> showModalSideSheet<T>({
   Color? barrierColor,
 }) {
   assert(debugCheckHasMediaQuery(context));
-  assert(debugCheckHasMaterialLocalizations(context));
 
   final navigator = sheetNavigatorOf(context);
-  final MaterialLocalizations localizations = MaterialLocalizations.of(context);
+  final localizations = UiLocalizations.of(context);
   return navigator.push(
     ModalSideSheetRoute<T>(
       builder: builder,
-      barrierLabel: localizations.scrimLabel,
-      barrierOnTapHint: localizations.scrimOnTapHint(
-        localizations.bottomSheetLabel,
-      ),
+      barrierLabel: localizations.close,
+      barrierOnTapHint: localizations.close,
       backgroundColor: backgroundColor,
-      modalBarrierColor:
-          barrierColor ?? Theme.of(context).bottomSheetTheme.modalBarrierColor,
+      modalBarrierColor: barrierColor,
     ),
   );
 }

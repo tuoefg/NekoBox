@@ -1,7 +1,8 @@
-import 'package:b_box_ui/ui/item_position.dart';
-import 'package:b_box_ui/ui/sheet.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/item_position.dart';
+import 'package:b_box_ui/ui/scroll_behavior.dart';
+import 'package:b_box_ui/ui/sheet.dart';
 
 class PageActivityScope extends InheritedWidget {
   final bool isActive;
@@ -27,7 +28,7 @@ class PageActivityScope extends InheritedWidget {
 
 class BottomInsetScope extends InheritedWidget {
   static const double dockedSearchHeight = 48;
-  static const double dockedSearchMargin = kFloatingActionButtonMargin;
+  static const double dockedSearchMargin = 16;
   static const double dockedSearchInset =
       dockedSearchMargin + dockedSearchHeight;
 
@@ -169,24 +170,6 @@ class SheetProvider<T> extends InheritedWidget {
       onClose != oldWidget.onClose;
 }
 
-class ProfileIdProvider extends InheritedWidget {
-  final int profileId;
-
-  const ProfileIdProvider({
-    super.key,
-    required this.profileId,
-    required super.child,
-  });
-
-  static ProfileIdProvider? of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<ProfileIdProvider>();
-  }
-
-  @override
-  bool updateShouldNotify(ProfileIdProvider oldWidget) =>
-      profileId != oldWidget.profileId;
-}
-
 /// How far a sheet's content hangs below the screen at its current detent.
 class SheetOverhangScope extends InheritedWidget {
   final ValueListenable<double> overhang;
@@ -270,7 +253,39 @@ ScrollController sheetScrollController(
 }) {
   final createController = SheetScrollScope.of(context);
   if (createController == null) {
-    return ScrollController(initialScrollOffset: initialScrollOffset);
+    return _PageScrollController(initialScrollOffset: initialScrollOffset);
   }
   return createController(initialScrollOffset: initialScrollOffset);
+}
+
+class _PageScrollController extends ScrollController {
+  _PageScrollController({super.initialScrollOffset});
+
+  @override
+  ScrollPosition createScrollPosition(
+    ScrollPhysics physics,
+    ScrollContext context,
+    ScrollPosition? oldPosition,
+  ) {
+    return _PageScrollPosition(
+      physics: physics,
+      context: context,
+      initialPixels: initialScrollOffset,
+      keepScrollOffset: keepScrollOffset,
+      oldPosition: oldPosition,
+      debugLabel: debugLabel,
+    );
+  }
+}
+
+class _PageScrollPosition extends ScrollPositionWithSingleContext
+    with InitialPixelsInRange {
+  _PageScrollPosition({
+    required super.physics,
+    required super.context,
+    super.initialPixels,
+    super.keepScrollOffset,
+    super.oldPosition,
+    super.debugLabel,
+  });
 }

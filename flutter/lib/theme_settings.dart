@@ -6,9 +6,14 @@ const defaultAccentColors = [0xff007aff, 0xffcb30e0, 0xffff2d55, 0xffff383c, 0xf
 
 TabAnimation tabAnimationOf(Json preferences) => preferences['tabAnimation'] == 'fade' ? TabAnimation.fade : TabAnimation.slide;
 
+Color appAccentColor(BoxController box, {Color? color}) {
+  final prefs = box.preferences;
+  return color ?? Color(prefs['systemColor'] == true ? box.systemAccentColor : (prefs['color'] as num?)?.toInt() ?? 0xff007aff);
+}
+
 ColorScheme appColorScheme(BoxController box, Brightness brightness, {Color? color, bool? pureBlack}) {
   final prefs = box.preferences;
-  final accent = color ?? Color(prefs['systemColor'] == true ? box.systemAccentColor : (prefs['color'] as num?)?.toInt() ?? 0xff007aff);
+  final accent = appAccentColor(box, color: color);
   final style = ColorStyle.values.firstWhere((v) => v.name == prefs['colorStyle'], orElse: () => ColorStyle.vivid);
   return seededColorScheme(seedColor: accent, brightness: brightness, style: style).toPureBlack(pureBlack ?? prefs['pureBlack'] == true);
 }

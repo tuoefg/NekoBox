@@ -24,5 +24,9 @@ const pageToolbarHeight = 72.0;
 const sheetToolbarHeight = 48.0;
 const sheetAppBarHeight = 68.0;
 
+/// How far into a page's bar a banner rests: 8 below a root page's title,
+/// whose line ends 51 into the bar, and clear of the bar's 44 buttons.
+const bannerBarClearance = 59.0;
+
 const midDuration = Duration(milliseconds: 200);
 const commonDuration = Duration(milliseconds: 300);

@@ -10,15 +10,12 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   material_ui: 1.5.0
-  animations: 3.0.0
   collection: 1.19.1
   country_flags: 4.1.2
-  emoji_regex: 0.0.5
   freezed_annotation: 3.1.0
   material_color_utilities: 0.13.0
   material_new_shapes: 1.0.0
   path_parsing: 1.1.0
-  qr: 4.0.0
   super_sliver_list: 0.4.1
   mobile_scanner: 7.4.2
 dev_dependencies:
@@ -34,6 +31,7 @@ flutter:
     - assets/schema/
   shaders:
     - shaders/liquid_glass.frag
+    - shaders/ink_sparkle.frag
   fonts:
     - family: JetBrainsMono
       fonts:

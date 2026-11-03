@@ -14,6 +14,14 @@ class RequestsPage extends StatefulWidget {
 
 class _RequestsPageState extends State<RequestsPage> {
   String _query = '';
+  // Labels tapped on a record filter by them; the search field keeps its own text.
+  final _keywords = ValueNotifier<List<ScaffoldKeyword>>(const []);
+  String get _search => [
+    _query,
+    ..._keywords.value.map((keyword) => '${keyword.key}'),
+  ].where((word) => word.trim().isNotEmpty).join(' ');
+  void _keywordsChanged() => setState(() {});
+
   int _limit = 50, _revision = 0;
   bool _busy = false;
 
@@ -24,20 +32,27 @@ class _RequestsPageState extends State<RequestsPage> {
     if (mounted) setState(() { _busy = false; _revision++; });
   }
 
+  @override void dispose() { _keywords.removeListener(_keywordsChanged); _keywords.dispose(); super.dispose(); }
+
+  @override void initState() {
+    super.initState();
+    _keywords.addListener(_keywordsChanged);
+  }
+
   @override Widget build(BuildContext context) {
     final box = context.box;
     if (box.remote) return const BoxPage(title: 'Requests', children: [EmptyState('HTTP debugging is only available for the local service')]);
-    return CapturePoll(method: 'capture.snapshot', arguments: {'query': _query, 'limit': _limit}, revision: _revision,
+    return CapturePoll(method: 'capture.snapshot', arguments: {'query': _search, 'limit': _limit}, revision: _revision,
       builder: (context, snapshot, error, refresh) {
         final state = json(snapshot?['state']), page = json(snapshot?['page']);
         final active = state['active'] == true, entries = rows(page['items']);
-        return CommonScaffold(
+        return Scaffold(
           title: context.tr('Requests'), isLoading: _busy,
           searchState: AppBarSearchState(onSearch: (query) => setState(() { _query = query; _limit = 50; })),
-          onKeywordsUpdate: (words) => setState(() { _query = words.join(' '); _limit = 50; }),
+          keywords: _keywords,
           iconActions: [IconButtonData(glyph: AppGlyphs.refresh, tooltip: context.tr('Refresh'), onPressed: refresh)],
           menuItems: [
-            CommonPopupMenuItem(glyph: AppGlyphs.sliders, label: context.tr('Capture settings'), onPressed: _busy || active ? null : () async {
+            PopupMenuItem(glyph: AppGlyphs.sliders, label: context.tr('Capture settings'), onPressed: _busy || active ? null : () async {
               setState(() => _busy = true);
               try {
                 final source = json(await context.box.call('capture.settings'));
@@ -45,9 +60,9 @@ class _RequestsPageState extends State<RequestsPage> {
               } catch (error) { if (context.mounted) context.box.messages.add(BoxController.describe(error)); }
               finally { if (mounted) setState(() { _busy = false; _revision++; }); }
             }),
-            CommonPopupMenuItem(glyph: AppGlyphs.arrowDown, label: context.tr('Export HAR'), onPressed: _busy || entries.isEmpty ? null : () => _act('capture.export', {'format': 'har', 'query': _query})),
-            CommonPopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Extract domains'), onPressed: _busy ? null : () => openPage(context, CaptureDomainsPage(query: _query))),
-            CommonPopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Clear requests'), onPressed: _busy ? null : () async {
+            PopupMenuItem(glyph: AppGlyphs.arrowDown, label: context.tr('Export HAR'), onPressed: _busy || entries.isEmpty ? null : () => _act('capture.export', {'format': 'har', 'query': _search})),
+            PopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Extract domains'), onPressed: _busy ? null : () => openPage(context, CaptureDomainsPage(query: _search))),
+            PopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Clear requests'), onPressed: _busy ? null : () async {
               if (await confirm(context, 'Clear captured requests?') && mounted) await _act('capture.clear');
             }),
           ],
@@ -175,8 +190,8 @@ class _RequestDetailPageState extends State<RequestDetailPage> {
           if (mounted) setState(() => _busy = false);
         }),
       ], menuItems: [
-        for (final part in const ['Request', 'Response', 'Cookies']) CommonPopupMenuItem(label: context.tr(part),
-          section: part == 'Request' ? CommonPopupMenuSection(title: context.tr('Message type')) : null,
+        for (final part in const ['Request', 'Response', 'Cookies']) PopupMenuItem(label: context.tr(part),
+          section: part == 'Request' ? PopupMenuSection(title: context.tr('Message type')) : null,
           checked: part == _part, onPressed: () => setState(() => _part = part)),
       ], children: [
         if (error != null) ErrorState(error, retry: refresh),

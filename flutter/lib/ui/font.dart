@@ -1,4 +1,5 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
 enum _HanVariant { simplified, traditional, japanese, korean }
 
@@ -69,10 +70,10 @@ List<String> appFontFamilyFallback({
   required Iterable<Locale> locales,
   String? fontFamily,
 }) {
-  final base = Typography.material2021(platform: platform).black.bodyMedium!;
+  final system = systemFontOf(platform);
   return [
-    if (fontFamily != null) ?base.fontFamily,
-    ...?base.fontFamilyFallback,
+    if (fontFamily != null) system.family,
+    ...?system.fallback,
     ...?_hanFamilies[platform]?[_hanVariantOf(locales)],
   ];
 }

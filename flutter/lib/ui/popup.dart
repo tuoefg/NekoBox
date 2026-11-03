@@ -3,20 +3,26 @@ import 'dart:math' as math;
 import 'dart:ui' as ui show Image;
 import 'dart:ui' show ImageFilter, lerpDouble;
 
-import 'package:b_box_ui/ui/color.dart';
-import 'package:b_box_ui/ui/context.dart';
-import 'package:b_box_ui/ui/icons/icons.dart';
-import 'package:b_box_ui/ui/metrics.dart';
-import 'package:b_box_ui/ui/motion.dart';
-import 'package:b_box_ui/ui/shape.dart';
-import 'package:b_box_ui/ui/surface.dart';
-import 'package:b_box_ui/ui/typography.dart';
 import 'package:flutter/foundation.dart' show ValueListenable, listEquals;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/physics.dart' show SpringSimulation;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/l10n.dart';
+import 'package:b_box_ui/ui/card_surface.dart';
+import 'package:b_box_ui/ui/color.dart';
+import 'package:b_box_ui/ui/context.dart';
+import 'package:b_box_ui/ui/divider.dart';
+import 'package:b_box_ui/ui/icons/icons.dart';
+import 'package:b_box_ui/ui/metrics.dart';
+import 'package:b_box_ui/ui/motion.dart';
+import 'package:b_box_ui/ui/press_region.dart';
+import 'package:b_box_ui/ui/press_surface.dart';
+import 'package:b_box_ui/ui/shape.dart';
+import 'package:b_box_ui/ui/surface.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
+import 'package:b_box_ui/ui/typography.dart';
 
 import 'goo.dart';
 import 'liquid_glass.dart';
@@ -114,6 +120,18 @@ const _dropletShare = 0.25;
 const _rimDepth = 8.0;
 const _glyphUnderAt = 0.25;
 
+// A control with no glass of its own has its text at its very edge and nothing
+// to hand over to, so the drop stands clear of it and fades at both ends.
+const _bareControlMargin = EdgeInsets.symmetric(horizontal: 12, vertical: 6);
+const _bareGlassIn = 0.1;
+
+/// How much longer than round the control is, which the platter keeps where
+/// it meets it so that a capsule button takes it in as a capsule.
+Size _beyondRound(Rect anchor) => Size(
+  math.max(0.0, anchor.width - anchor.height),
+  math.max(0.0, anchor.height - anchor.width),
+);
+
 const _dwellDuration = Duration(milliseconds: 400);
 
 final _unfoldSpring = SpringDescription.withDurationAndBounce(
@@ -125,8 +143,8 @@ final _foldSpring = SpringDescription.withDurationAndBounce(
   duration: const Duration(milliseconds: 340),
 );
 
-class CommonPopupRoute<T> extends PopupRoute<T> {
-  CommonPopupRoute({
+class AnchoredPopupRoute<T> extends PopupRoute<T> {
+  AnchoredPopupRoute({
     required this.builder,
     required this.anchorOf,
     required this.barrierLabel,
@@ -134,6 +152,7 @@ class CommonPopupRoute<T> extends PopupRoute<T> {
     this.elevated = false,
     this.sourceColor = Colors.transparent,
     this.sourceImage,
+    this.bareSource = false,
     this.modal = true,
     this.avoid,
   }) : super(requestFocus: modal ? null : false);
@@ -154,6 +173,9 @@ class CommonPopupRoute<T> extends PopupRoute<T> {
   /// A snapshot of the source control, drawn inside the platter while the
   /// control itself is hidden; null while it is still being taken.
   final ValueListenable<ui.Image?>? sourceImage;
+
+  /// Whether the source control shows no surface of its own at rest.
+  final bool bareSource;
 
   /// Off, focus stays on the page and touches outside pass through to it.
   final bool modal;
@@ -332,6 +354,7 @@ class CommonPopupRoute<T> extends PopupRoute<T> {
               surface: _surface,
               sourceColor: sourceColor,
               sourceImage: sourceImage,
+              bareSource: bareSource,
               surfaceColor: SurfaceLevel.floatingOf(
                 colorScheme,
               ).colorOf(colorScheme),
@@ -420,6 +443,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
     required this.surface,
     required this.sourceColor,
     required this.sourceImage,
+    required this.bareSource,
     required this.surfaceColor,
     required this.shadows,
     required this.glass,
@@ -432,6 +456,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
   final _PopupSurface surface;
   final Color sourceColor;
   final ValueListenable<ui.Image?>? sourceImage;
+  final bool bareSource;
   final Color surfaceColor;
   final List<BoxShadow> shadows;
 
@@ -448,6 +473,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
       surface: surface,
       sourceColor: sourceColor,
       sourceImage: sourceImage,
+      bareSource: bareSource,
       surfaceColor: surfaceColor,
       shadows: shadows,
       glass: glass,
@@ -466,6 +492,7 @@ class _PopupMorph extends SingleChildRenderObjectWidget {
       ..surface = surface
       ..sourceColor = sourceColor
       ..sourceImage = sourceImage
+      ..bareSource = bareSource
       ..surfaceColor = surfaceColor
       ..shadows = shadows
       ..glass = glass;
@@ -487,20 +514,30 @@ typedef _Opening = ({
 /// toward its anchor as it fades.
 class _RenderPopupMorph extends RenderProxyBox {
   _RenderPopupMorph({
-    required this._anchor,
-    required this._animation,
-    required this._platter,
+    required Rect anchor,
+    required Animation<double> animation,
+    required ValueListenable<bool> platter,
     required this.surface,
-    required this._sourceColor,
-    required this._sourceImage,
-    required this._surfaceColor,
-    required this._shadows,
-    required this._glass,
-  });
+    required Color sourceColor,
+    required ValueListenable<ui.Image?>? sourceImage,
+    required this.bareSource,
+    required Color surfaceColor,
+    required List<BoxShadow> shadows,
+    required _PlatterGlass? glass,
+  }) : _anchor = anchor,
+       _animation = animation,
+       _platter = platter,
+       _sourceColor = sourceColor,
+       _sourceImage = sourceImage,
+       _surfaceColor = surfaceColor,
+       _shadows = shadows,
+       _glass = glass;
 
   late final _pane = LiquidGlassPane(markNeedsPaint);
 
   _PopupSurface surface;
+
+  bool bareSource;
 
   Rect _anchor;
 
@@ -653,6 +690,36 @@ class _RenderPopupMorph extends RenderProxyBox {
   Rect get _localAnchor =>
       _anchor.shift(-(parentData! as BoxParentData).offset);
 
+  Rect get _dropAnchor =>
+      bareSource ? _bareControlMargin.inflateRect(_localAnchor) : _localAnchor;
+
+  Rect _glyphIn(Rect droplet) {
+    final control = _localAnchor;
+    final drop = _dropAnchor;
+    return Rect.fromCenter(
+      center: droplet.center,
+      width: droplet.width * control.width / drop.width,
+      height: droplet.height * control.height / drop.height,
+    );
+  }
+
+  double _bareGlassOpening(double time) =>
+      bareSource ? math.min(1.0, time / _bareGlassIn) : 1.0;
+
+  void _paintDropGlass(
+    PaintingContext context,
+    Offset offset,
+    double opacity,
+    PaintingContextCallback painter,
+  ) {
+    final alpha = Color.getAlphaFromOpacity(opacity);
+    if (alpha == 255) {
+      painter(context, offset);
+      return;
+    }
+    LiquidGlassFade.push(context, offset, alpha, painter);
+  }
+
   @override
   void paint(PaintingContext context, Offset offset) {
     if (child == null) {
@@ -695,7 +762,7 @@ class _RenderPopupMorph extends RenderProxyBox {
   }
 
   _Opening _openingOf(double time, Rect card) {
-    final anchor = _localAnchor;
+    final anchor = _dropAnchor;
     final progress = _open.x(time);
     final scale = lerpDouble(
       _platterInControl * anchor.shortestSide / card.width,
@@ -710,11 +777,12 @@ class _RenderPopupMorph extends RenderProxyBox {
         : toCard.sign *
               (math.min(1.0, distance / 30) * 23 + 0.124 * distance) *
               riseAndFall(time, 0.098, 3.3);
+    final beyond = _beyondRound(anchor) * (1 - progress).clamp(0.0, 1.0);
     final platter = Rect.fromCenter(
       center:
           Offset.lerp(anchor.center, card.center, progress)! + Offset(0, dip),
-      width: math.max(0.0, card.width * scale),
-      height: math.max(0.0, height * scale),
+      width: math.max(0.0, card.width * scale + beyond.width),
+      height: math.max(0.0, height * scale + beyond.height),
     );
     final corners =
         _cardRadius +
@@ -755,7 +823,6 @@ class _RenderPopupMorph extends RenderProxyBox {
       context.paintChild(child, offset);
       return;
     }
-    final anchor = _localAnchor;
     final bounds = Offset.zero & size;
     final (:platter, :radius, :droplet, :progress) = _openingOf(
       frame.time,
@@ -805,27 +872,35 @@ class _RenderPopupMorph extends RenderProxyBox {
     if (glass != null) {
       final shape = outline.getBounds();
       // Frosted as the card and shadowed after, so one capture serves the morph.
-      _pane.paint(
+      _paintDropGlass(
         context,
-        (merged ? platter : shape).shift(offset),
-        shape: merged
-            ? LiquidGlassCorners.circular(radius)
-            : LiquidGlassGoo(
-                outline.shift(-shape.topLeft),
-                [platter.shift(-shape.topLeft), droplet!.shift(-shape.topLeft)],
-                const [_dropletBlend],
-                firstRadius: math.max(radius, 1e-3),
-              ),
-        style: LiquidGlassStyle.lerp(
-          glass.from,
-          glass.to,
-          settled,
-        ).copyWith(blur: glass.to.blur),
-        hold: bounds
-            .expandToInclude(anchor)
-            .inflate(size.longestSide * _overshootPerLongestSide)
-            .shift(offset),
-        rim: rim,
+        offset,
+        _bareGlassOpening(frame.time),
+        (context, offset) => _pane.paint(
+          context,
+          (merged ? platter : shape).shift(offset),
+          shape: merged
+              ? LiquidGlassCorners.circular(radius)
+              : LiquidGlassGoo(
+                  outline.shift(-shape.topLeft),
+                  [
+                    platter.shift(-shape.topLeft),
+                    droplet!.shift(-shape.topLeft),
+                  ],
+                  const [_dropletBlend],
+                  firstRadius: math.max(radius, 1e-3),
+                ),
+          style: LiquidGlassStyle.lerp(
+            glass.from,
+            glass.to,
+            settled,
+          ).copyWith(blur: glass.to.blur),
+          hold: bounds
+              .expandToInclude(_dropAnchor)
+              .inflate(size.longestSide * _overshootPerLongestSide)
+              .shift(offset),
+          rim: rim,
+        ),
       );
     }
     _paintShadows(context.canvas, path, platter.shift(offset), radius, settled);
@@ -842,7 +917,7 @@ class _RenderPopupMorph extends RenderProxyBox {
       _paintSource(
         context.canvas,
         image,
-        droplet.shift(offset),
+        _glyphIn(droplet).shift(offset),
         1 - under,
         blur: _openContentBlur * under,
       );
@@ -881,7 +956,7 @@ class _RenderPopupMorph extends RenderProxyBox {
     if (image == null) {
       return;
     }
-    final anchor = _localAnchor;
+    final anchor = _dropAnchor;
     final bounds = Offset.zero & size;
     final card = _closingSurface ?? bounds;
     if (card.isEmpty) {
@@ -916,14 +991,15 @@ class _RenderPopupMorph extends RenderProxyBox {
           math.max(from.width, from.height),
       progress,
     )!;
+    final beyond = _beyondRound(anchor) * progress.clamp(0.0, 1.0);
     final platter = Rect.fromCenter(
       center:
           Offset.lerp(from.center, anchor.center, progress)! +
           Offset(0, away * dip * ringing),
-      width: math.max(0.0, from.width * scale),
+      width: math.max(0.0, from.width * scale + beyond.width),
       height: math.max(
         0.0,
-        lerpDouble(from.height, from.width, progress)! * scale,
+        lerpDouble(from.height, from.width, progress)! * scale + beyond.height,
       ),
     );
     final platterRadius = math.max(
@@ -959,26 +1035,35 @@ class _RenderPopupMorph extends RenderProxyBox {
     final remaining = (1 - progress).clamp(0.0, 1.0);
     final path = outline.shift(offset);
     if (glass != null) {
-      _pane.paint(
+      _paintDropGlass(
         context,
-        shape.shift(offset),
-        shape: LiquidGlassGoo(
-          outline.shift(-shape.topLeft),
-          [platter.shift(-shape.topLeft), droplet.shift(-shape.topLeft)],
-          [blend],
-          firstRadius: math.max(platterRadius, 1e-3),
+        offset,
+        bareSource
+            ? math.min(
+                _bareGlassOpening(start?.time ?? _bareGlassIn),
+                1 - absorbed,
+              )
+            : 1.0,
+        (context, offset) => _pane.paint(
+          context,
+          shape.shift(offset),
+          shape: LiquidGlassGoo(
+            outline.shift(-shape.topLeft),
+            [platter.shift(-shape.topLeft), droplet.shift(-shape.topLeft)],
+            [blend],
+            firstRadius: math.max(platterRadius, 1e-3),
+          ),
+          style: LiquidGlassStyle.lerp(glass.from, glass.to, remaining)
+              .copyWith(
+                blur: lerpDouble(glass.to.blur, glass.from.blur, absorbed),
+              ),
+          hold: bounds
+              .expandToInclude(from)
+              .expandToInclude(anchor.inflate(anchor.longestSide))
+              .inflate(size.longestSide * _overshootPerLongestSide)
+              .shift(offset),
+          holdFrost: absorbed > 0 ? glass.from.blur : null,
         ),
-        style: LiquidGlassStyle.lerp(
-          glass.from,
-          glass.to,
-          remaining,
-        ).copyWith(blur: lerpDouble(glass.to.blur, glass.from.blur, absorbed)),
-        hold: bounds
-            .expandToInclude(from)
-            .expandToInclude(anchor.inflate(anchor.longestSide))
-            .inflate(size.longestSide * _overshootPerLongestSide)
-            .shift(offset),
-        holdFrost: absorbed > 0 ? glass.from.blur : null,
       );
     }
     // Returning cards keep their own shadow as they fade into the platter's,
@@ -1001,7 +1086,7 @@ class _RenderPopupMorph extends RenderProxyBox {
     _paintSource(
       context.canvas,
       image,
-      droplet.shift(offset),
+      _glyphIn(droplet).shift(offset),
       lerpDouble(
         0.2,
         1,
@@ -1304,12 +1389,13 @@ class _PopupPin {
 /// Opens a popup out of the button [targetBuilder] builds. A press on the
 /// button opens it at once, as iOS menus do, so the finger can slide on into
 /// the menu and let go on an item.
-class CommonPopupBox extends StatefulWidget {
-  const CommonPopupBox({
+class PopupAnchor extends StatefulWidget {
+  const PopupAnchor({
     super.key,
     required this.targetBuilder,
     required this.popupBuilder,
     this.placement = PopupPlacement.overAnchorEnd,
+    this.bare = false,
   });
 
   final Widget Function(PopupOpen open) targetBuilder;
@@ -1318,14 +1404,17 @@ class CommonPopupBox extends StatefulWidget {
 
   final PopupPlacement placement;
 
+  /// Whether the target shows no surface of its own at rest, as a bar's title.
+  final bool bare;
+
   @override
-  State<CommonPopupBox> createState() => _CommonPopupBoxState();
+  State<PopupAnchor> createState() => _PopupAnchorState();
 }
 
-class _CommonPopupBoxState extends State<CommonPopupBox> {
+class _PopupAnchorState extends State<PopupAnchor> {
   final _sourceKey = GlobalKey();
   final _sourceHidden = ValueNotifier<bool>(false);
-  CommonPopupRoute<void>? _route;
+  AnchoredPopupRoute<void>? _route;
   int? _pointer;
   Offset _pressOrigin = Offset.zero;
   bool _pressMoved = false;
@@ -1356,11 +1445,13 @@ class _CommonPopupBoxState extends State<CommonPopupBox> {
       if (color != null) {
         return;
       }
-      if (element.widget case final Material material) {
-        color = material.type == MaterialType.transparency
-            ? Colors.transparent
-            : material.color ?? Colors.transparent;
-        return;
+      switch (element.widget) {
+        case final CardSurface surface:
+          color = surface.fill;
+          return;
+        case final Surface surface:
+          color = surface.color ?? Colors.transparent;
+          return;
       }
       element.visitChildren(visit);
     }
@@ -1378,7 +1469,7 @@ class _CommonPopupBoxState extends State<CommonPopupBox> {
   }
 
   void _captureSource(
-    CommonPopupRoute<void> route,
+    AnchoredPopupRoute<void> route,
     ValueNotifier<ui.Image?> snapshot,
   ) {
     if (!mounted || !route.isActive) {
@@ -1395,16 +1486,20 @@ class _CommonPopupBoxState extends State<CommonPopupBox> {
     _sourceHidden.value = true;
   }
 
-  /// Whether the button takes taps, as the first ink response in it tells.
+  /// Whether the button takes taps, as the first pressable in it tells.
   bool _targetEnabled() {
     bool? enabled;
     void visit(Element element) {
       if (enabled != null) {
         return;
       }
-      if (element.widget case final InkResponse response) {
-        enabled = response.onTap != null;
-        return;
+      switch (element.widget) {
+        case final PressSurface surface:
+          enabled = surface.onPressed != null && !surface.inert;
+          return;
+        case final PressRegion region:
+          enabled = region.onTap != null;
+          return;
       }
       element.visitChildren(visit);
     }
@@ -1477,14 +1572,15 @@ class _CommonPopupBoxState extends State<CommonPopupBox> {
       return;
     }
     final snapshot = ValueNotifier<ui.Image?>(null);
-    final route = _route = CommonPopupRoute<void>(
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    final route = _route = AnchoredPopupRoute<void>(
+      barrierLabel: UiLocalizations.of(context).close,
       builder: (context) => widget.popupBuilder(context),
       anchorOf: _sourceRect,
       placement: widget.placement,
       elevated: ElevatedSurfaceTheme.isIn(context),
-      sourceColor: _sourceColor(),
+      sourceColor: widget.bare ? Colors.transparent : _sourceColor(),
       sourceImage: snapshot,
+      bareSource: widget.bare,
     );
     Navigator.of(context).push(route);
     void reveal() {
@@ -1722,14 +1818,15 @@ class _PopupPressRecognizer extends OneSequenceGestureRecognizer {
   String get debugDescription => 'popup press';
 }
 
-class CommonPopupMenuItem {
-  const CommonPopupMenuItem({
+class PopupMenuItem {
+  const PopupMenuItem({
     required this.label,
     this.subtitle,
     this.glyph,
     this.onPressed,
     this.danger = false,
     this.checked,
+    this.keepsOpen = false,
     this.section,
     this.subItems = const [],
   });
@@ -1741,14 +1838,17 @@ class CommonPopupMenuItem {
   final bool danger;
   final bool? checked;
 
+  /// iOS's keepsMenuPresented, for one of several choices.
+  final bool keepsOpen;
+
   /// Sets this item and those after it apart from the items above, as an
   /// inline section of an iOS menu does.
-  final CommonPopupMenuSection? section;
-  final List<CommonPopupMenuItem> subItems;
+  final PopupMenuSection? section;
+  final List<PopupMenuItem> subItems;
 }
 
-class CommonPopupMenuSection {
-  const CommonPopupMenuSection({this.title});
+class PopupMenuSection {
+  const PopupMenuSection({this.title});
 
   final String? title;
 }
@@ -1757,17 +1857,17 @@ const _menuMinWidth = 160.0;
 const _menuMaxWidth = 280.0;
 const _defaultMaxVisibleItems = 7;
 
-class CommonPopupMenu extends StatefulWidget {
-  const CommonPopupMenu({super.key, required this.items, this.maxVisibleItems});
+class PopupMenu extends StatefulWidget {
+  const PopupMenu({super.key, required this.items, this.maxVisibleItems});
 
-  final List<CommonPopupMenuItem> items;
+  final List<PopupMenuItem> items;
 
   /// Half of the next row shows past these, so the cut tells the menu scrolls.
   /// Setting them builds only the rows in view, which needs rows of one height.
   final int? maxVisibleItems;
 
   @override
-  State<CommonPopupMenu> createState() => _CommonPopupMenuState();
+  State<PopupMenu> createState() => _PopupMenuState();
 }
 
 class _MenuStep {
@@ -1795,8 +1895,8 @@ class _MenuLevel {
     this.step,
   });
 
-  final List<CommonPopupMenuItem> items;
-  final CommonPopupMenuItem? owner;
+  final List<PopupMenuItem> items;
+  final PopupMenuItem? owner;
 
   /// The step that opened this level from an item of the one below.
   final _MenuStep? step;
@@ -1817,7 +1917,7 @@ class _Span extends Animatable<double> {
   double transform(double t) => ((t - begin) / (end - begin)).clamp(0.0, 1.0);
 }
 
-class _CommonPopupMenuState extends State<CommonPopupMenu>
+class _PopupMenuState extends State<PopupMenu>
     with SingleTickerProviderStateMixin {
   static const _headerIndex = -1;
   static const _levelWidthScale = 1.12;
@@ -1861,6 +1961,8 @@ class _CommonPopupMenuState extends State<CommonPopupMenu>
   /// the header standing on its item, so letting go there changes nothing.
   bool _landed = false;
   bool _carrying = false;
+
+  final _toggled = <PopupMenuItem>{};
 
   @override
   void initState() {
@@ -1940,7 +2042,7 @@ class _CommonPopupMenuState extends State<CommonPopupMenu>
 
   /// What the rows would take at their intrinsic width, measured from the
   /// labels as the rows lay them out.
-  double _lazyWidthOf(BuildContext context, List<CommonPopupMenuItem> items) {
+  double _lazyWidthOf(BuildContext context, List<PopupMenuItem> items) {
     final style = AppTextStyle.subheadline.of(context);
     final root = DefaultTextStyle.of(context).style.merge(style);
     final textScaler = MediaQuery.textScalerOf(context);
@@ -2127,6 +2229,18 @@ class _CommonPopupMenuState extends State<CommonPopupMenu>
     _unfoldTop();
   }
 
+  bool _isChecked(PopupMenuItem item) =>
+      (item.checked ?? false) != _toggled.contains(item);
+
+  void _toggle(PopupMenuItem item, VoidCallback onPressed) {
+    setState(() {
+      if (!_toggled.remove(item)) {
+        _toggled.add(item);
+      }
+    });
+    onPressed();
+  }
+
   void _select(VoidCallback onPressed) {
     Navigator.of(context).pop();
     final runPicked = _runPicked;
@@ -2250,7 +2364,7 @@ class _CommonPopupMenuState extends State<CommonPopupMenu>
 
   Widget _buildRow(
     BuildContext context, {
-    required CommonPopupMenuItem item,
+    required PopupMenuItem item,
     required int index,
     required VoidCallback? onTap,
     bool pressed = false,
@@ -2263,31 +2377,34 @@ class _CommonPopupMenuState extends State<CommonPopupMenu>
     Widget? arrow;
     if (item.subItems.isNotEmpty) {
       arrow = GlyphIcon(
-        AppGlyphs.chevronForward,
+        Glyphs.chevronForward,
         size: _submenuArrowSize,
         color: foregroundColor,
       );
       if (arrowTurns != null) {
         arrow = RotationTransition(turns: arrowTurns, child: arrow);
       }
-    } else if (item.checked == true) {
+    } else if (_isChecked(item)) {
       arrow = GlyphIcon(
-        AppGlyphs.check,
+        Glyphs.check,
         size: _submenuArrowSize,
         color: foregroundColor,
       );
     }
     // A press is the menu's to follow across the rows, so the row's own ink
     // only shows hover and focus.
-    final child = InkWell(
-      customBorder: AppShape.all(_itemRadius),
+    final child = PressRegion(
+      shape: AppShape.all(_itemRadius),
       onTap: onTap,
-      splashFactory: NoSplash.splashFactory,
-      highlightColor: Colors.transparent,
+      overlay: PressRegion.hoverOverlay,
       hoverColor: item.danger ? colorScheme.error.opacity10 : null,
       child: DecoratedBox(
         decoration: ShapeDecoration(
-          color: pressed ? Theme.of(context).highlightColor : null,
+          color: pressed
+              ? (Theme.brightnessOf(context) == Brightness.dark
+                    ? const Color(0x40CCCCCC)
+                    : const Color(0x66BCBCBC))
+              : null,
           shape: AppShape.all(_itemRadius),
         ),
         child: Padding(
@@ -2344,7 +2461,7 @@ class _CommonPopupMenuState extends State<CommonPopupMenu>
       child: Semantics(
         button: true,
         enabled: enabled,
-        checked: item.checked,
+        checked: item.checked == null ? null : _isChecked(item),
         child: child,
       ),
     );
@@ -2352,7 +2469,7 @@ class _CommonPopupMenuState extends State<CommonPopupMenu>
 
   Widget _buildItem(
     BuildContext context,
-    CommonPopupMenuItem item,
+    PopupMenuItem item,
     int index, {
     required bool active,
   }) {
@@ -2374,7 +2491,11 @@ class _CommonPopupMenuState extends State<CommonPopupMenu>
       item: item,
       index: index,
       pressed: pressed,
-      onTap: onPressed == null ? null : () => _select(onPressed),
+      onTap: switch (onPressed) {
+        null => null,
+        _ when item.keepsOpen => () => _toggle(item, onPressed),
+        _ => () => _select(onPressed),
+      },
     );
   }
 
@@ -2478,91 +2599,93 @@ class _CommonPopupMenuState extends State<CommonPopupMenu>
     return GestureDetector(
       excludeFromSemantics: true,
       onTap: receding ? _pop : null,
-      child: ExcludeSemantics(
+      child: ExcludeFocus(
         excluding: receding,
-        child: RepaintBoundary(
-          child: AnimatedBuilder(
-            animation: _motion,
-            builder: (context, child) {
-              final unfold = _unfold.value;
-              final settled = unfold.clamp(0.0, 1.0);
-              final width = step == null
-                  ? 1.0
-                  : (settled / _widthSpan).clamp(0.0, 1.0);
-              final distance = receding ? depth - 1 + settled : 0.0;
-              final scale = math.max(0.0, 1 - _levelScaleStep * distance);
-              final shadow = receding
-                  ? math.max(_minShadow, 1 - distance * _levelShadowStep)
-                  : step == null
-                  ? 1.0
-                  : settled;
-              final bare = _platter?.value ?? false;
-              return Opacity(
-                opacity: receding && bare ? 0 : 1,
-                child: Transform(
-                  transform: Matrix4.diagonal3Values(scale, scale, 1),
-                  alignment: Alignment.topRight,
-                  origin: Offset(0, pivot),
-                  child: PopupMenuCard(
-                    key: cardKey,
-                    grow: step == null ? 1 : unfold,
-                    origin: step == null
-                        ? null
-                        : (
-                            top: step.itemTop - level.top,
-                            height: step.itemHeight,
-                          ),
-                    shadows: menuShadows(colorScheme, shadow),
-                    fill: fill,
-                    dim: colorScheme.surface.withValues(
-                      alpha: math.min(0.4, _levelFadeStep * distance),
-                    ),
-                    glass: step == null
-                        ? glass
-                        : glass?.scale(_glassSpan.transform(unfold)),
-                    rim: step == null
-                        ? rim
-                        : rim?.scale(_glassSpan.transform(unfold)),
-                    bare: bare,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minWidth: lerpDouble(
-                          level.fromWidth,
-                          level.minWidth,
-                          width,
-                        )!,
-                        maxWidth: lerpDouble(
-                          level.fromWidth,
-                          level.maxWidth,
-                          width,
-                        )!,
-                        maxHeight: _maxHeightOf(context, level),
+        child: ExcludeSemantics(
+          excluding: receding,
+          child: RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _motion,
+              builder: (context, child) {
+                final unfold = _unfold.value;
+                final settled = unfold.clamp(0.0, 1.0);
+                final width = step == null
+                    ? 1.0
+                    : (settled / _widthSpan).clamp(0.0, 1.0);
+                final distance = receding ? depth - 1 + settled : 0.0;
+                final scale = math.max(0.0, 1 - _levelScaleStep * distance);
+                final shadow = receding
+                    ? math.max(_minShadow, 1 - distance * _levelShadowStep)
+                    : step == null
+                    ? 1.0
+                    : settled;
+                final bare = _platter?.value ?? false;
+                return Opacity(
+                  opacity: receding && bare ? 0 : 1,
+                  child: Transform(
+                    transform: Matrix4.diagonal3Values(scale, scale, 1),
+                    alignment: Alignment.topRight,
+                    origin: Offset(0, pivot),
+                    child: PopupMenuCard(
+                      key: cardKey,
+                      grow: step == null ? 1 : unfold,
+                      origin: step == null
+                          ? null
+                          : (
+                              top: step.itemTop - level.top,
+                              height: step.itemHeight,
+                            ),
+                      shadows: menuShadows(colorScheme, shadow),
+                      fill: fill,
+                      dim: colorScheme.surface.withValues(
+                        alpha: math.min(0.4, _levelFadeStep * distance),
                       ),
-                      child: child,
+                      glass: step == null
+                          ? glass
+                          : glass?.scale(_glassSpan.transform(unfold)),
+                      rim: step == null
+                          ? rim
+                          : rim?.scale(_glassSpan.transform(unfold)),
+                      bare: bare,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: lerpDouble(
+                            level.fromWidth,
+                            level.minWidth,
+                            width,
+                          )!,
+                          maxWidth: lerpDouble(
+                            level.fromWidth,
+                            level.maxWidth,
+                            width,
+                          )!,
+                          maxHeight: _maxHeightOf(context, level),
+                        ),
+                        child: child,
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
-            child: IgnorePointer(
-              ignoring: receding,
-              child: Material(
-                type: MaterialType.transparency,
-                child: Padding(
-                  padding: const EdgeInsets.all(_cardInset),
-                  child: _buildsLazily(level)
-                      ? _buildLazyContent(context, level)
-                      : SingleChildScrollView(
-                          physics: const ClampingScrollPhysics(),
-                          child: IntrinsicWidth(
-                            child: _buildContent(
-                              context,
-                              level,
-                              active: !receding,
-                              covered: covered,
+                );
+              },
+              child: IgnorePointer(
+                ignoring: receding,
+                child: Surface.transparent(
+                  child: Padding(
+                    padding: const EdgeInsets.all(_cardInset),
+                    child: _buildsLazily(level)
+                        ? _buildLazyContent(context, level)
+                        : SingleChildScrollView(
+                            physics: const ClampingScrollPhysics(),
+                            child: IntrinsicWidth(
+                              child: _buildContent(
+                                context,
+                                level,
+                                active: !receding,
+                                covered: covered,
+                              ),
                             ),
                           ),
-                        ),
+                  ),
                 ),
               ),
             ),
@@ -2784,15 +2907,22 @@ class PopupMenuCard extends SingleChildRenderObjectWidget {
 
 class _RenderPopupMenuCard extends RenderProxyBox {
   _RenderPopupMenuCard({
-    required this._grow,
-    required this._origin,
-    required this._shadows,
-    required this._fill,
-    required this._dim,
-    required this._glass,
-    required this._rim,
-    required this._bare,
-  });
+    required double grow,
+    required ({double top, double height})? origin,
+    required List<BoxShadow> shadows,
+    required Color fill,
+    required Color dim,
+    required LiquidGlassStyle? glass,
+    required LiquidGlassRim? rim,
+    required bool bare,
+  }) : _grow = grow,
+       _origin = origin,
+       _shadows = shadows,
+       _fill = fill,
+       _dim = dim,
+       _glass = glass,
+       _rim = rim,
+       _bare = bare;
 
   late final _pane = LiquidGlassPane(markNeedsPaint);
   final _clip = LayerHandle<ClipPathLayer>();

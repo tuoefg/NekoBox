@@ -65,8 +65,7 @@ class _TestPanelPageState extends State<TestPanelPage> {
     final answer = json(await context.box.call('groups.testSession.remove', {'ids': ids}));
     if (mounted) {
       final removed = (answer['removed'] as num? ?? 0).toInt();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('Removed N profiles').replaceFirst('N', '$removed'))));
+      showAppBanner(context, context.tr('Removed N profiles').replaceFirst('N', '$removed'));
     }
   }
 
@@ -147,17 +146,17 @@ class _TestPanelPageState extends State<TestPanelPage> {
     final groupId = (session['groupId'] as num? ?? 0).toInt();
     final ranking = rows(session['ranking']);
     final scopes = _scopes;
-    return BoxDataSubscription(data: BoxData.testSession, child: CommonScaffold(
+    return BoxDataSubscription(data: BoxData.testSession, child: Scaffold(
       title: context.tr('Test panel'),
       confirmationAction: running
           ? IconButtonData(glyph: AppGlyphs.playPause(1), tooltip: context.tr('Stop'), onPressed: () => box.act('groups.testSession.stop'))
           : IconButtonData(glyph: AppGlyphs.playPause(0), tooltip: context.tr('Start'), isLoading: _starting, onPressed: _starting ? null : _start),
       menuItems: [
-        if (finished && groupId > 0) CommonPopupMenuItem(glyph: AppGlyphs.sort, label: context.tr('Sort'),
+        if (finished && groupId > 0) PopupMenuItem(glyph: AppGlyphs.sort, label: context.tr('Sort'),
           onPressed: () => box.act('groups.testSession.sort', {'groupId': groupId})),
-        if (finished && _failedIds(session).isNotEmpty) CommonPopupMenuItem(glyph: AppGlyphs.delete,
+        if (finished && _failedIds(session).isNotEmpty) PopupMenuItem(glyph: AppGlyphs.delete,
           label: context.tr('Remove unavailable'), onPressed: () => _removeUnavailable(session)),
-        if (finished) CommonPopupMenuItem(glyph: AppGlyphs.close, label: context.tr('Dismiss'),
+        if (finished) PopupMenuItem(glyph: AppGlyphs.close, label: context.tr('Dismiss'),
           onPressed: () => box.act('groups.testSession.dismiss')),
       ],
       body: ListView(shrinkWrap: true,

@@ -1,6 +1,6 @@
-import 'package:b_box_ui/ui/icons/icons.dart';
 import 'package:flutter/foundation.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:b_box_ui/ui/icons/icons.dart';
 
 part 'generated/models.freezed.dart';
 
@@ -15,17 +15,4 @@ abstract class IconButtonData with _$IconButtonData {
     /// Non-null makes the button a toggle that shows this state.
     bool? isSelected,
   }) = _IconButtonData;
-}
-
-@freezed
-abstract class AppBarState with _$AppBarState {
-  const factory AppBarState({AppBarSearchState? searchState}) = _AppBarState;
-}
-
-@freezed
-abstract class AppBarSearchState with _$AppBarSearchState {
-  const factory AppBarSearchState({
-    required Function(String) onSearch,
-    @Default(null) String? query,
-  }) = _AppBarSearchState;
 }

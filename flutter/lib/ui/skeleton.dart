@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/shape.dart';
-import 'package:material_ui/material_ui.dart';
 
 /// A pulsing bar that holds the place of one line of [style] text.
 class SkeletonText extends StatelessWidget {

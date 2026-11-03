@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:flutter/animation.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/widgets.dart';
 
 const fadeTabDuration = Duration(milliseconds: 220);
 const fadeTabCurve = Curves.easeInOut;
@@ -20,6 +20,35 @@ class SpringCurve extends Curve {
   @override
   double transformInternal(double t) =>
       _simulation.x(t * seconds) + _residual * t;
+}
+
+Duration frameIntervalOf(BuildContext context) {
+  final rate = View.maybeOf(context)?.display.refreshRate ?? 0;
+  return rate > 0
+      ? Duration(microseconds: Duration.microsecondsPerSecond ~/ rate)
+      : Duration.zero;
+}
+
+/// Ends [simulation] at [end], where a controller would hold an overshoot.
+class ArrivingSimulation extends Simulation {
+  ArrivingSimulation(this.simulation, {required this.end})
+    : _start = simulation.x(0),
+      super(tolerance: simulation.tolerance);
+
+  final Simulation simulation;
+  final double end;
+  final double _start;
+
+  @override
+  double x(double time) => simulation.x(time);
+
+  @override
+  double dx(double time) => simulation.dx(time);
+
+  @override
+  bool isDone(double time) =>
+      simulation.isDone(time) ||
+      (_start != end && (x(time) - end) * (_start - end) <= 0);
 }
 
 final dropletSpring = SpringDescription.withDampingRatio(

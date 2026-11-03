@@ -1,6 +1,6 @@
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/icons/glyph.dart';
 import 'package:b_box_ui/ui/icons/glyph_painter.dart';
-import 'package:material_ui/material_ui.dart';
 
 class GlyphIcon extends StatelessWidget {
   const GlyphIcon(this.glyph, {super.key, this.fill, this.size, this.color});

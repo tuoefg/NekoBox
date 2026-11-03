@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import '../widgets.dart';
 import '../components/form.dart';
 
@@ -77,9 +78,7 @@ class _RouteProfilesPageState extends State<RouteProfilesPage> {
       }));
       final added = (result['added'] as num?)?.toInt() ?? 0;
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('$added ${context.tr('route profiles added')}'),
-        ));
+        showAppBanner(context, '$added ${context.tr('route profiles added')}');
         await _load();
       }
     } catch (error) {
@@ -270,7 +269,7 @@ class _RouteEditorPageState extends State<RouteEditorPage> {
   }
 
   Future<void> _delete() async {
-    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => material.AlertDialog(
       title: Text(context.tr('Delete route profile?')),
       content: Text(_name.text),
       actions: [
@@ -471,7 +470,7 @@ class _RuleOrderPageState extends State<RuleOrderPage> {
   );
 
   @override
-  Widget build(BuildContext context) => CommonScaffold(
+  Widget build(BuildContext context) => Scaffold(
     title: context.tr('Reorder rules'),
     confirmationAction: IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Save'), isLoading: _saving,
       onPressed: _saving ? null : () async {
@@ -566,7 +565,7 @@ class _RuleEditorPageState extends State<RuleEditorPage> {
 
   Future<void> _delete() async {
     if (widget.index < 0) { context.safeNestedPop(false); return; }
-    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => material.AlertDialog(
       title: Text(context.tr('Delete rule?')),
       content: Text(_rule['name']?.toString() ?? '#${widget.index + 1}'),
       actions: [
@@ -922,7 +921,7 @@ class _MultiChoiceDialogState extends State<_MultiChoiceDialog> {
   late final _selected = widget.initial.toSet();
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => material.AlertDialog(
     title: Text(widget.title),
     content: Column(mainAxisSize: MainAxisSize.min, children: [
       for (final option in widget.options)
@@ -959,7 +958,7 @@ class _BatchAddDialogState extends State<_BatchAddDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => material.AlertDialog(
     title: Text(context.tr('Batch add simple rules')),
     content: SizedBox(
       width: 360,
@@ -1028,7 +1027,7 @@ class _RuleSetDialogState extends State<_RuleSetDialog> {
     setState(() => _values.text = selected.join(', '));
   }
 
-  @override Widget build(BuildContext context) => AlertDialog(
+  @override Widget build(BuildContext context) => material.AlertDialog(
     title: Text(context.tr('Throne preset rules')),
     content: SizedBox(
       width: 420, height: 420,

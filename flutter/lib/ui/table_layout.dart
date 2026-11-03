@@ -1,5 +1,6 @@
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/shape.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
 const tableColumnMinWidth = 48.0;
 const _resizeHandleWidth = 12.0;

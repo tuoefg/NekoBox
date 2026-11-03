@@ -1,6 +1,12 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/l10n.dart';
+import 'package:b_box_ui/ui/card_surface.dart';
 import 'package:b_box_ui/ui/color.dart';
+import 'package:b_box_ui/ui/common_button.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/input.dart';
 import 'package:b_box_ui/ui/liquid_glass.dart';
@@ -8,10 +14,8 @@ import 'package:b_box_ui/ui/motion.dart';
 import 'package:b_box_ui/ui/navigation_dock.dart';
 import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/surface.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 import 'package:b_box_ui/ui/typography.dart';
-import 'package:flutter/foundation.dart' show listEquals;
-import 'package:flutter/rendering.dart';
-import 'package:material_ui/material_ui.dart';
 
 const double _actionGap = 8;
 const double _actionInset = 16;
@@ -46,9 +50,7 @@ Future<T?> showFloatingDialog<T>({
     _AlertRoute<T>(
       barrierColor: context.colorScheme.alertScrim,
       barrierDismissible: dismissible,
-      barrierLabel: dismissible
-          ? MaterialLocalizations.of(context).modalBarrierDismissLabel
-          : null,
+      barrierLabel: dismissible ? UiLocalizations.of(context).close : null,
       builder: (context) => SurfaceScope(
         level: SurfaceLevel.floatingOf(context.colorScheme),
         child: child,
@@ -223,8 +225,7 @@ Rect _surfaceRectIn(RenderBox box) {
   );
 }
 
-/// An [AlertDialog] takes only a color, so the pane goes where its [Material]
-/// lays out its [PhysicalShape].
+/// The pane goes where the alert's [Surface] lays out its [PhysicalShape].
 class _AlertGlass extends SingleChildRenderObjectWidget {
   const _AlertGlass({
     required this.style,
@@ -318,7 +319,43 @@ class _RenderAlertGlass extends RenderProxyBox {
   }
 }
 
-class CommonDialog extends StatelessWidget {
+/// Keeps an alert clear of the keyboard and the window's edge, centered.
+class _AlertFrame extends StatelessWidget {
+  const _AlertFrame({required this.color, required this.child});
+
+  final Color color;
+  final Widget child;
+
+  static const _inset = EdgeInsets.symmetric(horizontal: 40, vertical: 24);
+  static const _minWidth = 280.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedPadding(
+      padding: MediaQuery.viewInsetsOf(context) + _inset,
+      duration: Duration.zero,
+      child: MediaQuery.removeViewInsets(
+        removeLeft: true,
+        removeTop: true,
+        removeRight: true,
+        removeBottom: true,
+        context: context,
+        child: Align(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: _minWidth),
+            child: Surface(
+              color: color,
+              shape: AppShape.all(AppCorner.alert),
+              child: child,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AlertDialog extends StatelessWidget {
   final String title;
   final Widget? trailing;
   final Widget? child;
@@ -335,7 +372,7 @@ class CommonDialog extends StatelessWidget {
   /// The last action destroys data: red on the plain fill, as in UIKit.
   final bool destructive;
 
-  const CommonDialog({
+  const AlertDialog({
     super.key,
     required this.title,
     this.trailing,
@@ -353,62 +390,94 @@ class CommonDialog extends StatelessWidget {
     final glass = LiquidGlassScope.of(context);
     final colorScheme = context.colorScheme;
     final fill = glass ? glassFillOf(colorScheme) : null;
-    final dialog = AlertDialog(
-      backgroundColor: glass ? Colors.transparent : null,
-      titleTextStyle: hasFields
-          ? AppTextStyle.body.of(context)
-          : AppTextStyle.headline.of(context),
-      contentTextStyle: AppTextStyle.subheadline
-          .of(context)
-          .copyWith(
-            color: colorScheme.onSurfaceVariant.withValues(
-              alpha: colorScheme.brightness == Brightness.dark ? 1 : 0.85,
-            ),
-          ),
-      title: _buildTitle(),
-      actions: actions.isEmpty
-          ? null
-          : [
-              AlertActions(
-                actions: actions,
-                fill: fill,
-                destructive: destructive,
+    final dialog = _AlertFrame(
+      color: glass
+          ? Colors.transparent
+          : SurfaceLevel.floatingOf(colorScheme).colorOf(colorScheme),
+      child: IntrinsicWidth(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(_textInset, 21, _textInset, 0),
+              child: DefaultTextStyle(
+                style: hasFields
+                    ? AppTextStyle.body.of(context)
+                    : AppTextStyle.headline.of(context),
+                child: Semantics(container: true, child: _buildTitle()),
               ),
-            ],
-      actionsPadding: const EdgeInsets.fromLTRB(
-        _actionInset,
-        0,
-        _actionInset,
-        _actionInset,
-      ),
-      titlePadding: const EdgeInsets.fromLTRB(_textInset, 21, _textInset, 0),
-      contentPadding:
-          padding ??
-          EdgeInsets.fromLTRB(
-            contentInset,
-            hasFields ? 16 : 6,
-            contentInset,
-            20,
-          ),
-      content: Container(
-        constraints: BoxConstraints(
-          maxWidth: padding == null
-              ? _alertWidth - contentInset * 2
-              : _contentMaxWidth,
-        ),
-        width: double.infinity,
-        child: SingleChildScrollView(
-          child: hasFields
-              ? FilledInputTheme(
-                  fillColor: fill,
-                  borderRadius: AppRadius.all(_actionHeight / 2),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: _textInset - _actionInset - _fieldInputGap,
-                    vertical: 12,
+            ),
+            Flexible(
+              child: Padding(
+                padding:
+                    padding ??
+                    EdgeInsets.fromLTRB(
+                      contentInset,
+                      hasFields ? 16 : 6,
+                      contentInset,
+                      20,
+                    ),
+                child: DefaultTextStyle(
+                  style: AppTextStyle.subheadline
+                      .of(context)
+                      .copyWith(
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: colorScheme.brightness == Brightness.dark
+                              ? 1
+                              : 0.85,
+                        ),
+                      ),
+                  child: Semantics(
+                    container: true,
+                    child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: padding == null
+                            ? _alertWidth - contentInset * 2
+                            : _contentMaxWidth,
+                      ),
+                      width: double.infinity,
+                      child: SingleChildScrollView(
+                        child: hasFields
+                            ? FilledInputTheme(
+                                fillColor: fill,
+                                borderRadius: AppRadius.all(_actionHeight / 2),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal:
+                                      _textInset -
+                                      _actionInset -
+                                      _fieldInputGap,
+                                  vertical: 12,
+                                ),
+                                child: child ?? const SizedBox.shrink(),
+                              )
+                            : child,
+                      ),
+                    ),
                   ),
-                  child: child ?? const SizedBox.shrink(),
-                )
-              : child,
+                ),
+              ),
+            ),
+            if (actions.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  _actionInset,
+                  0,
+                  _actionInset,
+                  _actionInset,
+                ),
+                child: OverflowBar(
+                  alignment: MainAxisAlignment.end,
+                  children: [
+                    AlertActions(
+                      actions: actions,
+                      fill: fill,
+                      destructive: destructive,
+                    ),
+                  ],
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -471,7 +540,8 @@ class _RenderCenteredTitle extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, MultiChildLayoutParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, MultiChildLayoutParentData> {
-  _RenderCenteredTitle({required this._textDirection});
+  _RenderCenteredTitle({required TextDirection textDirection})
+    : _textDirection = textDirection;
 
   TextDirection _textDirection;
 
@@ -565,7 +635,7 @@ class _RenderCenteredTitle extends RenderBox
   }
 }
 
-/// Text buttons laid out and filled as [CommonDialog] sets its own.
+/// Text buttons laid out and filled as [AlertDialog] sets its own.
 class AlertActions extends StatelessWidget {
   const AlertActions({
     super.key,
@@ -625,40 +695,37 @@ class _AlertAction extends StatelessWidget {
       (false, Brightness.dark) => 1.0,
       _ => _pressedFillShare,
     };
-    return TextButtonTheme(
-      data: TextButtonThemeData(
-        style:
-            TextButton.styleFrom(
-              foregroundColor: foreground,
-              disabledForegroundColor: colorScheme.onSurface.withValues(
-                alpha: 0.38,
-              ),
-              textStyle: isDefault
-                  ? AppTextStyle.body.of(context, emphasized: true)
-                  : AppTextStyle.body
-                        .of(context)
-                        .copyWith(fontWeight: FontWeight.w500),
-              minimumSize: const Size(0, _actionHeight),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              shape: AppShape.full,
-              visualDensity: VisualDensity.standard,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              splashFactory: NoSplash.splashFactory,
-            ).copyWith(
-              backgroundColor: WidgetStateProperty<Color?>.fromMap({
-                WidgetState.disabled: fill,
-                WidgetState.pressed: background.withValues(
-                  alpha: background.a * pressedShare,
-                ),
-                WidgetState.any: background,
-              }),
-              overlayColor: WidgetStateProperty<Color?>.fromMap({
-                WidgetState.focused: foreground.withValues(alpha: 0.1),
-                WidgetState.pressed: Colors.transparent,
-                WidgetState.hovered: foreground.withValues(alpha: 0.08),
-              }),
-              side: focusRingStyle(colorScheme, standsOff: isDefault).side,
+    return ButtonTheme(
+      data: ButtonTheme.of(context).copyWith(
+        text: ButtonStyle(
+          foregroundColor: WidgetStateProperty<Color?>.fromMap({
+            WidgetState.disabled: colorScheme.onSurface.withValues(alpha: 0.38),
+            WidgetState.any: foreground,
+          }),
+          backgroundColor: WidgetStateProperty<Color?>.fromMap({
+            WidgetState.disabled: fill,
+            WidgetState.pressed: background.withValues(
+              alpha: background.a * pressedShare,
             ),
+            WidgetState.any: background,
+          }),
+          overlayColor: WidgetStateProperty<Color?>.fromMap({
+            WidgetState.focused: foreground.withValues(alpha: 0.1),
+            WidgetState.pressed: Colors.transparent,
+            WidgetState.hovered: foreground.withValues(alpha: 0.08),
+          }),
+          textStyle: isDefault
+              ? AppTextStyle.body.of(context, emphasized: true)
+              : AppTextStyle.body
+                    .of(context)
+                    .copyWith(fontWeight: FontWeight.w500),
+          minimumSize: const Size(0, _actionHeight),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          visualDensity: VisualDensity.standard,
+          tapTargetSize: TapTargetSize.shrinkWrap,
+          pressLook: PressLook.none,
+          ringStandsOff: isDefault,
+        ),
       ),
       child: child,
     );
@@ -691,7 +758,8 @@ class _RenderAlertActions extends RenderBox
     with
         ContainerRenderObjectMixin<RenderBox, _AlertActionsParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, _AlertActionsParentData> {
-  _RenderAlertActions({required this._textDirection});
+  _RenderAlertActions({required TextDirection textDirection})
+    : _textDirection = textDirection;
 
   TextDirection _textDirection;
   set textDirection(TextDirection value) {

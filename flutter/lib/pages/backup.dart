@@ -76,7 +76,7 @@ class _BackupPageState extends State<BackupPage> {
 
   void _showLoading(bool value) { if (mounted) setState(() => _loading = value); }
   Future<void> _success(String title, String message) => showFloatingDialog<void>(context: context,
-    child: CommonDialog(title: context.tr(title), actions: [
+    child: AlertDialog(title: context.tr(title), actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close'))),
     ], child: Text(context.tr(message))));
 
@@ -125,14 +125,14 @@ class _BackupPageState extends State<BackupPage> {
   Widget _indicator() {
     final label = _checking ? 'Checking connection' : _connected == true ? 'Connected' : 'Connection failed';
     return Semantics(label: context.tr(label), child: Tooltip(message: _connectionError ?? context.tr(label),
-      child: FadeThroughBox(child: _checking ? const CommonCircleLoading(size: 12)
+      child: FadeThroughBox(child: _checking ? const ActivityIndicator(size: 12)
         : SizedBox.square(dimension: 12, child: DecoratedBox(decoration: BoxDecoration(shape: BoxShape.circle,
           color: _connected == true ? context.colorScheme.success : context.colorScheme.error))))));
   }
 
   @override Widget build(BuildContext context) {
     final account = _account;
-    return BoxEditGuard(dirty: false, busy: _locked, child: CommonScaffold(title: context.tr('Backup and restore'), isLoading: _loading,
+    return BoxEditGuard(dirty: false, busy: _locked, child: Scaffold(title: context.tr('Backup and restore'), isLoading: _loading,
       body: AbsorbPointer(absorbing: _locked, child: ListView(
         padding: EdgeInsets.fromLTRB(16, context.sectionsTopPadding, 16, 16 + context.bottomInset), children: [
           generateSection(title: context.tr('Remote'), items: [
@@ -178,7 +178,7 @@ Future<void> restorePayload(BuildContext context, Json payload, {required String
   // A backup with no profiles cannot fill a profiles-only restore; saying "Restore 0 profiles?"
   // and then doing nothing is worse than saying so.
   if (count == 0 && scope != 'all') {
-    await showFloatingDialog<void>(context: context, child: CommonDialog(
+    await showFloatingDialog<void>(context: context, child: AlertDialog(
       title: context.tr('Restore'), actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close'))),
       ], child: Text(context.tr('This backup holds no profiles'))));
@@ -193,7 +193,7 @@ Future<void> restorePayload(BuildContext context, Json payload, {required String
     await box.call('backup.restore', {'backup': payload, 'scope': scope, 'strategy': strategy});
   } finally { onLoading?.call(false); }
   if (!context.mounted) return;
-  await showFloatingDialog<void>(context: context, child: CommonDialog(
+  await showFloatingDialog<void>(context: context, child: AlertDialog(
     title: context.tr('Restore'), actions: [
       TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close'))),
     ], child: Text(context.tr('Restore complete'))));
@@ -214,7 +214,7 @@ class _RestoreConfirm extends StatelessWidget {
   final String scope;
   final bool destructive;
 
-  @override Widget build(BuildContext context) => CommonDialog(
+  @override Widget build(BuildContext context) => AlertDialog(
     title: context.tr('Restore backup'), destructive: destructive,
     actions: [
       TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
@@ -235,7 +235,7 @@ String? backupFileIssue(String? value) => value == null || value.isEmpty || valu
 
 class RestoreScopeDialog extends StatelessWidget {
   const RestoreScopeDialog({super.key});
-  @override Widget build(BuildContext context) => CommonDialog(title: context.tr('Restore'),
+  @override Widget build(BuildContext context) => AlertDialog(title: context.tr('Restore'),
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16), child: Wrap(children: [
       ListItem(title: Text(context.tr('Restore profiles only')), onTap: () => Navigator.pop(context, 'profiles')),
       ListItem(title: Text(context.tr('Restore all data')), onTap: () => Navigator.pop(context, 'all')),

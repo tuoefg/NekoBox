@@ -76,7 +76,7 @@ class _DashboardPageState extends State<DashboardPage> {
     final hidden = box.preferences['hiddenCards'] as List? ?? defaultHiddenCards;
     final shown = [for (final card in dashboardOrder(box.preferences))
       if (cards.containsKey(card) && (card == 'Status' || !hidden.contains(card))) card];
-    return CommonScaffold(title: context.tr(_editing ? 'Edit dashboard' : 'Dashboard'),
+    return Scaffold(title: context.tr(_editing ? 'Edit dashboard' : 'Dashboard'),
       isLoading: _saving, backgroundColor: SurfaceLevel.page.colorOf(context.colorScheme),
       confirmationAction: _editing ? IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Done'),
         onPressed: _saving ? null : () { _editor.currentState?.finish(); }) : null,

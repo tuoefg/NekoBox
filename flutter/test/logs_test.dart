@@ -73,8 +73,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  CommonScaffold scaffold(WidgetTester tester) => tester.widget<CommonScaffold>(
-    find.descendant(of: find.byType(LogsPage), matching: find.byType(CommonScaffold)).first,
+  Scaffold scaffold(WidgetTester tester) => tester.widget<Scaffold>(
+    find.descendant(of: find.byType(LogsPage), matching: find.byType(Scaffold)).first,
   );
 
   Future<void> emit(WidgetTester tester, String? level, [List<Json>? records]) async {
@@ -205,7 +205,7 @@ void main() {
     expect(messages, ['Cannot write document']);
     expect(box.logs, hasLength(_levels.length));
     expect(scaffold(tester).iconActions.first.onPressed, isNotNull);
-    scaffold(tester).onKeywordsUpdate!(['no matching records']);
+    (scaffold(tester).keywords! as ValueNotifier<List<ScaffoldKeyword>>).value = [ScaffoldKeyword(key: 'no matching records', label: 'no matching records')];
     await tester.pumpAndSettle();
     expect(scaffold(tester).iconActions.first.onPressed, isNull);
     expect(tester.takeException(), isNull);
@@ -218,10 +218,10 @@ void main() {
     await emit(tester, 'Warn');
     await choose(tester, 'Pause');
     await emit(tester, 'Warn', [..._records, {'id': 8, 'level': 'Error', 'message': 'later record'}]);
-    scaffold(tester).onKeywordsUpdate!(['core']);
+    (scaffold(tester).keywords! as ValueNotifier<List<ScaffoldKeyword>>).value = [ScaffoldKeyword(key: 'core', label: 'core')];
     await tester.pumpAndSettle();
     await expectExport(tester, ['Warn', 'Error', 'Fatal', 'Panic']);
-    scaffold(tester).onKeywordsUpdate!([]);
+    (scaffold(tester).keywords! as ValueNotifier<List<ScaffoldKeyword>>).value = const [];
     await tester.pumpAndSettle();
     expect(find.text('later record'), findsNothing);
     await choose(tester, 'Resume');

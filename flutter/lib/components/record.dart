@@ -81,7 +81,7 @@ class RecordListItem extends StatelessWidget {
                 minVerticalPadding: 0,
                 minTileHeight: 0,
                 horizontalTitleGap: 12,
-                tileTitleAlignment: ListTileTitleAlignment.top,
+                alignment: ListRowAlignment.top,
                 onTap: onTap,
                 title: header,
                 subtitle: Padding(

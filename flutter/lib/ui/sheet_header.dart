@@ -1,12 +1,14 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/metrics.dart';
 import 'package:b_box_ui/ui/scroll_behavior.dart';
 import 'package:b_box_ui/ui/shape.dart';
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/rendering.dart';
 
 import 'inherited.dart';
+import 'sheet_navigator.dart';
+import 'package:b_box_ui/ui/surface.dart';
 
 class SheetDragHandle extends StatelessWidget {
   const SheetDragHandle({super.key});
@@ -50,7 +52,8 @@ class SheetToolBar extends StatelessWidget {
     final bar = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        dragHandle
+        // A paged sheet holds its handle still over the pages it moves.
+        dragHandle && !isSheetPage(context)
             ? const SheetDragHandle()
             : const SizedBox(height: SheetDragHandle.height),
         appBar,
@@ -168,7 +171,7 @@ class FloatingHeaderBody extends StatelessWidget {
             left: 0,
             right: 0,
             child: SheetOverhangLift(
-              child: Material(type: MaterialType.transparency, child: footer),
+              child: Surface.transparent(child: footer!),
             ),
           ),
       ],
@@ -195,8 +198,9 @@ class SheetOverhangLift extends SingleChildRenderObjectWidget {
 }
 
 class _RenderSheetOverhangLift extends RenderTransform {
-  _RenderSheetOverhangLift({required this._overhang})
-    : super(transform: Matrix4.identity(), transformHitTests: true) {
+  _RenderSheetOverhangLift({required ValueListenable<double>? overhang})
+    : _overhang = overhang,
+      super(transform: Matrix4.identity(), transformHitTests: true) {
     _overhang?.addListener(_syncTransform);
   }
 

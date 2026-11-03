@@ -1,18 +1,14 @@
 import 'dart:math' as math;
 
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/color.dart';
 import 'package:b_box_ui/ui/inherited.dart';
 import 'package:b_box_ui/ui/metrics.dart';
-import 'package:b_box_ui/ui/scaffold.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 import 'package:b_box_ui/ui/typography.dart';
 import 'package:b_box_ui/ui/view_scope.dart';
-import 'package:material_ui/material_ui.dart';
 
 extension BuildContextExtension on BuildContext {
-  CommonScaffoldState? get commonScaffoldState {
-    return findAncestorStateOfType<CommonScaffoldState>();
-  }
-
   bool get isMobileView => ViewScope.isMobileOf(this, listen: false);
 
   void safeNestedPop<T extends Object?>([T? result]) {

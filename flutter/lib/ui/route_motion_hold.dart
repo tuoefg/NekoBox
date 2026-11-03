@@ -1,10 +1,11 @@
 import 'dart:async';
 
-import 'package:b_box_ui/ui/navigator.dart';
-import 'package:b_box_ui/ui/sheet_navigator.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/navigator.dart';
+import 'package:b_box_ui/ui/sheet_navigator.dart';
 
 class _RouteMotion {
   _RouteMotion(BuildContext context)
@@ -134,6 +135,61 @@ mixin RouteSettledMixin<T extends StatefulWidget> on State<T> {
   }
 }
 
-ScrollCacheExtent? arrivalScrollCacheExtent(bool routeSettled) {
-  return routeSettled ? null : const ScrollCacheExtent.pixels(0);
+class ArrivalCacheExtentBuilder extends StatefulWidget {
+  const ArrivalCacheExtentBuilder({super.key, required this.builder});
+
+  final Widget Function(ScrollCacheExtent? cacheExtent) builder;
+
+  @override
+  State<ArrivalCacheExtentBuilder> createState() =>
+      _ArrivalCacheExtentBuilderState();
+}
+
+class _ArrivalCacheExtentBuilderState extends State<ArrivalCacheExtentBuilder>
+    with ArrivalCacheExtentMixin<ArrivalCacheExtentBuilder> {
+  @override
+  Widget build(BuildContext context) => widget.builder(arrivalCacheExtent);
+}
+
+/// A list's cache extent: none until its route settles and nothing animates.
+mixin ArrivalCacheExtentMixin<T extends StatefulWidget> on State<T> {
+  var _widenScheduled = false;
+  var _widened = false;
+
+  ScrollCacheExtent? get arrivalCacheExtent =>
+      _widened ? null : const ScrollCacheExtent.pixels(0);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_widenScheduled) {
+      return;
+    }
+    _widenScheduled = true;
+    unawaited(_widen());
+  }
+
+  Future<void> _widen() async {
+    await whenRouteSettled(context);
+    if (!mounted) {
+      return;
+    }
+    await whenNothingAnimates();
+    if (mounted) {
+      setState(() => _widened = true);
+    }
+  }
+}
+
+const _stillnessLimit = Duration(milliseconds: 500);
+
+/// Gives up after [_stillnessLimit], as a ticker may never stop; [besides]
+/// counts the tickers the caller runs itself, such as its spinner's.
+Future<void> whenNothingAnimates({int besides = 0}) async {
+  final scheduler = SchedulerBinding.instance;
+  final waited = Stopwatch()..start();
+  while (scheduler.transientCallbackCount > besides &&
+      waited.elapsed < _stillnessLimit) {
+    await scheduler.endOfFrame;
+  }
 }

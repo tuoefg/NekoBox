@@ -1,18 +1,13 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart' show clampDouble;
-import 'package:material_color_utilities/material_color_utilities.dart'
-    show
-        DynamicColor,
-        DynamicScheme,
-        Hct,
-        MaterialDynamicColors,
-        SchemeContent,
-        SchemeMonochrome,
-        SchemeTonalSpot,
-        TonalPalette,
-        Variant;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/hct/dynamic_color.dart';
+import 'package:b_box_ui/ui/hct/dynamic_scheme.dart';
+import 'package:b_box_ui/ui/hct/hct.dart';
+import 'package:b_box_ui/ui/hct/material_dynamic_colors.dart';
+import 'package:b_box_ui/ui/hct/tonal_palette.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
 enum ColorStyle {
   vivid,
@@ -213,32 +208,25 @@ DynamicScheme _dynamicScheme(Hct source, bool dark, ColorStyle style) {
           neutralVariantPalette: last.neutralVariantPalette,
         )
       : switch (style) {
-          ColorStyle.vivid || ColorStyle.tinted => SchemeContent(
+          ColorStyle.vivid || ColorStyle.tinted => DynamicScheme.content(
             sourceColorHct: source,
             isDark: dark,
-            contrastLevel: 0,
           ),
-          ColorStyle.soft => SchemeTonalSpot(
+          ColorStyle.soft => DynamicScheme.tonalSpot(
             sourceColorHct: source,
             isDark: dark,
-            contrastLevel: 0,
           ),
-          ColorStyle.monochrome => SchemeMonochrome(
+          ColorStyle.monochrome => DynamicScheme.monochrome(
             sourceColorHct: source,
             isDark: dark,
-            contrastLevel: 0,
           ),
         };
   return _lastScheme = scheme;
 }
 
-final _successPalette = TonalPalette.fromHct(
-  Hct.fromInt(Colors.green.toARGB32()),
-);
+final _successPalette = TonalPalette.fromHct(Hct.fromInt(0xFF4CAF50));
 
-final _warningPalette = TonalPalette.fromHct(
-  Hct.fromInt(Colors.orange.toARGB32()),
-);
+final _warningPalette = TonalPalette.fromHct(Hct.fromInt(0xFFFF9800));
 
 extension ColorExtension on Color {
   Color get opacity80 {
@@ -322,7 +310,8 @@ extension ColorSchemeExtension on ColorScheme {
     );
   }
 
-  Color get modalScrim => scrim.withValues(alpha: 0.32);
+  /// How far iOS 27 dims behind a sheet, as far as behind an alert.
+  Color get modalScrim => alertScrim;
 
   /// How far iOS 27 dims behind an alert.
   Color get alertScrim =>
@@ -346,11 +335,4 @@ extension ColorSchemeExtension on ColorScheme {
   Color get warningContainer => _toneOf(_warningPalette, 90, 30);
 
   Color get onWarningContainer => _toneOf(_warningPalette, 30, 90);
-
-  Color? delayColor(int? delay) {
-    if (delay == null) return null;
-    if (delay < 0) return error;
-    if (delay < 600) return success;
-    return warning;
-  }
 }

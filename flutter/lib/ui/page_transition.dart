@@ -1,16 +1,231 @@
-import 'package:b_box_ui/ui/drag_back.dart';
-import 'package:b_box_ui/ui/surface.dart';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/drag_back.dart';
+import 'package:b_box_ui/ui/liquid_glass.dart';
+import 'package:b_box_ui/ui/motion.dart';
+import 'package:b_box_ui/ui/surface.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
-/// The motion a pushed page and a page inside a sheet share: a
-/// [SharedXPageTransition] that a drag back from the edge takes over.
-mixin SharedXPageRouteMixin<T> on PageRoute<T>, DragBackRouteMixin<T> {
-  bool _overSettledPage = false;
+/// iOS 27 pushes and pops a page on a critically damped spring of 0.3 s that
+/// sets off at nine times its distance a second, as measured on the simulator.
+final _pushSpring = SpringDescription.withDurationAndBounce(
+  duration: const Duration(milliseconds: 300),
+);
+const _pushSpeed = 9.0;
+const _settleTolerance = Tolerance(distance: 1e-3, velocity: 1e-2);
 
-  bool sharesMotionWith(Route<dynamic>? route);
+/// For what reads a route's duration rather than following its animation.
+Duration _settlingTimeOf(SpringDescription spring, double launchSpeed) {
+  final simulation = SpringSimulation(
+    spring,
+    0,
+    1,
+    launchSpeed,
+    tolerance: _settleTolerance,
+  );
+  var milliseconds = 0;
+  while (!simulation.isDone(milliseconds / 1000)) {
+    milliseconds++;
+  }
+  return Duration(milliseconds: milliseconds);
+}
 
-  Color backdropOf(Color surface, {required bool dragging});
+const _coveredSlide = 0.3;
+const _coveredDim = Color.from(alpha: 0.1, red: 0, green: 0, blue: 0);
+
+/// UIKit's zoom shrinks the page it covers toward its center by 34.667 dp of
+/// width, to no less than 80%, and dims it.
+const _recededShrinkWidth = 34.667;
+const _recededMinScale = 0.8;
+const _recededDim = Color.from(alpha: 0.15, red: 0, green: 0, blue: 0);
+
+double _recededShrinkOf(Size size) =>
+    math.min(1 - _recededMinScale, _recededShrinkWidth / size.width);
+
+/// What a 4% black Gaussian of sigma 12 casts past the card's leading edge.
+const _cardShadowSigma = 12.0;
+const _cardShadowStops = [0.0, 1 / 6, 1 / 3, 1 / 2, 2 / 3, 1.0];
+final _cardShadowColors = [
+  for (final share in const [0.5, 0.3085, 0.1587, 0.0668, 0.0228, 0.0])
+    Color.from(alpha: 0.04 * share, red: 0, green: 0, blue: 0),
+];
+
+Rect _scaleTowardCenter(Rect rect, Size size, double scale) {
+  final center = size.center(Offset.zero);
+  return Rect.fromLTRB(
+    center.dx + (rect.left - center.dx) * scale,
+    center.dy + (rect.top - center.dy) * scale,
+    center.dx + (rect.right - center.dx) * scale,
+    center.dy + (rect.bottom - center.dy) * scale,
+  );
+}
+
+Rect recededRect(Rect rect, Size size, double covered) =>
+    _scaleTowardCenter(rect, size, 1 - _recededShrinkOf(size) * covered);
+
+Rect unrecededRect(Rect rect, Size size, double covered) =>
+    _scaleTowardCenter(rect, size, 1 / (1 - _recededShrinkOf(size) * covered));
+
+var _measuringAtRest = false;
+
+T measureAtRest<T>(T Function() measure) {
+  final measuring = _measuringAtRest;
+  _measuringAtRest = true;
+  try {
+    return measure();
+  } finally {
+    _measuringAtRest = measuring;
+  }
+}
+
+bool get isMeasuringAtRest => _measuringAtRest;
+
+/// How a route moves its page's bar items: [lifted] out of a snapshot of the
+/// page, [moving] while the page moves under a bar that holds still.
+typedef BarItemsMotion = ({
+  bool lifted,
+  bool moving,
+  bool shown,
+  double? tracking,
+});
+
+/// The display's corners where the platform reports them, which Android does
+/// from API 31; elsewhere a moving page stays square.
+BorderRadius displayRadiusOf(BuildContext context) =>
+    MediaQuery.displayCornerRadiiOf(context) ?? BorderRadius.zero;
+
+/// The [ModalRoute.delegatedTransition] of every card route. Sharing it keeps
+/// Flutter from wrapping one's page in another's transition, which would move
+/// the page to a new parent and rebuild all of it; any other route under a
+/// card route stays still.
+Widget? _cardRouteMotion(
+  BuildContext context,
+  Animation<double> animation,
+  Animation<double> secondaryAnimation,
+  bool allowSnapshotting,
+  Widget? child,
+) => null;
+
+/// iOS 27's navigation push.
+mixin CardRouteMixin<T> on ModalRoute<T> {
+  BorderRadius cardRadiusOf(BuildContext context) => displayRadiusOf(context);
+
+  Color settledFillOf(Color surface) => surface;
+
+  @protected
+  SpringDescription get openSpring => _pushSpring;
+
+  @protected
+  SpringDescription get closeSpring => _pushSpring;
+
+  /// The speed a spring from rest sets off at, as a multiple of its distance
+  /// a second.
+  @protected
+  double get openLaunchSpeed => _pushSpeed;
+
+  @protected
+  double get closeLaunchSpeed => _pushSpeed;
+
+  /// Whether this route shrinks the page it covers, as iOS's zoom does,
+  /// rather than sliding it back.
+  @protected
+  bool get recedesCovered => false;
+
+  final _coveredByZoom = ValueNotifier(false);
+
+  final _barItems = ValueNotifier<BarItemsMotion>((
+    lifted: false,
+    moving: false,
+    shown: true,
+    tracking: null,
+  ));
+
+  ValueListenable<BarItemsMotion> get barItems => _barItems;
+
+  CardRouteMixin<dynamic>? _next;
+
+  final _coveringOverdrag = ValueNotifier(0.0);
+  ValueListenable<double>? _nextOverdrag;
+
+  void _copyOverdrag() => _coveringOverdrag.value = _nextOverdrag?.value ?? 0;
+
+  ValueListenable<double> get _overdrag => switch (this) {
+    final DragBackRouteMixin<T> route => route.dragBackOverdrag,
+    _ => const AlwaysStoppedAnimation(0.0),
+  };
+
+  /// How far a drag back of this route shows the bar items under it.
+  @protected
+  double? get barItemsUncovering => null;
+
+  /// Whether [animation]'s card has moved in and not yet moved back out.
+  @protected
+  bool hasCome(Animation<double> animation) => switch (animation.status) {
+    AnimationStatus.forward => animation.value > 0,
+    AnimationStatus.reverse => animation.value == 1,
+    AnimationStatus.completed => true,
+    AnimationStatus.dismissed => false,
+  };
+
+  /// iOS's bar items hold still while a push moves the pages under them.
+  @protected
+  BarItemsMotion computeBarItems() {
+    final secondary = secondaryAnimation!;
+    if (_coveredByZoom.value && !secondary.isDismissed) {
+      return (
+        lifted: true,
+        moving: true,
+        shown: !hasCome(secondary),
+        tracking: _next?.barItemsUncovering,
+      );
+    }
+    final animation = this.animation!;
+    return (
+      lifted: false,
+      moving: animation.isAnimating || secondary.isAnimating,
+      shown: hasCome(animation) && !hasCome(secondary),
+      tracking: null,
+    );
+  }
+
+  @protected
+  void updateBarItems() => _barItems.value = computeBarItems();
+
+  // Impeller redraws a moving page in full each frame.
+  final _motionSnapshot = SnapshotController();
+
+  // Only a page going out of view is drawn from its snapshot. One coming into
+  // view stays live, as a frozen picture of it would show what it held when
+  // last covered, such as a press still fading out, until it settles.
+  void _updateMotionSnapshot() {
+    final animation = this.animation!;
+    final secondary = secondaryAnimation!;
+    final dragged = navigator?.userGestureInProgress ?? false;
+    _motionSnapshot.allowSnapshotting = _coveredByZoom.value
+        ? animation.isCompleted && secondary.isAnimating
+        : (secondary.status == AnimationStatus.forward && !dragged) ||
+              (!recedesCovered &&
+                  animation.status.isAnimating &&
+                  (animation.status == AnimationStatus.reverse || dragged));
+  }
+
+  void retakeSnapshot() {
+    if (!_motionSnapshot.allowSnapshotting) {
+      return;
+    }
+    _motionSnapshot.allowSnapshotting = false;
+    _updateMotionSnapshot();
+  }
+
+  void _handleStatus(AnimationStatus _) {
+    _updateMotionSnapshot();
+    updateBarItems();
+  }
 
   @override
   bool get maintainState => true;
@@ -22,16 +237,152 @@ mixin SharedXPageRouteMixin<T> on PageRoute<T>, DragBackRouteMixin<T> {
   String? get barrierLabel => null;
 
   @override
-  Duration get transitionDuration => SharedXPageTransition.duration;
+  Duration get transitionDuration =>
+      _settlingTimeOf(openSpring, openLaunchSpeed);
 
   @override
-  void didChangePrevious(Route<dynamic>? previousRoute) {
-    super.didChangePrevious(previousRoute);
-    _overSettledPage =
-        previousRoute is TransitionRoute &&
-        sharesMotionWith(previousRoute) &&
-        previousRoute.animation!.isCompleted &&
-        previousRoute.secondaryAnimation!.isDismissed;
+  Duration get reverseTransitionDuration =>
+      _settlingTimeOf(closeSpring, closeLaunchSpeed);
+
+  @override
+  DelegatedTransitionBuilder? get delegatedTransition => _cardRouteMotion;
+
+  @override
+  bool canTransitionTo(TransitionRoute<dynamic> nextRoute) =>
+      nextRoute is CardRouteMixin;
+
+  // The navigator announces a route pushed over this one while it pops.
+  @override
+  void didChangeNext(Route<dynamic>? nextRoute) {
+    final next = isActive ? nextRoute : null;
+    _next = next is CardRouteMixin ? next : null;
+    _nextOverdrag?.removeListener(_copyOverdrag);
+    _nextOverdrag = switch (next) {
+      final DragBackRouteMixin<dynamic> route => route.dragBackOverdrag,
+      _ => null,
+    };
+    _nextOverdrag?.addListener(_copyOverdrag);
+    _copyOverdrag();
+    if (next is CardRouteMixin) {
+      _coveredByZoom.value = next.recedesCovered;
+    }
+    super.didChangeNext(next);
+    retakeSnapshot();
+  }
+
+  @override
+  void didPopNext(Route<dynamic> nextRoute) {
+    super.didPopNext(nextRoute);
+    retakeSnapshot();
+  }
+
+  @override
+  void install() {
+    super.install();
+    animation!
+      ..addListener(updateBarItems)
+      ..addStatusListener(_handleStatus);
+    secondaryAnimation!
+      ..addListener(updateBarItems)
+      ..addStatusListener(_handleStatus);
+    _coveredByZoom
+      ..addListener(_updateMotionSnapshot)
+      ..addListener(updateBarItems);
+  }
+
+  @override
+  void dispose() {
+    animation!
+      ..removeListener(updateBarItems)
+      ..removeStatusListener(_handleStatus);
+    secondaryAnimation!
+      ..removeListener(updateBarItems)
+      ..removeStatusListener(_handleStatus);
+    _nextOverdrag?.removeListener(_copyOverdrag);
+    _coveringOverdrag.dispose();
+    _coveredByZoom.dispose();
+    _barItems.dispose();
+    _motionSnapshot.dispose();
+    super.dispose();
+  }
+
+  Widget _snapshotWhileMoving(BuildContext context, Widget child) {
+    _updateMotionSnapshot();
+    // The snapshot has no host over it, so one within takes the page's panes
+    // for it, and they come out as glass rather than a flat tint.
+    return SnapshotWidget(
+      controller: _motionSnapshot,
+      mode: SnapshotMode.permissive,
+      autoresize: true,
+      child: LiquidGlassHost(
+        enabled: LiquidGlassScope.of(context),
+        child: child,
+      ),
+    );
+  }
+
+  @protected
+  TickerFuture settleTo(double target, {double? velocity}) {
+    final controller = this.controller!;
+    final from = controller.value;
+    final opens = target == 1;
+    final simulation = SpringSimulation(
+      opens ? openSpring : closeSpring,
+      from,
+      target,
+      velocity ??
+          (target - from) * (opens ? openLaunchSpeed : closeLaunchSpeed),
+      tolerance: _settleTolerance,
+      snapToEnd: true,
+    );
+    final settle = ArrivingSimulation(simulation, end: target);
+    return opens
+        ? controller.animateWith(settle)
+        : controller.animateBackWith(settle);
+  }
+
+  @override
+  TickerFuture didPush() {
+    super.didPush();
+    return settleTo(1);
+  }
+
+  @override
+  bool didPop(T? result) {
+    final controller = this.controller!;
+    final velocity = controller.isAnimating ? controller.velocity : null;
+    final popped = super.didPop(result);
+    // A pop that only drops a local history entry, such as a search layer,
+    // leaves the route in place.
+    if (!popped) {
+      return false;
+    }
+    // A drag back lets go with its own spring.
+    if (this case DragBackRouteMixin<T>(isDragBackActive: true)) {
+      return popped;
+    }
+    if (!controller.isDismissed) {
+      settleTo(0, velocity: velocity);
+    }
+    return popped;
+  }
+
+  @protected
+  Widget coveredTransition(
+    BuildContext context,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return _CardTransition(
+      animation: kAlwaysCompleteAnimation,
+      secondaryAnimation: secondaryAnimation,
+      overdrag: const AlwaysStoppedAnimation(0.0),
+      coveringOverdrag: _coveringOverdrag,
+      radius: cardRadiusOf(context),
+      settledFill: Colors.transparent,
+      receding: _coveredByZoom,
+      child: _snapshotWhileMoving(context, child),
+    );
   }
 
   @override
@@ -41,325 +392,498 @@ mixin SharedXPageRouteMixin<T> on PageRoute<T>, DragBackRouteMixin<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    final surface = SurfaceLevel.page.colorOf(ColorScheme.of(context));
-    final dragging = isDragBackActive;
-    return dragBackDetector(
-      dragBackSlide(
-        context,
-        animation,
-        SharedXPageTransition(
-          animation: dragging ? kAlwaysCompleteAnimation : animation,
-          secondaryAnimation: dragging
-              ? kAlwaysDismissedAnimation
-              : secondaryAnimation,
-          color: surface,
-          slide: SharedXPageTransition.pageSlide,
-          overSettledPage: _overSettledPage,
-          uncoveredByGesture: navigator!.userGestureInProgress,
-          child: ColoredBox(
-            color: backdropOf(surface, dragging: dragging),
-            child: child,
-          ),
-        ),
+    final transition = _CardTransition(
+      animation: animation,
+      secondaryAnimation: secondaryAnimation,
+      overdrag: _overdrag,
+      coveringOverdrag: _coveringOverdrag,
+      radius: cardRadiusOf(context),
+      settledFill: settledFillOf(
+        SurfaceLevel.page.colorOf(ColorScheme.of(context)),
       ),
+      receding: _coveredByZoom,
+      child: _snapshotWhileMoving(context, child),
+    );
+    return switch (this) {
+      final DragBackRouteMixin<T> route => route.dragBackDetector(transition),
+      _ => transition,
+    };
+  }
+}
+
+class HomeRoute<T> extends PageRoute<T> with CardRouteMixin<T> {
+  HomeRoute({required this.builder, super.settings});
+
+  final WidgetBuilder builder;
+
+  @override
+  Color settledFillOf(Color surface) => Colors.transparent;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return Semantics(
+      scopesRoute: true,
+      explicitChildNodes: true,
+      child: builder(context),
     );
   }
 }
 
-/// Slides pages by [slide] while they fade. A page fades by laying
-/// [color] over it wherever only that color lies beneath, since an opacity
-/// layer costs Impeller an offscreen pass of the page every frame.
-class SharedXPageTransition extends StatelessWidget {
-  const SharedXPageTransition({
-    super.key,
+/// Moves the page by painting alone, so it is neither rebuilt nor laid out
+/// again while it moves.
+class _CardTransition extends SingleChildRenderObjectWidget {
+  const _CardTransition({
     required this.animation,
     required this.secondaryAnimation,
-    required this.color,
-    required this.slide,
-    required this.overSettledPage,
-    this.uncoveredByGesture = false,
-    required this.child,
-  });
-
-  static const duration = Duration(milliseconds: 450);
-
-  /// Android 14's page slide, as FadeForwardsPageTransitionsBuilder has it.
-  static const pageSlide = Offset(0.25, 0);
-
-  final Animation<double> animation;
-  final Animation<double> secondaryAnimation;
-  final Color color;
-
-  /// How far a page travels, as a fraction of its size.
-  final Offset slide;
-
-  /// Whether the page below sat still as this one came in, so it fades out on
-  /// this route's animation and leaves only [color] beneath.
-  final bool overSettledPage;
-
-  /// Whether a drag on the page above drives [secondaryAnimation]: the page
-  /// then trails the finger and fades in as far as it is uncovered, instead
-  /// of showing only near the end of the drag.
-  final bool uncoveredByGesture;
-  final Widget child;
-
-  static final _slideCurve = CurveTween(curve: Curves.easeInOutCubicEmphasized);
-
-  static const _fadeInCurve = Interval(0.15, 0.55, curve: Curves.easeOutCubic);
-  static const _fadeOutCurve = Interval(0, 0.3);
-  static final _fadeIn = CurveTween(curve: _fadeInCurve);
-  static final _fadeOut = Tween(
-    begin: 1.0,
-    end: 0.0,
-  ).chain(CurveTween(curve: _fadeOutCurve));
-
-  // The fades cross a fifth of the way through, both pages a third opaque, and
-  // the page on top shows only on its side of that point so they never double.
-  static const _handOver = 0.2;
-  static final _takeOver = CurveTween(
-    curve: const _HandOver(_fadeInCurve, at: _handOver, leaving: false),
-  );
-  static final _handBack = Tween(begin: 1.0, end: 0.0).chain(
-    CurveTween(
-      curve: const _HandOver(_fadeOutCurve, at: _handOver, leaving: true),
-    ),
-  );
-
-  Animatable<Offset> _slide(Offset begin, Offset end) {
-    return Tween(begin: begin, end: end).chain(_slideCurve);
-  }
-
-  Widget _overPageBelow(
-    Animation<double> animation,
-    Animatable<double> pageBelowOpacity,
-    Widget child,
-  ) {
-    final fades = !overSettledPage && animation.isAnimating;
-    final opacity = fades ? pageBelowOpacity.evaluate(animation) : 1.0;
-    return CustomPaint(
-      painter: _Fill(color.withValues(alpha: color.a * (1 - opacity))),
-      child: child,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final enterSlide = _slide(slide, Offset.zero);
-    final exitSlide = _slide(Offset.zero, slide);
-    final gesture = uncoveredByGesture;
-    final uncoverSlide = gesture
-        ? Tween(begin: -slide, end: Offset.zero)
-        : _slide(-slide, Offset.zero);
-    final coverSlide = gesture
-        ? Tween(begin: Offset.zero, end: -slide)
-        : _slide(Offset.zero, -slide);
-    final covered = DualTransitionBuilder(
-      animation: ReverseAnimation(secondaryAnimation),
-      forwardBuilder: (_, animation, child) => SlideTransition(
-        position: uncoverSlide.animate(animation),
-        child: _PageFade(
-          opacity: gesture ? animation : _fadeIn.animate(animation),
-          color: color,
-          child: child,
-        ),
-      ),
-      reverseBuilder: (_, animation, child) => SlideTransition(
-        position: coverSlide.animate(animation),
-        child: _PageFade(
-          opacity: gesture
-              ? ReverseAnimation(animation)
-              : _fadeOut.animate(animation),
-          color: color,
-          child: child,
-        ),
-      ),
-      child: child,
-    );
-    return DualTransitionBuilder(
-      animation: animation,
-      forwardBuilder: (_, animation, child) => _overPageBelow(
-        animation,
-        _fadeOut,
-        SlideTransition(
-          position: enterSlide.animate(animation),
-          child: _PageFade(
-            opacity: _takeOver.animate(animation),
-            color: color,
-            opaque: true,
-            child: child,
-          ),
-        ),
-      ),
-      reverseBuilder: (_, animation, child) => IgnorePointer(
-        ignoring: animation.status == AnimationStatus.forward,
-        child: _overPageBelow(
-          animation,
-          _fadeIn,
-          SlideTransition(
-            position: exitSlide.animate(animation),
-            child: _PageFade(
-              opacity: _handBack.animate(animation),
-              color: color,
-              opaque: true,
-              child: child,
-            ),
-          ),
-        ),
-      ),
-      child: ColoredBox(
-        color: secondaryAnimation.isAnimating ? color : Colors.transparent,
-        child: covered,
-      ),
-    );
-  }
-}
-
-class _HandOver extends Curve {
-  const _HandOver(this.curve, {required this.at, required this.leaving});
-
-  final Curve curve;
-  final double at;
-  final bool leaving;
-
-  @override
-  double transformInternal(double t) {
-    if (leaving) {
-      return t < at ? curve.transform(t) : 1;
-    }
-    return t < at ? 0 : curve.transform(t);
-  }
-}
-
-class _Fill extends CustomPainter {
-  const _Fill(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (color.a > 0) {
-      canvas.drawRect(Offset.zero & size, Paint()..color = color);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_Fill oldDelegate) => color != oldDelegate.color;
-}
-
-/// Fades [child] toward [color] by painting that color over it, and under it
-/// too if [opaque], so nothing beneath shows through.
-class _PageFade extends SingleChildRenderObjectWidget {
-  const _PageFade({
-    required this.opacity,
-    required this.color,
-    this.opaque = false,
+    required this.overdrag,
+    required this.coveringOverdrag,
+    required this.radius,
+    required this.settledFill,
+    required this.receding,
     super.child,
   });
 
-  final Animation<double> opacity;
-  final Color color;
-  final bool opaque;
+  final Animation<double> animation;
+  final Animation<double> secondaryAnimation;
+
+  /// How far a drag has pulled the page, and the page over it, past rest.
+  final ValueListenable<double> overdrag;
+  final ValueListenable<double> coveringOverdrag;
+  final BorderRadius radius;
+  final Color settledFill;
+  final ValueListenable<bool> receding;
 
   @override
   RenderObject createRenderObject(BuildContext context) {
-    return _RenderPageFade(opacity: opacity, color: color, opaque: opaque);
+    final colorScheme = ColorScheme.of(context);
+    return _RenderCardTransition(
+      animation: animation,
+      secondaryAnimation: secondaryAnimation,
+      overdrag: overdrag,
+      coveringOverdrag: coveringOverdrag,
+      radius: radius,
+      settledFill: settledFill,
+      receding: receding,
+      surface: SurfaceLevel.page.colorOf(colorScheme),
+      backdrop: colorScheme.surfaceContainerLowest,
+      shadow: colorScheme.brightness == Brightness.light,
+      textDirection: Directionality.of(context),
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+    );
   }
 
   @override
-  void updateRenderObject(BuildContext context, _RenderPageFade renderObject) {
+  void updateRenderObject(
+    BuildContext context,
+    _RenderCardTransition renderObject,
+  ) {
+    final colorScheme = ColorScheme.of(context);
     renderObject
-      ..opacity = opacity
-      ..color = color
-      ..opaque = opaque;
+      ..animation = animation
+      ..secondaryAnimation = secondaryAnimation
+      ..overdrag = overdrag
+      ..coveringOverdrag = coveringOverdrag
+      ..radius = radius
+      ..settledFill = settledFill
+      ..receding = receding
+      ..surface = SurfaceLevel.page.colorOf(colorScheme)
+      ..backdrop = colorScheme.surfaceContainerLowest
+      ..shadow = colorScheme.brightness == Brightness.light
+      ..textDirection = Directionality.of(context)
+      ..devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
   }
 }
 
-class _RenderPageFade extends RenderProxyBox {
-  _RenderPageFade({
-    required this._opacity,
-    required this._color,
-    required this._opaque,
-  });
+class _RenderCardTransition extends RenderProxyBox {
+  _RenderCardTransition({
+    required Animation<double> animation,
+    required Animation<double> secondaryAnimation,
+    required ValueListenable<double> overdrag,
+    required ValueListenable<double> coveringOverdrag,
+    required BorderRadius radius,
+    required Color settledFill,
+    required ValueListenable<bool> receding,
+    required Color surface,
+    required Color backdrop,
+    required bool shadow,
+    required TextDirection textDirection,
+    required double devicePixelRatio,
+  }) : _animation = animation,
+       _secondaryAnimation = secondaryAnimation,
+       _overdrag = overdrag,
+       _coveringOverdrag = coveringOverdrag,
+       _radius = radius,
+       _settledFill = settledFill,
+       _receding = receding,
+       _surface = surface,
+       _backdrop = backdrop,
+       _shadow = shadow,
+       _textDirection = textDirection,
+       _devicePixelRatio = devicePixelRatio;
 
-  Animation<double> _opacity;
-  Color _color;
-  bool _opaque;
-  bool _visible = true;
-
-  set opacity(Animation<double> value) {
-    if (identical(value, _opacity)) {
+  Animation<double> _animation;
+  set animation(Animation<double> value) {
+    if (identical(value, _animation)) {
       return;
     }
     if (attached) {
-      _opacity.removeListener(_update);
-      value.addListener(_update);
+      _unlisten();
     }
-    _opacity = value;
-    _update();
+    _animation = value;
+    if (attached) {
+      _listen();
+    }
+    markNeedsPaint();
   }
 
-  set color(Color value) {
-    if (value == _color) {
+  Animation<double> _secondaryAnimation;
+  set secondaryAnimation(Animation<double> value) {
+    if (identical(value, _secondaryAnimation)) {
       return;
     }
-    _color = value;
+    if (attached) {
+      _unlisten();
+    }
+    _secondaryAnimation = value;
+    if (attached) {
+      _listen();
+    }
     markNeedsPaint();
   }
 
-  set opaque(bool value) {
-    if (value == _opaque) {
+  ValueListenable<double> _overdrag;
+  set overdrag(ValueListenable<double> value) {
+    if (identical(value, _overdrag)) {
       return;
     }
-    _opaque = value;
+    if (attached) {
+      _overdrag.removeListener(markNeedsPaint);
+      value.addListener(markNeedsPaint);
+    }
+    _overdrag = value;
     markNeedsPaint();
   }
 
-  void _update() {
-    final visible = _opacity.value > 0;
-    if (visible != _visible) {
-      _visible = visible;
-      markNeedsSemanticsUpdate();
+  ValueListenable<double> _coveringOverdrag;
+  set coveringOverdrag(ValueListenable<double> value) {
+    if (identical(value, _coveringOverdrag)) {
+      return;
     }
+    if (attached) {
+      _coveringOverdrag.removeListener(markNeedsPaint);
+      value.addListener(markNeedsPaint);
+    }
+    _coveringOverdrag = value;
     markNeedsPaint();
+  }
+
+  BorderRadius _radius;
+  set radius(BorderRadius value) {
+    if (value == _radius) {
+      return;
+    }
+    _radius = value;
+    markNeedsPaint();
+  }
+
+  Color _settledFill;
+  set settledFill(Color value) {
+    if (value == _settledFill) {
+      return;
+    }
+    _settledFill = value;
+    markNeedsPaint();
+  }
+
+  ValueListenable<bool> _receding;
+  set receding(ValueListenable<bool> value) {
+    if (identical(value, _receding)) {
+      return;
+    }
+    if (attached) {
+      _receding.removeListener(markNeedsPaint);
+      value.addListener(markNeedsPaint);
+    }
+    _receding = value;
+    markNeedsPaint();
+  }
+
+  Color _surface;
+  set surface(Color value) {
+    if (value == _surface) {
+      return;
+    }
+    _surface = value;
+    markNeedsPaint();
+  }
+
+  Color _backdrop;
+  set backdrop(Color value) {
+    if (value == _backdrop) {
+      return;
+    }
+    _backdrop = value;
+    markNeedsPaint();
+  }
+
+  bool _shadow;
+  set shadow(bool value) {
+    if (value == _shadow) {
+      return;
+    }
+    _shadow = value;
+    markNeedsPaint();
+  }
+
+  TextDirection _textDirection;
+  set textDirection(TextDirection value) {
+    if (value == _textDirection) {
+      return;
+    }
+    _textDirection = value;
+    markNeedsPaint();
+  }
+
+  double _devicePixelRatio;
+  set devicePixelRatio(double value) {
+    if (value == _devicePixelRatio) {
+      return;
+    }
+    _devicePixelRatio = value;
+    markNeedsPaint();
+  }
+
+  final _clipLayer = LayerHandle<ClipRSuperellipseLayer>();
+  final _transformLayer = LayerHandle<TransformLayer>();
+
+  bool get _moving =>
+      !_animation.isCompleted || !_secondaryAnimation.isDismissed;
+
+  bool get _recedes => _receding.value;
+
+  double get _covered => _secondaryAnimation.value + _coveringOverdrag.value;
+
+  double get _dx {
+    final width = size.width;
+    final slide = _recedes ? 0.0 : _coveredSlide * width * _covered;
+    final dx = (1 - _animation.value - _overdrag.value) * width - slide;
+    // On whole physical pixels a snapshot is drawn as sharp as the page.
+    final snapped =
+        (dx * _devicePixelRatio).roundToDouble() / _devicePixelRatio;
+    return _textDirection == TextDirection.rtl ? -snapped : snapped;
+  }
+
+  Rect get _card {
+    final page = Offset.zero & size;
+    final card = _recedes
+        ? recededRect(page, size, _secondaryAnimation.value)
+        : page;
+    return card.shift(Offset(_dx, 0));
+  }
+
+  Matrix4 _childTransform(Rect card) {
+    final scale = card.width / size.width;
+    return Matrix4.translationValues(card.left, card.top, 0)
+      ..scaleByDouble(scale, scale, 1, 1);
+  }
+
+  void _handleStatus(AnimationStatus _) => markNeedsSemanticsUpdate();
+
+  void _listen() {
+    for (final animation in [_animation, _secondaryAnimation]) {
+      animation
+        ..addListener(markNeedsPaint)
+        ..addStatusListener(_handleStatus);
+    }
+    _receding.addListener(markNeedsPaint);
+    _overdrag.addListener(markNeedsPaint);
+    _coveringOverdrag.addListener(markNeedsPaint);
+  }
+
+  void _unlisten() {
+    for (final animation in [_animation, _secondaryAnimation]) {
+      animation
+        ..removeListener(markNeedsPaint)
+        ..removeStatusListener(_handleStatus);
+    }
+    _receding.removeListener(markNeedsPaint);
+    _overdrag.removeListener(markNeedsPaint);
+    _coveringOverdrag.removeListener(markNeedsPaint);
   }
 
   @override
   void attach(PipelineOwner owner) {
     super.attach(owner);
-    _opacity.addListener(_update);
-    _update();
+    _listen();
   }
 
   @override
   void detach() {
-    _opacity.removeListener(_update);
+    _unlisten();
     super.detach();
   }
 
   @override
-  void paint(PaintingContext context, Offset offset) {
-    final opacity = _opacity.value;
-    if (child == null || opacity == 0) {
-      return;
-    }
-    if (opacity == 1) {
-      super.paint(context, offset);
-      return;
-    }
-    if (_opaque) {
-      context.canvas.drawRect(offset & size, Paint()..color = _color);
-    }
-    super.paint(context, offset);
-    context.canvas.drawRect(
-      offset & size,
-      Paint()..color = _color.withValues(alpha: _color.a * (1 - opacity)),
-    );
+  void dispose() {
+    _clipLayer.layer = null;
+    _transformLayer.layer = null;
+    super.dispose();
   }
 
   @override
-  void visitChildrenForSemantics(RenderObjectVisitor visitor) {
-    if (_visible) {
-      super.visitChildrenForSemantics(visitor);
+  void paint(PaintingContext context, Offset offset) {
+    final child = this.child;
+    if (child == null) {
+      return;
     }
+    if (!_moving) {
+      _clipLayer.layer = null;
+      _transformLayer.layer = null;
+      if (_settledFill.a > 0) {
+        context.canvas.drawRect(offset & size, Paint()..color = _settledFill);
+      }
+      context.paintChild(child, offset);
+      return;
+    }
+    final covered = _covered;
+    final recedes = _recedes;
+    final card = _card;
+    // A card leaving while still covered, as in a second pop before the first
+    // has ended, has the page below it beside it, not the empty backdrop.
+    if (covered > 0 && _animation.isCompleted) {
+      final screen = offset & size;
+      if (recedes) {
+        context.canvas.drawRect(screen, Paint()..color = _surface);
+      } else {
+        _paintBesideCard(context.canvas, screen, card.shift(offset));
+      }
+    }
+    if (_shadow && !_animation.isCompleted) {
+      _paintShadow(context.canvas, card.shift(offset));
+    }
+    void paintCard(PaintingContext context, Offset offset) {
+      context.canvas.drawRect(card.shift(offset), Paint()..color = _surface);
+      if (card.width == size.width) {
+        _transformLayer.layer = null;
+        context.paintChild(child, offset + card.topLeft);
+        return;
+      }
+      _transformLayer.layer = context.pushTransform(
+        needsCompositing,
+        offset,
+        _childTransform(card),
+        (context, offset) => context.paintChild(child, offset),
+        oldLayer: _transformLayer.layer,
+      );
+    }
+
+    // iOS shrinks the content of a page under a zoom but keeps its
+    // background, so a receding page has no corners of its own.
+    if (_radius == BorderRadius.zero || (recedes && _animation.isCompleted)) {
+      _clipLayer.layer = null;
+      paintCard(context, offset);
+    } else {
+      _clipLayer.layer = context.pushClipRSuperellipse(
+        needsCompositing,
+        offset,
+        card,
+        _radius.toRSuperellipse(card),
+        paintCard,
+        oldLayer: _clipLayer.layer,
+      );
+    }
+    if (covered > 0) {
+      final dim = recedes ? _recededDim : _coveredDim;
+      context.canvas.drawRect(
+        offset & size,
+        Paint()..color = dim.withValues(alpha: dim.a * math.min(covered, 1)),
+      );
+    }
+  }
+
+  void _paintShadow(Canvas canvas, Rect card) {
+    final rtl = _textDirection == TextDirection.rtl;
+    final edge = rtl ? card.right : card.left;
+    final end = edge + (rtl ? 3 : -3) * _cardShadowSigma;
+    final top = card.top + (rtl ? _radius.topRight.y : _radius.topLeft.y);
+    final bottom =
+        card.bottom - (rtl ? _radius.bottomRight.y : _radius.bottomLeft.y);
+    if (bottom <= top) {
+      return;
+    }
+    canvas.drawRect(
+      Rect.fromLTRB(math.min(edge, end), top, math.max(edge, end), bottom),
+      Paint()
+        ..shader = ui.Gradient.linear(
+          Offset(edge, 0),
+          Offset(end, 0),
+          _cardShadowColors,
+          _cardShadowStops,
+        ),
+    );
+  }
+
+  /// Only the uncovered strip and corners take the backdrop; each piece reaches
+  /// a pixel under the card so its antialiased edge stays off the root.
+  void _paintBesideCard(Canvas canvas, Rect screen, Rect card) {
+    final paint = Paint()..color = _backdrop;
+    final radius = _radius;
+    for (final rect in [
+      Rect.fromLTRB(screen.left, screen.top, card.left + 1, screen.bottom),
+      Rect.fromLTRB(card.right - 1, screen.top, screen.right, screen.bottom),
+      Rect.fromLTWH(
+        card.left,
+        card.top,
+        radius.topLeft.x + 1,
+        radius.topLeft.y + 1,
+      ),
+      Rect.fromLTRB(
+        card.right - radius.topRight.x - 1,
+        card.top,
+        card.right,
+        card.top + radius.topRight.y + 1,
+      ),
+      Rect.fromLTRB(
+        card.left,
+        card.bottom - radius.bottomLeft.y - 1,
+        card.left + radius.bottomLeft.x + 1,
+        card.bottom,
+      ),
+      Rect.fromLTRB(
+        card.right - radius.bottomRight.x - 1,
+        card.bottom - radius.bottomRight.y - 1,
+        card.right,
+        card.bottom,
+      ),
+    ]) {
+      final visible = rect.intersect(screen);
+      if (!visible.isEmpty) {
+        canvas.drawRect(visible, paint);
+      }
+    }
+  }
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    if (_moving && !_measuringAtRest) {
+      transform.multiply(_childTransform(_card));
+    }
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    final child = this.child;
+    if (child == null) {
+      return false;
+    }
+    return result.addWithPaintTransform(
+      transform: _moving ? _childTransform(_card) : null,
+      position: position,
+      hitTest: (result, position) => child.hitTest(result, position: position),
+    );
   }
 }

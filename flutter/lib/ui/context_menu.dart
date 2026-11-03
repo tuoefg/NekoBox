@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/l10n.dart';
 
 import 'focus.dart';
 import 'popup.dart';
@@ -19,7 +20,7 @@ const _touchDevices = {
 /// the menu clear of the row, which a finger or the focus highlight would
 /// otherwise leave covered.
 class ContextMenuRegion extends StatefulWidget {
-  final List<CommonPopupMenuItem>? menuItems;
+  final List<PopupMenuItem>? menuItems;
   final Widget child;
 
   const ContextMenuRegion({super.key, this.menuItems, required this.child});
@@ -31,7 +32,7 @@ class ContextMenuRegion extends StatefulWidget {
 class _ContextMenuRegionState extends State<ContextMenuRegion> {
   Timer? _holdTimer;
   LogicalKeyboardKey? _heldKey;
-  CommonPopupRoute<void>? _menu;
+  AnchoredPopupRoute<void>? _menu;
 
   bool get _enabled {
     final items = widget.menuItems;
@@ -102,13 +103,13 @@ class _ContextMenuRegionState extends State<ContextMenuRegion> {
       box.getTransformTo(navigatorBox),
       Offset.zero & box.size,
     );
-    final menu = _menu = CommonPopupRoute<void>(
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    final menu = _menu = AnchoredPopupRoute<void>(
+      barrierLabel: UiLocalizations.of(context).close,
       placement: PopupPlacement.belowPoint,
       elevated: ElevatedSurfaceTheme.isIn(context),
       anchorOf: () => point & Size.zero,
       avoid: avoid ? rowRect : null,
-      builder: (_) => CommonPopupMenu(items: items),
+      builder: (_) => PopupMenu(items: items),
     );
     unawaited(
       navigator.push(menu).whenComplete(() {
@@ -195,20 +196,32 @@ class _ContextMenuRegionState extends State<ContextMenuRegion> {
       canRequestFocus: false,
       skipTraversal: true,
       onKeyEvent: enabled ? (_, event) => _handleKey(event) : null,
-      child: GestureDetector(
-        onSecondaryTapUp: enabled
-            ? (details) => _open(details.globalPosition)
-            : null,
-        child: GestureDetector(
-          supportedDevices: _touchDevices,
-          onLongPressStart: enabled
-              ? (details) {
-                  Feedback.forLongPress(context);
-                  _open(details.globalPosition, avoid: true);
-                }
-              : null,
-          child: widget.child,
-        ),
+      child: RawGestureDetector(
+        gestures: {
+          if (enabled) ...{
+            TapGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+                  () => TapGestureRecognizer(debugOwner: this),
+                  (recognizer) =>
+                      recognizer.onSecondaryTapUp = (details) =>
+                          _open(details.globalPosition),
+                ),
+            LongPressGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<
+                  LongPressGestureRecognizer
+                >(
+                  () => LongPressGestureRecognizer(
+                    debugOwner: this,
+                    supportedDevices: _touchDevices,
+                  ),
+                  (recognizer) => recognizer.onLongPressStart = (details) {
+                    Feedback.forLongPress(context);
+                    _open(details.globalPosition, avoid: true);
+                  },
+                ),
+          },
+        },
+        child: widget.child,
       ),
     );
   }

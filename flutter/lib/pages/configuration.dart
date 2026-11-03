@@ -74,15 +74,15 @@ class _ProfileConfigurationPageState extends State<ProfileConfigurationPage> {
   @override Widget build(BuildContext context) {
     final store = _store;
     if (store == null) {
-      return CommonScaffold(title: context.tr('Advanced configuration'),
+      return Scaffold(title: context.tr('Advanced configuration'),
       body: NullStatus(label: context.tr(context.box.remote ? 'Disconnect remote session to edit local profiles' : 'No profile'),
         illustration: NullStatusIllustration.profile, action: context.box.remote ? null : TonalButton(size: TonalButtonSize.bar,
           glyph: AppGlyphs.profiles, label: context.tr('Profiles'), onPressed: () => openForm(context, const ProfilesPage(picker: true)))));
     }
     return ListenableBuilder(listenable: store, builder: (context, _) {
       if (!store.ready) {
-        return CommonScaffold(title: context.tr('Advanced configuration'),
-        body: store.error == null ? const Center(child: CommonCircleLoading.page()) : ErrorState(store.error!, retry: store.load));
+        return Scaffold(title: context.tr('Advanced configuration'),
+        body: store.error == null ? const Center(child: ActivityIndicator.page()) : ErrorState(store.error!, retry: store.load));
       }
       final nodes = store.entries(const ['nodes']);
       return BoxPage(title: 'Advanced configuration',

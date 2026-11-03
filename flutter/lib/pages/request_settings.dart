@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import 'package:flutter/services.dart';
 import '../widgets.dart';
 import '../components/form.dart';
@@ -65,7 +66,7 @@ class _RequestSettingsPageState extends State<RequestSettingsPage> {
       textInputAction: multiline ? TextInputAction.newline : TextInputAction.done,
       inputFormatters: [LengthLimitingTextInputFormatter(65536)], autocorrect: false,
       style: AppTextStyle.body.of(context),
-      decoration: InputDecoration.collapsed(border: const NoInputBorder(), hintText: hint),
+      decoration: InputDecoration.collapsed(border: material.InputBorder.none, hintText: hint),
       onChanged: (_) => setState(() => _dirty = true),
     ))],
   );
@@ -122,7 +123,7 @@ class _CaptureAppsPageState extends State<CaptureAppsPage> {
     super.didChangeDependencies();
     _apps ??= context.box.call('apps.list', {'system': true, 'refresh': true}).then(rows);
   }
-  @override Widget build(BuildContext context) => CommonScaffold(title: context.tr('Capture applications'),
+  @override Widget build(BuildContext context) => Scaffold(title: context.tr('Capture applications'),
     searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query.toLowerCase())),
     confirmationAction: IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Done'), onPressed: () => Navigator.pop(context, _selected.toList()..sort())),
     iconActions: [IconButtonData(glyph: AppGlyphs.clearAll, tooltip: context.tr('All applications'), onPressed: () => setState(_selected.clear))],

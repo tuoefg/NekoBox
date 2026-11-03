@@ -128,7 +128,7 @@ class _NodeJsonPageState extends State<NodeJsonPage> {
       if (formatted != null) _text.text = formatted;
     });
     if (formatted == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Not valid JSON'))));
+      showAppBanner(context, context.tr('Not valid JSON'));
     }
   }
 
@@ -140,7 +140,7 @@ class _NodeJsonPageState extends State<NodeJsonPage> {
       await box.call('profiles.nodeUpdate', {'id': widget.id, 'name': _name.text.trim(), 'content': _text.text});
       if (!mounted) return;
       setState(() { _original = _text.text; _saving = false; });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Done'))));
+      showAppBanner(context, context.tr('Done'));
     } catch (error) {
       if (!mounted) return;
       setState(() { _saving = false; _error = BoxController.describe(error); });
@@ -148,7 +148,7 @@ class _NodeJsonPageState extends State<NodeJsonPage> {
   }
 
   @override Widget build(BuildContext context) {
-    return CommonScaffold(
+    return Scaffold(
       title: _name.text.isEmpty ? context.tr('Edit') : _name.text.toString() + (_dirty ? ' •' : ''),
       isLoading: _loading,
       confirmationAction: IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Save'),

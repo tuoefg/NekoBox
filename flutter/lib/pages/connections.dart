@@ -9,6 +9,25 @@ class ConnectionsPage extends StatefulWidget {
 class _ConnectionsPageState extends State<ConnectionsPage> {
   BoxController? _box;
   String _query = '', _filter = 'Active', _sort = 'Speed';
+  // Taps on a record's labels filter by them: the strip shows those terms and
+  // the search field keeps only what was typed.
+  final _keywords = ValueNotifier<List<ScaffoldKeyword>>(const []);
+  String get _search => [
+    _query,
+    ..._keywords.value.map((keyword) => '${keyword.key}'),
+  ].where((word) => word.trim().isNotEmpty).join(' ');
+  void _keywordsChanged() => setState(() {});
+  void _addFilter(String word) {
+    if (_keywords.value.any((keyword) => keyword.key == word)) return;
+    _keywords.value = [..._keywords.value, ScaffoldKeyword(key: word, label: word, onDeleted: () => _removeFilter(word))];
+  }
+  void _removeFilter(String word) =>
+    _keywords.value = [for (final keyword in _keywords.value) if (keyword.key != word) keyword];
+  @override void initState() {
+    super.initState();
+    _keywords.addListener(_keywordsChanged);
+  }
+
   @override void didChangeDependencies() {
     super.didChangeDependencies();
     if (_box == null) {
@@ -17,6 +36,8 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
     }
   }
   @override void dispose() {
+    _keywords.removeListener(_keywordsChanged);
+    _keywords.dispose();
     _box?.act('connections.visible', {'visible': false});
     super.dispose();
   }
@@ -33,26 +54,26 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
         connection['destination'], connection['domain'], connection['outbound'],
         connection['network'], connection['rule'], connection['source'], connection['process'],
       ].join(' ').toLowerCase();
-      return _query.toLowerCase().split(' ').every(search.contains);
+      return _search.toLowerCase().split(' ').where((w) => w.isNotEmpty).every(search.contains);
     }).toList();
     final key = {'Created': 'createdAt', 'Upload': 'uploadTotal', 'Download': 'downloadTotal'}[_sort];
     num rank(Json c) => key == null ? (c['upload'] as num? ?? 0) + (c['download'] as num? ?? 0) : c[key] as num? ?? 0;
     list.sort((a, b) => rank(b).compareTo(rank(a)));
-    return CommonScaffold(
+    return Scaffold(
       title: context.tr('Connections'),
-      onKeywordsUpdate: (words) => setState(() => _query = words.join(' ')),
+      keywords: _keywords,
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
       iconActions: [IconButtonData(glyph: AppGlyphs.clearAll, tooltip: context.tr('Close all connections'), onPressed: box.running ? _closeAll : null)],
       menuItems: [
         for (final filter in ['Active', 'Closed', 'All'])
-          CommonPopupMenuItem(label: context.tr(filter), checked: filter == _filter,
-            section: filter == 'Active' ? CommonPopupMenuSection(title: context.tr('Connections')) : null,
+          PopupMenuItem(label: context.tr(filter), checked: filter == _filter,
+            section: filter == 'Active' ? PopupMenuSection(title: context.tr('Connections')) : null,
             onPressed: () => setState(() => _filter = filter)),
         for (final sort in ['Speed', 'Created', 'Upload', 'Download'])
-          CommonPopupMenuItem(glyph: AppGlyphs.sort, label: context.tr(sort), checked: sort == _sort, onPressed: () => setState(() => _sort = sort)),
+          PopupMenuItem(glyph: AppGlyphs.sort, label: context.tr(sort), checked: sort == _sort, onPressed: () => setState(() => _sort = sort)),
       ],
       body: NullStatusSwitcher(
-        isEmpty: list.isEmpty, isSearching: _query.trim().isNotEmpty,
+        isEmpty: list.isEmpty, isSearching: _search.trim().isNotEmpty,
         nullStatus: NullStatus(label: context.tr('No connections'), illustration: NullStatusIllustration.connections),
         child: ListView.separated(
             padding: EdgeInsets.only(top: context.contentTopPadding, bottom: 16 + context.bottomInset),
@@ -60,7 +81,7 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
             separatorBuilder: (_, _) => const SizedBox(height: recordListGap),
             itemBuilder: (context, index) {
               final connection = list[index];
-              return ConnectionRecord(connection: connection);
+              return ConnectionRecord(connection: connection, onFilter: _addFilter);
             },
           ),
       ),
@@ -69,8 +90,9 @@ class _ConnectionsPageState extends State<ConnectionsPage> {
 }
 
 class ConnectionRecord extends StatelessWidget {
-  const ConnectionRecord({super.key, required this.connection});
+  const ConnectionRecord({super.key, required this.connection, required this.onFilter});
   final Json connection;
+  final ValueChanged<String> onFilter;
   @override Widget build(BuildContext context) {
     final c = connection, box = context.box;
     final styles = RecordTextStyles.of(context);
@@ -87,7 +109,7 @@ class ConnectionRecord extends StatelessWidget {
         ) : null,
         children: [
           RecordTimestamp(recordTime(c['createdAt'])),
-          RecordLabel(label: c['network'].toString().toUpperCase(), onPressed: () => context.commonScaffoldState?.addKeyword(c['network'].toString())),
+          RecordLabel(label: c['network'].toString().toUpperCase(), onPressed: () => onFilter(c['network'].toString())),
           if (closed) RecordLabel(label: context.tr('Closed')),
         ],
       ),

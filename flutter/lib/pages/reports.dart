@@ -12,7 +12,7 @@ class _ReportsPageState extends State<ReportsPage> {
   Future<List<Json>> _load() async => rows(await context.box.call('reports.list', {'kind': widget.kind}));
   @override void didChangeDependencies() { super.didChangeDependencies(); _reports ??= _load(); }
   void _refresh() => setState(() => _reports = _load());
-  @override Widget build(BuildContext context) => CommonScaffold(title: context.tr(reportTitle(widget.kind)), iconActions: [
+  @override Widget build(BuildContext context) => Scaffold(title: context.tr(reportTitle(widget.kind)), iconActions: [
     IconButtonData(glyph: AppGlyphs.refresh, onPressed: _refresh, tooltip: context.tr('Refresh')),
     IconButtonData(glyph: AppGlyphs.delete, tooltip: context.tr('Clear'), onPressed: () async {
       final box = context.box;

@@ -1,7 +1,5 @@
-import 'dart:math' as math;
-import 'dart:ui' show ClipOp, lerpDouble;
-
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/input_border.dart';
 
 abstract final class AppCorner {
   static const double none = 0;
@@ -113,11 +111,9 @@ class AppInputBorder extends InputBorder {
   const AppInputBorder({
     super.borderSide = const BorderSide(),
     this.borderRadius = AppRadius.md,
-    this.gapPadding = 4.0,
   });
 
   final BorderRadius borderRadius;
-  final double gapPadding;
 
   RoundedSuperellipseBorder get _shape =>
       RoundedSuperellipseBorder(borderRadius: borderRadius, side: borderSide);
@@ -135,12 +131,10 @@ class AppInputBorder extends InputBorder {
   AppInputBorder copyWith({
     BorderSide? borderSide,
     BorderRadius? borderRadius,
-    double? gapPadding,
   }) {
     return AppInputBorder(
       borderSide: borderSide ?? this.borderSide,
       borderRadius: borderRadius ?? this.borderRadius,
-      gapPadding: gapPadding ?? this.gapPadding,
     );
   }
 
@@ -149,7 +143,6 @@ class AppInputBorder extends InputBorder {
     return AppInputBorder(
       borderSide: borderSide.scale(t),
       borderRadius: borderRadius * t,
-      gapPadding: gapPadding * t,
     );
   }
 
@@ -175,7 +168,6 @@ class AppInputBorder extends InputBorder {
       return AppInputBorder(
         borderSide: BorderSide.lerp(a.borderSide, borderSide, t),
         borderRadius: BorderRadius.lerp(a.borderRadius, borderRadius, t)!,
-        gapPadding: a.gapPadding,
       );
     }
     return super.lerpFrom(a, t);
@@ -187,123 +179,12 @@ class AppInputBorder extends InputBorder {
       return AppInputBorder(
         borderSide: BorderSide.lerp(borderSide, b.borderSide, t),
         borderRadius: BorderRadius.lerp(borderRadius, b.borderRadius, t)!,
-        gapPadding: b.gapPadding,
       );
     }
     return super.lerpTo(b, t);
   }
 
   @override
-  void paint(
-    Canvas canvas,
-    Rect rect, {
-    double? gapStart,
-    double gapExtent = 0.0,
-    double gapPercentage = 0.0,
-    TextDirection? textDirection,
-  }) {
-    final outline = rect.deflate(borderSide.width / 2);
-    if (gapStart == null || gapExtent <= 0.0 || gapPercentage == 0.0) {
+  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) =>
       _shape.paint(canvas, rect, textDirection: textDirection);
-      return;
-    }
-    final extent = lerpDouble(
-      0.0,
-      gapExtent + gapPadding * 2.0,
-      gapPercentage,
-    )!;
-    final start = switch (textDirection ?? TextDirection.ltr) {
-      TextDirection.rtl => gapStart + gapPadding - extent,
-      TextDirection.ltr => gapStart - gapPadding,
-    };
-    final radii = borderRadius.resolve(textDirection);
-    final left = outline.left + math.max(0.0, start);
-    final depth =
-        math.max(radii.topLeft.y, radii.topRight.y) + borderSide.width;
-    canvas
-      ..save()
-      ..clipRect(
-        Rect.fromLTRB(
-          left,
-          outline.top - borderSide.width,
-          left + extent,
-          outline.top + depth,
-        ),
-        clipOp: ClipOp.difference,
-      );
-    _shape.paint(canvas, rect, textDirection: textDirection);
-    canvas.restore();
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) {
-      return true;
-    }
-    return other is AppInputBorder &&
-        other.borderSide == borderSide &&
-        other.borderRadius == borderRadius &&
-        other.gapPadding == gapPadding;
-  }
-
-  @override
-  int get hashCode => Object.hash(borderSide, borderRadius, gapPadding);
 }
-
-extension AppShapeThemeExt on ThemeData {
-  ThemeData get withAppShapes => copyWith(
-    cardTheme: cardTheme.copyWith(shape: AppShape.md),
-    dialogTheme: dialogTheme.copyWith(shape: AppShape.all(AppCorner.alert)),
-    bottomSheetTheme: bottomSheetTheme.copyWith(
-      shape: AppShape.top(AppCorner.xxl),
-    ),
-    snackBarTheme: snackBarTheme.copyWith(shape: AppShape.xs),
-    tooltipTheme: tooltipTheme.copyWith(
-      // A decoration replaces Material's tooltip colours too, so restate them.
-      decoration: ShapeDecoration(
-        shape: AppShape.xs,
-        color: switch (brightness) {
-          Brightness.dark => Colors.white.withAlpha(230),
-          Brightness.light => Colors.grey[700]!.withAlpha(230),
-        },
-      ),
-    ),
-    chipTheme: chipTheme.copyWith(shape: AppShape.sm),
-    popupMenuTheme: popupMenuTheme.copyWith(shape: AppShape.md),
-    menuTheme: MenuThemeData(
-      style: (menuTheme.style ?? const MenuStyle()).copyWith(
-        shape: const WidgetStatePropertyAll(AppShape.md),
-      ),
-    ),
-    inputDecorationTheme: inputDecorationTheme.copyWith(border: AppShape.input),
-    floatingActionButtonTheme: floatingActionButtonTheme.copyWith(
-      shape: AppShape.md,
-    ),
-    navigationBarTheme: navigationBarTheme.copyWith(
-      indicatorShape: AppShape.full,
-    ),
-    navigationRailTheme: navigationRailTheme.copyWith(
-      indicatorShape: AppShape.full,
-    ),
-    progressIndicatorTheme: progressIndicatorTheme.copyWith(
-      borderRadius: AppRadius.full,
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: filledButtonTheme.style?.merge(_pillButton) ?? _pillButton,
-    ),
-    textButtonTheme: TextButtonThemeData(
-      style: textButtonTheme.style?.merge(_pillButton) ?? _pillButton,
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: outlinedButtonTheme.style?.merge(_pillButton) ?? _pillButton,
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: elevatedButtonTheme.style?.merge(_pillButton) ?? _pillButton,
-    ),
-    iconButtonTheme: IconButtonThemeData(
-      style: iconButtonTheme.style?.merge(_pillButton) ?? _pillButton,
-    ),
-  );
-}
-
-const _pillButton = ButtonStyle(shape: WidgetStatePropertyAll(AppShape.full));

@@ -1,8 +1,5 @@
-import 'package:b_box_ui/ui/context.dart';
-import 'package:b_box_ui/ui/typography.dart';
-import 'package:material_ui/material_ui.dart';
-
-import 'card.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/prism_ui.dart';
 
 class SettingTextCard extends StatelessWidget {
   final String text;
@@ -18,7 +15,7 @@ class SettingTextCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CommonCard(
+    return Card(
       onPressed: onPressed,
       isSelected: isSelected,
       fillsSelection: true,

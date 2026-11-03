@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 /// A sheet's own navigator, which holds only the pages of that sheet.
 class SheetPagesNavigator extends Navigator {

@@ -1,7 +1,7 @@
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/icons/glyph.dart';
-import 'package:material_ui/material_ui.dart';
 
 const _grid = Rect.fromLTWH(0, 0, Glyph.size, Glyph.size);
 const _fillStart = Glyph.strokeWidth / 2;

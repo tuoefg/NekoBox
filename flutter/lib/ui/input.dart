@@ -1,35 +1,14 @@
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/common_button.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/dialog.dart';
 import 'package:b_box_ui/ui/icons/icons.dart';
 import 'package:b_box_ui/ui/l10n.dart';
 import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/surface.dart';
-import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
-
-class CommonCheckBox extends StatelessWidget {
-  final bool? value;
-  final ValueChanged<bool?>? onChanged;
-  final bool isCircle;
-
-  const CommonCheckBox({
-    required this.value,
-    required this.onChanged,
-    this.isCircle = false,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Checkbox(
-      materialTapTargetSize: MaterialTapTargetSize.padded,
-      visualDensity: VisualDensity.standard,
-      shape: isCircle ? AppShape.circle : null,
-      value: value,
-      onChanged: onChanged,
-    );
-  }
-}
+import 'package:b_box_ui/ui/text_field.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
 /// Single-line while hidden: Flutter cannot obscure more than one line.
 class SecretTextFormField extends StatefulWidget {
@@ -85,7 +64,7 @@ class _SecretTextFormFieldState extends State<SecretTextFormField> {
           tooltip: _obscure
               ? localizations.showPassword
               : localizations.hidePassword,
-          icon: GlyphIcon(_obscure ? AppGlyphs.eye : AppGlyphs.eyeOff),
+          icon: GlyphIcon(_obscure ? Glyphs.eye : Glyphs.eyeOff),
           onPressed: () {
             setState(() {
               _obscure = !_obscure;
@@ -193,7 +172,7 @@ class _InputDialogState extends State<InputDialog> {
       suffixText: suffixText,
       hintText: widget.hintText ?? widget.labelText,
     );
-    return CommonDialog(
+    return AlertDialog(
       title: title,
       hasFields: true,
       actions: [
@@ -242,7 +221,7 @@ class _InputDialogState extends State<InputDialog> {
                   widget.inputFormatters,
                   widget.maxLength,
                 ),
-                keyboardType: widget.keyboardType ?? TextInputType.text,
+                keyboardType: widget.keyboardType ?? TextInputType.url,
                 maxLines: null,
                 minLines: 1,
                 controller: _textController,
@@ -257,55 +236,6 @@ class _InputDialogState extends State<InputDialog> {
       ),
     );
   }
-}
-
-class NoInputBorder extends InputBorder {
-  const NoInputBorder() : super(borderSide: BorderSide.none);
-
-  @override
-  NoInputBorder copyWith({BorderSide? borderSide}) => const NoInputBorder();
-
-  @override
-  bool get isOutline => false;
-
-  @override
-  EdgeInsetsGeometry get dimensions => EdgeInsets.zero;
-
-  @override
-  NoInputBorder scale(double t) => const NoInputBorder();
-
-  @override
-  Path getInnerPath(Rect rect, {TextDirection? textDirection}) {
-    return Path()..addRect(rect);
-  }
-
-  @override
-  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
-    return Path()..addRect(rect);
-  }
-
-  @override
-  void paintInterior(
-    Canvas canvas,
-    Rect rect,
-    Paint paint, {
-    TextDirection? textDirection,
-  }) {
-    canvas.drawRect(rect, paint);
-  }
-
-  @override
-  bool get preferPaintInterior => true;
-
-  @override
-  void paint(
-    Canvas canvas,
-    Rect rect, {
-    double? gapStart,
-    double gapExtent = 0.0,
-    double gapPercentage = 0.0,
-    TextDirection? textDirection,
-  }) {}
 }
 
 /// For a field with no grouped row to sit in; `.agents/surfaces.md` has why.
@@ -335,7 +265,6 @@ class FilledInputTheme extends StatelessWidget {
         filled: true,
         fillColor: fillColor ?? context.raisedSurfaceLevel.colorOf(colorScheme),
         hoverColor: Colors.transparent,
-        floatingLabelBehavior: FloatingLabelBehavior.never,
         contentPadding: contentPadding,
         border: none,
         enabledBorder: none,

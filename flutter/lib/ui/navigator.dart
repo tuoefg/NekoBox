@@ -1,23 +1,22 @@
 import 'dart:async';
 
-import 'package:animations/animations.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/deferred_push.dart';
 import 'package:b_box_ui/ui/drag_back.dart';
 import 'package:b_box_ui/ui/keyboard_inset_hold.dart';
 import 'package:b_box_ui/ui/page_transition.dart';
 import 'package:b_box_ui/ui/sheet_navigator.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:material_ui/material_ui.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 class BaseNavigator {
   static PageRoute<T> _routeOf<T>(BuildContext context, Widget child) {
     if (!context.isMobileView) {
-      return CommonDesktopRoute(builder: (context) => child);
+      return FadePageRoute(builder: (context) => child);
     }
-    return CommonRoute(builder: (context) => child);
+    return CardPageRoute(builder: (context) => child);
   }
 
   /// The mobile layout drops a home page's navigator, pages and all, so a
@@ -38,7 +37,7 @@ class BaseNavigator {
       });
     }
 
-    final route = CommonDesktopRoute<T>(
+    final route = FadePageRoute<T>(
       builder: (_) => _DropWatch(onDropped: reopenIfDropped, child: child),
     );
     unawaited(
@@ -137,16 +136,57 @@ Future<void> _whenStill(Animation<double> animation) {
   return completer.future;
 }
 
-const commonSharedXPageTransitions = SharedAxisPageTransitionsBuilder(
-  transitionType: SharedAxisTransitionType.horizontal,
-  fillColor: Colors.transparent,
-);
+/// A navigator's first page: it never animates itself, and a card route pushed
+/// over it drives how it recedes through its delegated transition.
+class RootPage<T> extends Page<T> {
+  final Widget child;
 
-class CommonDesktopRoute<T> extends PageRoute<T>
+  const RootPage({required this.child, super.key, super.name});
+
+  @override
+  Route<T> createRoute(BuildContext context) => _RootPageRoute<T>(page: this);
+}
+
+class _RootPageRoute<T> extends PageRoute<T> {
+  _RootPageRoute({required RootPage<T> page}) : super(settings: page);
+
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  Duration get transitionDuration => Duration.zero;
+
+  @override
+  bool canTransitionTo(TransitionRoute<dynamic> nextRoute) =>
+      nextRoute is ModalRoute<dynamic> &&
+      nextRoute.delegatedTransition != null &&
+      (nextRoute is! PageRoute<dynamic> || !nextRoute.fullscreenDialog);
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return Semantics(
+      scopesRoute: true,
+      explicitChildNodes: true,
+      child: (settings as RootPage<T>).child,
+    );
+  }
+}
+
+class FadePageRoute<T> extends PageRoute<T>
     with DragBackRouteMixin<T>, DeferredPushRouteMixin<T> {
   final Widget Function(BuildContext context) builder;
 
-  CommonDesktopRoute({required this.builder});
+  FadePageRoute({required this.builder});
 
   @override
   Color? get barrierColor => null;
@@ -191,21 +231,17 @@ class CommonDesktopRoute<T> extends PageRoute<T>
   Duration get reverseTransitionDuration => const Duration(milliseconds: 200);
 }
 
-class CommonRoute<T> extends PageRoute<T>
-    with
-        DragBackRouteMixin<T>,
-        DeferredPushRouteMixin<T>,
-        SharedXPageRouteMixin<T> {
+class CardPageRoute<T> extends PageRoute<T>
+    with DragBackRouteMixin<T>, DeferredPushRouteMixin<T>, CardRouteMixin<T> {
   final Widget Function(BuildContext context) builder;
 
-  CommonRoute({required this.builder});
+  CardPageRoute({required this.builder, super.settings});
 
+  // HeroController would hold the first frame offstage. Painted at rest off
+  // screen instead, the page takes its costly first paint and snapshots there
+  // rather than in the first frames it moves in.
   @override
-  bool sharesMotionWith(Route<dynamic>? route) => route is CommonRoute;
-
-  @override
-  Color backdropOf(Color surface, {required bool dragging}) =>
-      dragging ? Colors.transparent : surface;
+  set offstage(bool value) {}
 
   @override
   Widget buildPage(

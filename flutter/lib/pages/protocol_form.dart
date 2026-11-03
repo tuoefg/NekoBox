@@ -535,7 +535,7 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
           trailing: FormRowTextField(controller: _name, onChanged: _changed));
       case 'bool':
         return FormRow(title: context.tr(field.label), onPressed: () { _set(field.path, !_bool(field.path)); _changed(''); },
-          trailing: CommonSwitch(value: _bool(field.path), onChanged: (value) { _set(field.path, value); _changed(''); }));
+          trailing: Switch(value: _bool(field.path), onChanged: (value) { _set(field.path, value); _changed(''); }));
       case 'choice':
         final choices = field.choices ?? const <(String, String)>[];
         final current = switch (field.path) {
@@ -650,11 +650,12 @@ class _ProtocolFormPageState extends State<ProtocolFormPage> {
   }
 
   @override Widget build(BuildContext context) {
-    if (_loading) return CommonScaffold(title: context.tr('Edit settings'), isLoading: true, body: const SizedBox.shrink());
+    if (_loading) return Scaffold(title: context.tr('Edit settings'), isLoading: true, body: const SizedBox.shrink());
     if (!_supported) {
-      return CommonScaffold(title: context.tr('Edit settings'), body: NullStatus(
+      return Scaffold(title: context.tr('Edit settings'), body: NullStatus(
       label: context.tr('No typed form for this protocol'),
       description: context.tr('Use the node editor to change the configuration text.'),
+      illustration: NullStatusIllustration.rules,
     ));
     }
     final issue = _attempted ? _issue : null;

@@ -1,31 +1,44 @@
+import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/button.dart';
 import 'package:b_box_ui/ui/card.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/icons/icons.dart';
 import 'package:b_box_ui/ui/measure.dart';
+import 'package:b_box_ui/ui/press_surface.dart';
 import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/surface.dart';
 import 'package:b_box_ui/ui/typography.dart';
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter/rendering.dart';
 
-class CommonChip extends StatelessWidget {
+class Chip extends StatelessWidget {
   final String label;
   final VoidCallback? onDeleted;
 
-  const CommonChip({super.key, required this.label, this.onDeleted});
+  final VoidCallback? onPressed;
+  final bool selected;
+
+  const Chip({
+    super.key,
+    required this.label,
+    this.onDeleted,
+    this.onPressed,
+    this.selected = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
     final deletable = onDeleted != null;
+    final filled = selected && !deletable;
     return SizedBox(
       height: TonalButtonSize.section.button,
-      child: CommonCard(
+      child: Card(
         shape: AppShape.full,
-        inert: !deletable,
+        isSelected: filled,
+        fillsSelection: true,
+        inert: !deletable && onPressed == null,
         padding: EdgeInsets.only(left: 16, right: deletable ? 12 : 16),
-        onPressed: onDeleted,
+        onPressed: onDeleted ?? onPressed,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           spacing: 6,
@@ -37,12 +50,16 @@ class CommonChip extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: AppTextStyle.subheadline
                     .of(context, emphasized: true)
-                    .copyWith(color: colorScheme.onSurface),
+                    .copyWith(
+                      color: filled
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurface,
+                    ),
               ),
             ),
             if (deletable)
               GlyphIcon(
-                AppGlyphs.close,
+                Glyphs.close,
                 size: 16,
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -89,13 +106,20 @@ class TonalChip extends StatelessWidget {
         ),
       ),
     );
-    return Material(
-      color: color,
+    final onPressed = this.onPressed;
+    if (onPressed == null) {
+      return DecoratedBox(
+        decoration: ShapeDecoration(color: color, shape: AppShape.sm),
+        child: content,
+      );
+    }
+    return PressSurface(
+      fill: color,
       shape: AppShape.sm,
-      clipBehavior: Clip.antiAlias,
-      child: onPressed == null
-          ? content
-          : InkWell(onTap: onPressed, child: content),
+      inkColor: foregroundColor,
+      childFills: true,
+      onPressed: onPressed,
+      child: content,
     );
   }
 }

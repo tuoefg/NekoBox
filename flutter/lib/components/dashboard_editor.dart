@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
@@ -521,15 +522,15 @@ class _RoundButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox.square(
       dimension: 28,
-      child: IconButton(
+      child: material.IconButton(
         tooltip: tooltip,
         padding: EdgeInsets.zero,
-        style: IconButton.styleFrom(
+        style: material.IconButton.styleFrom(
           backgroundColor: background,
           foregroundColor: foreground,
           minimumSize: const Size.square(28),
           fixedSize: const Size.square(28),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          tapTargetSize: material.MaterialTapTargetSize.shrinkWrap,
         ),
         onPressed: onPressed,
         icon: GlyphIcon(glyph, size: 16, color: foreground),

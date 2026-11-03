@@ -1,16 +1,20 @@
 import 'dart:math' as math;
 
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/color.dart';
+import 'package:b_box_ui/ui/common_button.dart';
 import 'package:b_box_ui/ui/context.dart';
-import 'package:b_box_ui/ui/focus.dart';
 import 'package:b_box_ui/ui/icons/icons.dart';
 import 'package:b_box_ui/ui/measure.dart';
 import 'package:b_box_ui/ui/metrics.dart';
 import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/surface.dart';
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter/services.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
+import 'package:b_box_ui/ui/typography.dart';
 
 import 'fade_box.dart';
+import 'press_surface.dart';
 import 'scaffold.dart';
 import 'text.dart';
 
@@ -99,8 +103,10 @@ class InfoHeader extends StatelessWidget {
 
 const commonCardIconSize = 20.0;
 
-class CommonCard extends StatelessWidget {
-  const CommonCard({
+/// A pressable card or grouped row. A press highlights it as iOS 27
+/// highlights a list cell; see `.agents/surfaces.md`.
+class Card extends StatelessWidget {
+  const Card({
     super.key,
     bool? isSelected,
     this.onPressed,
@@ -132,134 +138,123 @@ class CommonCard extends StatelessWidget {
   final OutlinedBorder? shape;
   final WidgetStatesController? statesController;
 
-  BorderSide _buildBorderSide(
-    BuildContext context,
-    Set<WidgetState> states, {
-    required bool ringed,
-  }) {
-    if (!ringed || !states.contains(WidgetState.focused)) {
-      return BorderSide.none;
+  static const _minimumSize = Size(64, 40);
+  static const _minimumTapTarget = 48.0;
+
+  /// The smallest a card draws, which a compact visual density shrinks.
+  static BoxConstraints minimumOf(BuildContext context) =>
+      Theme.of(context).visualDensity.effectiveConstraints(
+        BoxConstraints(
+          minWidth: _minimumSize.width,
+          minHeight: _minimumSize.height,
+        ),
+      );
+
+  /// [padding] as a card lays it out: a visual density can shorten it, but
+  /// never narrow it.
+  static EdgeInsets paddingOf(BuildContext context, EdgeInsets padding) {
+    final adjustment = Theme.of(context).visualDensity.baseSizeAdjustment;
+    final dx = math.max(0.0, adjustment.dx);
+    return EdgeInsets.fromLTRB(
+      math.max(0, padding.left + dx),
+      math.max(0, padding.top + adjustment.dy),
+      math.max(0, padding.right + dx),
+      math.max(0, padding.bottom + adjustment.dy),
+    );
+  }
+
+  static Size _tapTargetOf(ThemeData theme) {
+    if (theme.tapTargetSize != TapTargetSize.padded) {
+      return Size.zero;
     }
-    final colorScheme = context.colorScheme;
-    final side = focusRingSide(colorScheme);
-    return isError ? side.copyWith(color: colorScheme.error) : side;
+    final adjustment = theme.visualDensity.baseSizeAdjustment;
+    return Size(
+      _minimumTapTarget + adjustment.dx,
+      _minimumTapTarget + adjustment.dy,
+    );
   }
 
   bool get _filled => isSelected && fillsSelection;
 
-  Color _buildBackgroundColor(BuildContext context, SurfaceLevel level) {
-    final colorScheme = context.colorScheme;
+  ({Color text, Color icon}) _contentColorsOf(ColorScheme colorScheme) {
+    if (onPressed == null && !inert) {
+      final disabled = colorScheme.onSurface.opacity38;
+      return (text: disabled, icon: disabled);
+    }
     if (isError) {
-      return colorScheme.errorContainer;
+      return (
+        text: colorScheme.onErrorContainer,
+        icon: colorScheme.onErrorContainer,
+      );
     }
     if (_filled) {
-      return colorScheme.primary;
+      return (text: colorScheme.onPrimary, icon: colorScheme.onPrimary);
     }
-    return level.colorOf(colorScheme);
-  }
-
-  Color _buildForegroundColor(BuildContext context) {
-    final colorScheme = context.colorScheme;
-    if (isError) {
-      return colorScheme.onErrorContainer;
-    }
-    if (_filled) {
-      return colorScheme.onPrimary;
-    }
-    return colorScheme.onSurfaceVariant;
-  }
-
-  Color _buildIconColor(BuildContext context) {
-    final colorScheme = context.colorScheme;
-    if (isError) {
-      return colorScheme.onErrorContainer;
-    }
-    if (_filled) {
-      return colorScheme.onPrimary;
-    }
-    return colorScheme.primary;
-  }
-
-  Widget _buildButton(BuildContext context, SurfaceLevel level) {
-    final iconColor = _buildIconColor(context);
-    final foregroundColor = _buildForegroundColor(context);
-    final remote = RemoteFocusAdapter.isEnabledOf(context);
-    return ValueListenableBuilder(
-      valueListenable: FocusMovedByKey.instance,
-      builder: (context, movedByKey, content) => FilledButton(
-        statesController: statesController,
-        clipBehavior: Clip.antiAlias,
-        style:
-            FilledButton.styleFrom(
-              padding: padding ?? EdgeInsets.zero,
-              shape: shape ?? AppShape.all(radius ?? AppCorner.md),
-              iconSize: commonCardIconSize,
-              iconColor: iconColor,
-              foregroundColor: foregroundColor,
-              disabledIconColor: inert ? iconColor : null,
-              disabledForegroundColor: inert ? foregroundColor : null,
-              elevation: 0,
-            ).copyWith(
-              backgroundColor: WidgetStatePropertyAll(
-                _buildBackgroundColor(context, level),
-              ),
-              side: WidgetStateProperty.resolveWith(
-                (states) => _buildBorderSide(
-                  context,
-                  states,
-                  ringed: remote || movedByKey,
-                ),
-              ),
-            ),
-        onPressed: inert ? null : onPressed,
-        child: content,
-      ),
-      child: Semantics(
-        selected: isSelected ? true : null,
-        child: SurfaceScope(level: level, child: child),
-      ),
-    );
+    return (text: colorScheme.onSurfaceVariant, icon: colorScheme.primary);
   }
 
   @override
   Widget build(BuildContext context) {
-    final button = _buildButton(context, context.raisedSurfaceLevel);
-    final card = !enterActionsOnRight
-        ? button
-        : Focus(
-            canRequestFocus: false,
-            onKeyEvent: (_, event) {
-              if (event is! KeyDownEvent ||
-                  event.logicalKey != LogicalKeyboardKey.arrowRight) {
-                return KeyEventResult.ignored;
-              }
-              final focusNode = FocusManager.instance.primaryFocus;
-              final context = focusNode?.context;
-              if (focusNode == null || context == null) {
-                return KeyEventResult.ignored;
-              }
-              final action = focusNode.descendants
-                  .where((node) => node.skipTraversal && node.canRequestFocus)
-                  .firstOrNull;
-              if (action != null) {
-                action.requestFocus();
-                return KeyEventResult.handled;
-              }
-              if (focusNode.skipTraversal ||
-                  context.findAncestorWidgetOfExactType<IconButton>() != null) {
-                return KeyEventResult.ignored;
-              }
-              return focusNode.nextFocus()
-                  ? KeyEventResult.handled
-                  : KeyEventResult.ignored;
-            },
-            child: button,
-          );
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final level = context.raisedSurfaceLevel;
+    final content = _contentColorsOf(colorScheme);
+    final card = PressSurface(
+      fill: switch ((isError, _filled)) {
+        (true, _) => colorScheme.errorContainer,
+        (_, true) => colorScheme.primary,
+        _ => level.colorOf(colorScheme),
+      },
+      shape: shape ?? AppShape.all(radius ?? AppCorner.md),
+      inkColor: _filled ? content.text : null,
+      ringColor: isError ? colorScheme.error : null,
+      padding: paddingOf(context, padding ?? EdgeInsets.zero),
+      minimum: minimumOf(context),
+      tapTarget: _tapTargetOf(theme),
+      onPressed: onPressed,
+      inert: inert,
+      selected: isSelected,
+      statesController: statesController,
+      onKeyEvent: enterActionsOnRight ? _enterActionOnRight : null,
+      child: DefaultTextStyle(
+        style: AppTextStyle.subheadline
+            .of(context, emphasized: true)
+            .copyWith(color: content.text),
+        child: IconTheme(
+          data: IconTheme.of(
+            context,
+          ).merge(IconThemeData(color: content.icon, size: commonCardIconSize)),
+          child: SurfaceScope(level: level, child: child),
+        ),
+      ),
+    );
+    return enterAnimated ? FadeScaleEnterBox(child: card) : card;
+  }
 
-    return switch (enterAnimated) {
-      true => FadeScaleEnterBox(child: card),
-      false => card,
-    };
+  static KeyEventResult _enterActionOnRight(FocusNode _, KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.arrowRight) {
+      return KeyEventResult.ignored;
+    }
+    final focusNode = FocusManager.instance.primaryFocus;
+    final context = focusNode?.context;
+    if (focusNode == null || context == null) {
+      return KeyEventResult.ignored;
+    }
+    final action = focusNode.descendants
+        .where((node) => node.skipTraversal && node.canRequestFocus)
+        .firstOrNull;
+    if (action != null) {
+      action.requestFocus();
+      return KeyEventResult.handled;
+    }
+    if (focusNode.skipTraversal ||
+        context.findAncestorWidgetOfExactType<IconButton>() != null) {
+      return KeyEventResult.ignored;
+    }
+    return focusNode.nextFocus()
+        ? KeyEventResult.handled
+        : KeyEventResult.ignored;
   }
 }
 

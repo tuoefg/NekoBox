@@ -107,7 +107,7 @@ class _AuthBrowserState extends State<AuthBrowser> {
     });
   }
   @override void dispose() { _subscription?.cancel(); super.dispose(); }
-  @override Widget build(BuildContext context) => CommonScaffold(title: context.tr('Authentication'), body: Padding(
+  @override Widget build(BuildContext context) => Scaffold(title: context.tr('Authentication'), body: Padding(
     padding: EdgeInsets.only(top: context.contentTopPadding, bottom: context.bottomInset),
     child: AndroidView(viewType: 'io.ericlee.bfa/openconnect',
       creationParams: {'endpoint': widget.endpoint, 'challenge': widget.challenge},

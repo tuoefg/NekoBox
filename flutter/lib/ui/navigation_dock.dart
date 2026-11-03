@@ -1,19 +1,23 @@
 import 'dart:math' as math;
 
-import 'package:b_box_ui/ui/context.dart';
-import 'package:b_box_ui/ui/icons/icons.dart';
-import 'package:b_box_ui/ui/shape.dart';
-import 'package:b_box_ui/ui/surface.dart';
-import 'package:b_box_ui/ui/typography.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:material_color_utilities/material_color_utilities.dart'
-    show Hct;
-import 'package:material_ui/material_ui.dart';
+import 'package:b_box_ui/ui/hct/hct.dart';
+import 'package:b_box_ui/ui/bar_item_presence.dart';
+import 'package:b_box_ui/ui/card_surface.dart';
+import 'package:b_box_ui/ui/common_button.dart';
+import 'package:b_box_ui/ui/context.dart';
+import 'package:b_box_ui/ui/icons/icons.dart';
+import 'package:b_box_ui/ui/shape.dart';
+import 'package:b_box_ui/ui/surface.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
+import 'package:b_box_ui/ui/tooltip.dart';
+import 'package:b_box_ui/ui/typography.dart';
+import 'package:flutter/widgets.dart';
 
 import 'liquid_glass.dart';
 
@@ -429,14 +433,6 @@ class ElasticPress extends StatefulWidget {
     required this.child,
   });
 
-  /// Leaves a press on the button inside to the swell alone.
-  static const buttonStyle = ButtonStyle(
-    splashFactory: NoSplash.splashFactory,
-    overlayColor: WidgetStateMapper<Color?>({
-      WidgetState.pressed: Colors.transparent,
-    }),
-  );
-
   final bool enabled;
   final bool pullPastEdges;
   final double maxGrowth;
@@ -644,21 +640,21 @@ class _ElasticPressState extends State<ElasticPress>
 
   @override
   Widget build(BuildContext context) {
-    return Listener(
-      onPointerDown: _handlePointerDown,
-      onPointerMove: _handlePointerMove,
-      onPointerUp: _handlePointerEnd,
-      onPointerCancel: _handlePointerEnd,
-      child: AnimatedBuilder(
-        animation: _motion,
-        builder: (_, child) => _PressTransform(
-          lift: _lift.value + (1 - _lift.value) * _hover.value,
-          press: _lift.value,
-          pull: Offset(_pullX.value, _pullY.value),
-          maxGrowth: widget.maxGrowth,
-          panelOf: widget.panelOf,
-          child: child,
-        ),
+    return AnimatedBuilder(
+      animation: _motion,
+      builder: (_, child) => _PressTransform(
+        lift: _lift.value + (1 - _lift.value) * _hover.value,
+        press: _lift.value,
+        pull: Offset(_pullX.value, _pullY.value),
+        maxGrowth: widget.maxGrowth,
+        panelOf: widget.panelOf,
+        child: child,
+      ),
+      child: Listener(
+        onPointerDown: _handlePointerDown,
+        onPointerMove: _handlePointerMove,
+        onPointerUp: _handlePointerEnd,
+        onPointerCancel: _handlePointerEnd,
         child: widget.child,
       ),
     );
@@ -710,8 +706,7 @@ class _ElasticHoverState extends State<ElasticHover> {
   }
 }
 
-/// Leaves a press on the filled button inside to [ElasticPress]; one whose
-/// style sets a foreground color merges [ElasticPress.buttonStyle].
+/// Leaves a press on the button inside to [ElasticPress].
 class ElasticButton extends StatelessWidget {
   const ElasticButton({super.key, this.enabled = true, required this.child});
 
@@ -720,32 +715,17 @@ class ElasticButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    const unlit = ButtonStyle(pressLook: PressLook.none);
     return ElasticPress(
       enabled: enabled,
-      child: Theme(
-        data: theme.copyWith(
-          splashFactory: NoSplash.splashFactory,
-          highlightColor: Colors.transparent,
+      child: ButtonTheme.merge(
+        data: const ButtonThemeData(
+          icon: unlit,
+          text: unlit,
+          filled: unlit,
+          outlined: unlit,
         ),
-        child: IconTheme(
-          data: IconTheme.of(context),
-          child: IconButtonTheme(
-            data: IconButtonThemeData(
-              style: ElasticPress.buttonStyle.merge(
-                IconButtonTheme.of(context).style,
-              ),
-            ),
-            child: FilledButtonTheme(
-              data: FilledButtonThemeData(
-                style: ElasticPress.buttonStyle.merge(
-                  FilledButtonTheme.of(context).style,
-                ),
-              ),
-              child: child,
-            ),
-          ),
-        ),
+        child: child,
       ),
     );
   }
@@ -790,10 +770,12 @@ class _PressTransform extends SingleChildRenderObjectWidget {
 
 class _RenderPressTransform extends RenderProxyBox {
   _RenderPressTransform({
-    required this._lift,
-    required this._press,
-    required this._pull,
-  });
+    required double lift,
+    required double press,
+    required Offset pull,
+  }) : _lift = lift,
+       _press = press,
+       _pull = pull;
 
   double _lift;
   double _press;
@@ -861,6 +843,25 @@ class _RenderPressTransform extends RenderProxyBox {
       _transform,
       super.paint,
       oldLayer: layer is TransformLayer ? layer as TransformLayer? : null,
+    );
+  }
+
+  // Keeps a pointer the swell has grown over, so a trembling one cannot flicker.
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final bounds = Offset.zero & size;
+    if (bounds.contains(position) || (_lift == 0 && _pull == .zero)) {
+      return super.hitTest(result, position: position);
+    }
+    if (!MatrixUtils.transformRect(_transform, bounds).contains(position)) {
+      return false;
+    }
+    return super.hitTest(
+      result,
+      position: Offset(
+        clampDouble(position.dx, 0, size.width - precisionErrorTolerance),
+        clampDouble(position.dy, 0, size.height - precisionErrorTolerance),
+      ),
     );
   }
 }
@@ -1272,7 +1273,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
       glass: glass,
       style: LiquidGlassStyle.pill(colorScheme),
       glow: _touchGlow,
-      child: Material(
+      child: Surface(
         color: glass
             ? Colors.transparent
             : SurfaceLevel.floatingOf(colorScheme).colorOf(colorScheme),
@@ -1292,7 +1293,7 @@ class _FloatingNavigationBarState extends State<FloatingNavigationBar>
               padding: const EdgeInsets.all(_barPadding),
               // Above the LayoutBuilder: rebuilding anything under one relays
               // it out, and that repaint would otherwise reach the whole dock.
-              child: RepaintBoundary(
+              child: _FilledBoundary(
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final layout = _dockLayout(
@@ -1458,7 +1459,8 @@ class _Lens extends StatelessWidget {
     final colorScheme = context.colorScheme;
     final lifted = lift.clamp(0.0, 1.0);
     final tone = colorScheme.brightness == Brightness.dark ? 4.0 : 90.0;
-    final hct = Hct.fromInt(colorScheme.secondary.toARGB32())..tone = tone;
+    final secondary = Hct.fromInt(colorScheme.secondary.toARGB32());
+    final hct = Hct.from(secondary.hue, secondary.chroma, tone);
     final platter = Color(hct.toInt()).withValues(alpha: 0.85);
     return PositionedDirectional(
       start: rect.left,
@@ -1805,16 +1807,24 @@ class _LensTint extends SingleChildRenderObjectWidget {
 
 class _RenderLensTint extends RenderProxyBox {
   _RenderLensTint({
-    required this._part,
-    required this._lens,
-    required this._lensWidth,
-    required this._jelly,
-    required this._lift,
-    required this._parallax,
-    required this._index,
-    required this._color,
-    required this._textDirection,
-  });
+    required _LensPart part,
+    required _Spring lens,
+    required double lensWidth,
+    required ValueListenable<double> jelly,
+    required ValueListenable<double> lift,
+    required ValueListenable<double> parallax,
+    required int index,
+    required Color color,
+    required TextDirection textDirection,
+  }) : _part = part,
+       _lens = lens,
+       _lensWidth = lensWidth,
+       _jelly = jelly,
+       _lift = lift,
+       _parallax = parallax,
+       _index = index,
+       _color = color,
+       _textDirection = textDirection;
 
   final _outside = LayerHandle<ClipPathLayer>();
   final _inside = LayerHandle<ClipPathLayer>();
@@ -2098,5 +2108,32 @@ class _RenderLensTint extends RenderProxyBox {
       ..saveLayer(lensBounds.shift(offset), Paint()..colorFilter = filter);
     _paintMoved(context, offset, motion, _insideMotion);
     canvas.restore();
+  }
+}
+
+/// Leaves the bar's bare glass while a page zooms over it, as iOS does.
+class _FilledBoundary extends StatelessWidget {
+  const _FilledBoundary({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final filled = BarItemPresence.filledOf(context);
+    final boundary = RepaintBoundary(child: child);
+    if (filled == null) {
+      return boundary;
+    }
+    return ValueListenableBuilder(
+      valueListenable: filled,
+      builder: (_, filled, child) => Visibility(
+        visible: filled,
+        maintainState: true,
+        maintainAnimation: true,
+        maintainSize: true,
+        child: child!,
+      ),
+      child: boundary,
+    );
   }
 }

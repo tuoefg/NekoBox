@@ -1,6 +1,7 @@
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/prism_list.dart';
 
 const _defaultDuration = Duration(milliseconds: 300);
 
@@ -17,6 +18,7 @@ class KeyedAnimatedList<T> extends StatefulWidget {
   final Widget? separator;
   final ScrollController? controller;
   final EdgeInsetsGeometry? padding;
+  final double estimatedItemExtent;
   final Duration duration;
 
   const KeyedAnimatedList({
@@ -27,6 +29,7 @@ class KeyedAnimatedList<T> extends StatefulWidget {
     this.separator,
     this.controller,
     this.padding,
+    this.estimatedItemExtent = SliverPrismList.defaultEstimatedItemExtent,
     this.duration = _defaultDuration,
   });
 
@@ -190,10 +193,11 @@ class _KeyedAnimatedListState<T> extends State<KeyedAnimatedList<T>>
     final indexByKey = {
       for (final (index, entry) in _entries.indexed) entry.key: index,
     };
-    return ListView.builder(
+    return PrismListView(
       controller: widget.controller,
       padding: widget.padding,
       itemCount: _entries.length,
+      estimatedItemExtent: widget.estimatedItemExtent,
       addRepaintBoundaries: false,
       findChildIndexCallback: (key) =>
           key is ValueKey<Object> ? indexByKey[key.value] : null,
@@ -287,9 +291,10 @@ class _RenderSlideOnMove extends RenderProxyBox {
   bool _startPending = false;
 
   _RenderSlideOnMove({
-    required this._generation,
-    required this._controller,
-  });
+    required int generation,
+    required AnimationController controller,
+  }) : _generation = generation,
+       _controller = controller;
 
   set controller(AnimationController value) {
     if (identical(value, _controller)) {

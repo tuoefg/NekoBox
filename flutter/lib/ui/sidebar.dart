@@ -1,15 +1,19 @@
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/context.dart';
+import 'package:b_box_ui/ui/divider.dart';
 import 'package:b_box_ui/ui/icons/icons.dart';
 import 'package:b_box_ui/ui/l10n.dart';
+import 'package:b_box_ui/ui/press_region.dart';
 import 'package:b_box_ui/ui/scroll_behavior.dart';
 import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/surface.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
+import 'package:b_box_ui/ui/tooltip.dart';
 import 'package:b_box_ui/ui/typography.dart';
-import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
 
 const _compactWidth = 48.0;
 const _expandedWidth = 220.0;
@@ -208,7 +212,7 @@ class _SidebarOverlay extends StatelessWidget {
               },
               child: FocusScope(
                 autofocus: true,
-                child: Material(
+                child: Surface(
                   color: colorScheme.chromeSurface,
                   shape: BorderDirectional(
                     end: Divider.createBorderSide(context),
@@ -309,7 +313,7 @@ class _SidebarPane extends StatelessWidget {
               onTap: onToggle,
               child: SizedBox(
                 width: itemWidth,
-                child: Center(child: GlyphIcon(AppGlyphs.sidebar(progress))),
+                child: Center(child: GlyphIcon(Glyphs.sidebar(progress))),
               ),
             ),
           ),
@@ -397,22 +401,18 @@ class _SidebarButton extends StatelessWidget {
         selected: selected,
         child: FocusRing(
           shape: _itemShape,
-          child: Material(
-            color: selected == true ? colors.selectedFill : Colors.transparent,
+          child: PressRegion(
+            onTap: onTap,
             shape: _itemShape,
-            child: InkWell(
-              onTap: onTap,
-              customBorder: _itemShape,
-              mouseCursor: SystemMouseCursors.basic,
-              splashFactory: NoSplash.splashFactory,
-              overlayColor: colors.overlay,
-              child: Tooltip(
-                message: tooltip,
-                excludeFromSemantics: !tooltipIsLabel,
-                child: IconTheme.merge(
-                  data: IconThemeData(size: _iconSize, color: colors.icon),
-                  child: SizedBox(height: height, child: child),
-                ),
+            fill: selected == true ? colors.selectedFill : null,
+            overlay: colors.overlay,
+            mouseCursor: SystemMouseCursors.basic,
+            child: Tooltip(
+              message: tooltip,
+              excludeFromSemantics: !tooltipIsLabel,
+              child: IconTheme.merge(
+                data: IconThemeData(size: _iconSize, color: colors.icon),
+                child: SizedBox(height: height, child: child),
               ),
             ),
           ),

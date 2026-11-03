@@ -1,20 +1,21 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/icons/icons.dart';
 import 'package:b_box_ui/ui/inherited.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:b_box_ui/ui/surface.dart';
 
-class CommonExpandIcon extends StatefulWidget {
+class ExpandIcon extends StatefulWidget {
   final bool expand;
 
-  const CommonExpandIcon({super.key, this.expand = false});
+  const ExpandIcon({super.key, this.expand = false});
 
   @override
-  State<CommonExpandIcon> createState() => _CommonExpandIconState();
+  State<ExpandIcon> createState() => _ExpandIconState();
 }
 
-class _CommonExpandIconState extends State<CommonExpandIcon>
+class _ExpandIconState extends State<ExpandIcon>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _iconTurns;
@@ -38,7 +39,7 @@ class _CommonExpandIconState extends State<CommonExpandIcon>
   }
 
   @override
-  void didUpdateWidget(covariant CommonExpandIcon oldWidget) {
+  void didUpdateWidget(covariant ExpandIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.expand != widget.expand) {
       if (widget.expand) {
@@ -62,7 +63,7 @@ class _CommonExpandIconState extends State<CommonExpandIcon>
       builder: (_, child) {
         return RotationTransition(turns: _iconTurns, child: child!);
       },
-      child: const GlyphIcon(AppGlyphs.caretDown, fill: 1),
+      child: const GlyphIcon(Glyphs.caretDown, fill: 1),
     );
   }
 }
@@ -77,10 +78,13 @@ Widget commonProxyDecorator(
     builder: (_, Widget? child) {
       final double animValue = Curves.easeInOut.transform(animation.value);
       final double scale = lerpDouble(1, 1.02, animValue)!;
+      // The lifted row leaves the page, and its text style, for the overlay.
       return ProxyDecoratorProvider(
         isProxyDecorator: true,
         lift: animValue,
-        child: Transform.scale(scale: scale, child: child),
+        child: Surface.transparent(
+          child: Transform.scale(scale: scale, child: child),
+        ),
       );
     },
     child: child,

@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import '../widgets.dart';
 
 // Hero and link badges adapted from FlClash v0.9.2 views/about.dart.
@@ -17,7 +18,7 @@ class _AboutPageState extends State<AboutPage> {
       final result = json(await box.call('updates.check'));
       if (!mounted) return;
       setState(() => _checking = false);
-      await showDialog<void>(context: context, builder: (context) => AlertDialog(
+      await showDialog<void>(context: context, builder: (context) => material.AlertDialog(
         title: Text(context.tr(result['available'] == true ? 'Update available' : 'Check for updates')),
         content: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 420), child: SingleChildScrollView(child: Column(
           mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, spacing: 12, children: [
@@ -46,7 +47,7 @@ class _AboutPageState extends State<AboutPage> {
 
   @override Widget build(BuildContext context) {
     final box = context.box, colors = context.colorScheme;
-    return CommonScaffold(title: context.tr('About'), isLoading: _checking,
+    return Scaffold(title: context.tr('About'), isLoading: _checking,
       body: ListView(padding: EdgeInsets.fromLTRB(16, context.contentTopPadding, 16, 32 + context.bottomInset), children: [
         Padding(padding: const EdgeInsets.fromLTRB(24, 16, 24, 0), child: Column(children: [
           DecoratedBox(decoration: ShapeDecoration(color: context.raisedSurfaceLevel.colorOf(colors), shape: AppShape.all(AppCorner.fit(96))),

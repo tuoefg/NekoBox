@@ -1,8 +1,8 @@
 import 'dart:math';
 
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/metrics.dart';
 import 'package:b_box_ui/ui/typography.dart';
-import 'package:material_ui/material_ui.dart';
 
 typedef _TextMeasureKey = (String?, TextStyle?, int?, TextDirection?, double?);
 
@@ -12,7 +12,6 @@ class Measure {
   final TextScaler _textScaler;
   final BuildContext context;
   final Map<_TextMeasureKey, Size> _textSizeCache = {};
-  final Map<_TextMeasureKey, bool> _textOverflowCache = {};
 
   Measure.of(this.context, double textScaleFactor)
     : _textScaler = TextScaler.linear(textScaleFactor);
@@ -65,14 +64,6 @@ class Measure {
       _textSizeCache,
       _measureKey(text, null),
       () => _measuring(text, null, (painter) => painter.size),
-    );
-  }
-
-  bool computeTextIsOverflow(Text text, {double? maxWidth}) {
-    return _cached(
-      _textOverflowCache,
-      _measureKey(text, maxWidth),
-      () => _measuring(text, maxWidth, (painter) => painter.didExceedMaxLines),
     );
   }
 

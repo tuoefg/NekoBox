@@ -5,3 +5,9 @@ analyzer:
     - build/**
     - android/**
     - ios/**
+
+linter:
+  rules:
+    # The vendored prism layer keeps constructor bodies readable with named
+    # parameters; upstream does not enforce this rule either.
+    prefer_initializing_formals: false

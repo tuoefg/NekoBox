@@ -81,18 +81,18 @@ void main() {
     await tester.tap(find.text('Treat the VPN as metered'));
     await tester.pump();
     await tester.pump();
-    final switches = find.descendant(of: find.byType(GeneralPage), matching: find.byType(CommonSwitch));
+    final switches = find.descendant(of: find.byType(GeneralPage), matching: find.byType(Switch));
     // The page has more switches than fit a test viewport, so assert on the ones that are built.
     expect(switches, findsWidgets);
     expect(box.serviceSettingsChanging, true);
-    expect(tester.widgetList<CommonSwitch>(switches).every((widget) => widget.onChanged == null), true);
+    expect(tester.widgetList<Switch>(switches).every((widget) => widget.onChanged == null), true);
     await tester.tap(find.text('Treat the VPN as metered'));
     await tester.pump();
     expect(edits.length, 1);
     reply.complete({'meteredNetwork': true, 'alwaysShowAddress': false, 'showDirectSpeed': false});
     await tester.pumpAndSettle();
     expect(box.serviceSettingsChanging, false);
-    expect(tester.widgetList<CommonSwitch>(switches).every((widget) => widget.onChanged != null), true);
+    expect(tester.widgetList<Switch>(switches).every((widget) => widget.onChanged != null), true);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await events.close();

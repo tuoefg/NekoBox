@@ -56,7 +56,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
       final saved = json(await box.call('profiles.write', {'id': widget.profile['id'], 'content': _text.text, 'revision': _revision}));
       if (mounted) {
         setState(() { _original = _text.text; _revision = saved['revision'] as String; });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Done'))));
+        showAppBanner(context, context.tr('Done'));
       }
     } catch (error) { if (mounted) setState(() => _error = BoxController.describe(error)); }
     if (mounted) setState(() => _saving = false);
@@ -86,12 +86,12 @@ class _ProfileEditorState extends State<ProfileEditor> {
           return;
         }
         _text.text = formatted;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Done'))));
+        showAppBanner(context, context.tr('Done'));
       } else {
         final result = await box.call('config.check', {'content': _text.text});
         if (!mounted) return;
         if (result != null) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Configuration is valid'))));
+          showAppBanner(context, context.tr('Configuration is valid'));
         }
       }
     } catch (error) { if (mounted) setState(() => _error = BoxController.describe(error)); }
@@ -109,7 +109,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
   }
 
   @override Widget build(BuildContext context) => BoxEditGuard(dirty: _dirty, busy: _saving || _checking || _loading,
-    child: CommonScaffold(
+    child: Scaffold(
       title: widget.profile['name'].toString() + (_dirty ? ' •' : ''),
       isLoading: _saving || _checking || _loading || (_original == null && _error == null),
       confirmationAction: IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Save'),

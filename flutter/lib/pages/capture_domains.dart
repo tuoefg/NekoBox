@@ -30,7 +30,7 @@ class _CaptureDomainsPageState extends State<CaptureDomainsPage> {
     if (context.box.remote) return const BoxPage(title: 'Extract domains', children: [EmptyState('HTTP debugging is only available for the local service')]);
     return FutureBuilder<List<String>>(future: _domains, builder: (context, snapshot) {
       final domains = snapshot.data ?? [];
-      return CommonScaffold(title: context.tr('Extract domains'), isLoading: _busy,
+      return Scaffold(title: context.tr('Extract domains'), isLoading: _busy,
         confirmationAction: widget.select ? IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Add domains'),
           onPressed: _selected.isEmpty ? null : () => Navigator.pop(context, _selected.toList()..sort())) : null,
         iconActions: [

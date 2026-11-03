@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 // Adapted from FlClash v0.9.2 intranet_ip.dart and card.dart (GPL-3.0).
 import 'package:flutter/rendering.dart' show OverflowBoxFit;
 import 'package:flutter/services.dart';
@@ -8,7 +9,7 @@ import 'shape_badge.dart';
 
 Future<void> _copy(BuildContext context, String text) async {
   await Clipboard.setData(ClipboardData(text: text));
-  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Copied'))));
+  if (context.mounted) showAppBanner(context, context.tr('Copied'));
 }
 
 Future<void> _change(BuildContext context, bool enabled) async {
@@ -50,9 +51,9 @@ class IntranetPanel extends StatelessWidget {
       PanelTitle('Intranet IP', AppGlyphs.devices, trailing: Transform.translate(
         offset: const Offset(8, 0), child: SizedBox(width: 32, child: OverflowBox(
         fit: OverflowBoxFit.deferToChild, minHeight: 32, maxHeight: 32,
-        child: IconButton(tooltip: context.tr('Copy'), padding: EdgeInsets.zero, iconSize: 18,
-        style: IconButton.styleFrom(minimumSize: const Size.square(32), fixedSize: const Size.square(32),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap, foregroundColor: context.colorScheme.onSurfaceVariant),
+        child: material.IconButton(tooltip: context.tr('Copy'), padding: EdgeInsets.zero, iconSize: 18,
+        style: material.IconButton.styleFrom(minimumSize: const Size.square(32), fixedSize: const Size.square(32),
+          tapTargetSize: material.MaterialTapTargetSize.shrinkWrap, foregroundColor: context.colorScheme.onSurfaceVariant),
         icon: const GlyphIcon(AppGlyphs.copy, size: 18), onPressed: copy == null ? null : () {
           final text = box.lanCopyText;
           if (text != null) _copy(context, text);
@@ -89,7 +90,7 @@ class LANProxyRow extends StatelessWidget {
     return LayoutBuilder(builder: (context, constraints) {
       final measurement = TextPainter(text: TextSpan(text: title, style: style),
         textDirection: Directionality.of(context), textScaler: MediaQuery.textScalerOf(context))..layout();
-      final showIcon = measurement.width <= constraints.maxWidth - 22 - 38 - 24 - CommonSwitch.trackWidth;
+      final showIcon = measurement.width <= constraints.maxWidth - 22 - 38 - 24 - Switch.trackWidth;
       measurement.dispose();
       return Material(color: SurfaceLevel.block.colorOf(scheme), shape: AppShape.all(20), clipBehavior: Clip.antiAlias,
         child: InkWell(onTap: onChanged == null ? null : () => onChanged!(!value), child: Padding(
@@ -102,8 +103,8 @@ class LANProxyRow extends StatelessWidget {
               Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
               Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.listCaptionStyle),
             ])),
-            SizedBox(width: CommonSwitch.trackWidth, height: CommonSwitch.trackHeight, child: OverflowBox(
-              maxWidth: double.infinity, maxHeight: double.infinity, child: CommonSwitch(
+            SizedBox(width: Switch.trackWidth, height: Switch.trackHeight, child: OverflowBox(
+              maxWidth: double.infinity, maxHeight: double.infinity, child: Switch(
                 value: value, onChanged: onChanged, semanticLabel: title))),
           ]))));
     });
@@ -126,7 +127,7 @@ class IntranetDetails extends StatelessWidget {
     ], children: [
       generateSection(title: context.tr('This device'), items: [
         for (final address in box.lanAddresses) ListItem(title: SelectableText(address),
-          trailing: IconButton(icon: const GlyphIcon(AppGlyphs.copy), tooltip: context.tr('Copy'), onPressed: () => _copy(context, address))),
+          trailing: material.IconButton(icon: const GlyphIcon(AppGlyphs.copy), tooltip: context.tr('Copy'), onPressed: () => _copy(context, address))),
         if (box.lanAddresses.isEmpty) ListItem(title: Text(context.tr('No network'))),
       ]),
       if (!box.remote) ...[
@@ -140,7 +141,7 @@ class IntranetDetails extends StatelessWidget {
               subtitle: Text('${_protocol(context, binding)} · ${binding['port'] == 0 ? context.tr('Automatic port') : '${context.tr('Port')}: ${binding['port']}'}'
                 '${binding['authentication'] == true ? ' · ${context.tr('Authentication required')}' : ''}')),
             if (active) for (final endpoint in (binding['endpoints'] as List? ?? []).whereType<String>())
-              ListItem(title: SelectableText(endpoint), trailing: IconButton(icon: const GlyphIcon(AppGlyphs.copy),
+              ListItem(title: SelectableText(endpoint), trailing: material.IconButton(icon: const GlyphIcon(AppGlyphs.copy),
                 tooltip: context.tr('Copy'), onPressed: () => _copy(context, endpoint))),
           ],
           if (bindings.isEmpty) ListItem(title: Text(context.tr('No local proxy listener'))),

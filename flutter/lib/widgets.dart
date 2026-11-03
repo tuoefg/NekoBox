@@ -1,10 +1,69 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:material_ui/material_ui.dart' as material;
+import 'package:material_ui/material_ui.dart'
+  hide
+    AlertDialog,
+    Banner,
+    ButtonLayerBuilder,
+    ButtonStyle,
+    ButtonTheme,
+    ButtonThemeData,
+    Card,
+    Checkbox,
+    Chip,
+    ColorScheme,
+    Divider,
+    ExpandIcon,
+    FilledButton,
+    IconButton,
+    LinearProgressIndicator,
+    OutlinedButton,
+    PopupMenuItem,
+    Scaffold,
+    ScaffoldState,
+    Scrollbar,
+    SelectableText,
+    SelectionArea,
+    Slider,
+    Switch,
+    TextButton,
+    Theme,
+    ThemeData;
 import 'box.dart';
 import 'l10n.dart';
 import 'ui/ui.dart';
 import 'ui/icons/icons.dart';
 
-export 'package:material_ui/material_ui.dart';
+// Prism's widgets take the names Material uses for the same ideas; ours are the
+// prism ones, so Material's are hidden here rather than shadowing them.
+export 'package:material_ui/material_ui.dart'
+  hide
+    AlertDialog,
+    Banner,
+    ButtonLayerBuilder,
+    ButtonStyle,
+    ButtonTheme,
+    ButtonThemeData,
+    Card,
+    Checkbox,
+    Chip,
+    ColorScheme,
+    Divider,
+    ExpandIcon,
+    FilledButton,
+    IconButton,
+    LinearProgressIndicator,
+    OutlinedButton,
+    PopupMenuItem,
+    Scaffold,
+    ScaffoldState,
+    Scrollbar,
+    SelectableText,
+    SelectionArea,
+    Slider,
+    Switch,
+    TextButton,
+    Theme,
+    ThemeData;
 export 'box.dart';
 export 'l10n.dart';
 export 'pages/throne.dart';
@@ -16,10 +75,10 @@ export 'ui/icons/icons.dart';
 
 class BoxMenu extends StatelessWidget {
   const BoxMenu({super.key, required this.items});
-  final List<CommonPopupMenuItem> items;
-  @override Widget build(BuildContext context) => CommonPopupBox(
+  final List<PopupMenuItem> items;
+  @override Widget build(BuildContext context) => PopupAnchor(
     targetBuilder: (open) => IconButton(tooltip: context.tr('More'), onPressed: open, icon: const GlyphIcon(AppGlyphs.more)),
-    popupBuilder: (_) => CommonPopupMenu(items: items),
+    popupBuilder: (_) => PopupMenu(items: items),
   );
 }
 
@@ -28,11 +87,11 @@ class BoxPage extends StatelessWidget {
   final String title;
   final List<Widget> children;
   final List<IconButtonData> actions;
-  final List<CommonPopupMenuItem> menuItems;
+  final List<PopupMenuItem> menuItems;
   final IconButtonData? primaryAction, confirmationAction;
   final bool loading;
   @override
-  Widget build(BuildContext context) => CommonScaffold(
+  Widget build(BuildContext context) => Scaffold(
     title: context.tr(title),
     iconActions: actions,
     menuItems: menuItems,
@@ -45,6 +104,10 @@ class BoxPage extends StatelessWidget {
     ),
   );
 }
+
+/// The app's transient message, as prism layers it over the page.
+void showAppBanner(BuildContext context, String text, {BannerLevel level = BannerLevel.info}) =>
+  BannerHost.maybeOf(context)?.show(text, level: level);
 
 Future<T?> openPage<T>(BuildContext context, Widget page) => showExtend<T>(context, builder: (_) => page);
 Future<T?> openForm<T>(BuildContext context, Widget page) => showFormSheet<T>(context: context, builder: (_) => page);
@@ -94,7 +157,7 @@ class _BoxEditGuardState extends State<BoxEditGuard> {
   }
 
   @override Widget build(BuildContext context) {
-    final guarded = CommonPopScope(onPop: widget.dirty || widget.busy ? _canLeave : null, child: widget.child);
+    final guarded = PopGuard(onPop: widget.dirty || widget.busy ? _canLeave : null, child: widget.child);
     return SheetProvider.of(context)?.copyWith(onClose: _dismiss, child: guarded) ?? guarded;
   }
 }
@@ -136,7 +199,7 @@ class ErrorState extends StatelessWidget {
 Future<bool> confirm(BuildContext context, String title, {String? message, String action = 'Delete'}) async =>
     await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => material.AlertDialog(
         title: Text(context.tr(title)),
         content: message == null ? null : Text(context.tr(message)),
         actions: [

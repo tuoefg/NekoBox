@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show LicenseRegistry, LicenseEntryWithLineBreaks, defaultTargetPlatform;
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart' as material;
 import 'widgets.dart';
 import 'pages/dashboard.dart';
 import 'pages/backup.dart';
@@ -29,25 +30,25 @@ class BoxApp extends StatefulWidget {
 }
 
 class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
-  final _messenger = GlobalKey<ScaffoldMessengerState>();
+  final _banner = GlobalKey<BannerHostState>();
   StreamSubscription<String>? _messages;
   StreamSubscription<Json>? _reports;
   @override void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _messages = widget.controller.messages.stream.listen((message) {
-      _messenger.currentState?.showSnackBar(SnackBar(content: Text(message)));
+      _banner.currentState?.show(message);
     });
     // A subscription update's change window (SubscriptionReportDialog): the report body selectable,
     // a copy action beside OK.
     _reports = widget.controller.subscriptionReports.stream.listen((report) {
-      final context = _messenger.currentState?.context;
+      final context = _banner.currentState?.context;
       if (context == null) return;
       final text = report['text']?.toString() ?? '';
       // The listener body is synchronous — no await separates the context capture from the
       // dialog — but the lint still fires on the builder's deferred execution.
       // ignore: use_build_context_synchronously
-      showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      showDialog<void>(context: context, builder: (dialogContext) => material.AlertDialog(
         title: Text(report['title']?.toString() ?? dialogContext.tr('Change of configuration')),
         content: SizedBox(width: 480, child: SingleChildScrollView(child: SelectableText(
           text.trim().isEmpty ? dialogContext.tr('Nothing changed') : text))),
@@ -68,29 +69,35 @@ class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  final _themes = <String, ThemeData>{};
+  final _themes = <String, ({material.ThemeData material, ThemeData prism})>{};
 
   @override void didChangeLocales(List<Locale>? locales) => setState(_themes.clear);
 
-  ThemeData _theme(Brightness brightness) {
+  /// Both layers the app draws with: Material's, for the widgets it still
+  /// carries (forms, snackbars, dialogs), and prism's, which every page and
+  /// component in `lib/ui` reads.
+  ({material.ThemeData material, ThemeData prism}) _theme(Brightness brightness) {
     final prefs = widget.controller.preferences;
     final scheme = appColorScheme(widget.controller, brightness);
     final family = prefs['fontFamily'] as String?;
     final key = "$brightness:${scheme.hashCode}:$family";
-    return _themes.putIfAbsent(key, () => ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      fontFamily: family,
-      fontFamilyFallback: appFontFamilyFallback(platform: defaultTargetPlatform, locales: WidgetsBinding.instance.platformDispatcher.locales, fontFamily: family),
-      actionIconTheme: ActionIconThemeData(
-        backButtonIconBuilder: (context) => GlyphIcon(AppGlyphs.backFor(Theme.of(context).platform)),
-        closeButtonIconBuilder: (_) => const GlyphIcon(AppGlyphs.close),
+    final fallback = appFontFamilyFallback(platform: defaultTargetPlatform, locales: WidgetsBinding.instance.platformDispatcher.locales, fontFamily: family);
+    return _themes.putIfAbsent(key, () => (
+      material: material.ThemeData(
+        useMaterial3: true,
+        // Material's widgets follow the same surfaces prism's do, pure black included.
+        colorScheme: material.ColorScheme.fromSeed(seedColor: appAccentColor(widget.controller), brightness: brightness)
+          .copyWith(surface: scheme.surface, onSurface: scheme.onSurface, primary: scheme.primary),
+        fontFamily: family,
+        fontFamilyFallback: fallback,
       ),
-      pageTransitionsTheme: const PageTransitionsTheme(builders: {
-        TargetPlatform.android: commonSharedXPageTransitions,
-      }),
-      extensions: [if (brightness == Brightness.dark) ElevatedColorScheme(scheme.elevated)],
-    ).withAppShapes.withAppSurfaces.withAppTypography);
+      prism: ThemeData(
+        colorScheme: scheme,
+        fontFamily: family,
+        fontFamilyFallback: fallback,
+        elevatedColorScheme: brightness == Brightness.dark ? scheme.elevated : null,
+      ),
+    ));
   }
 
   @override
@@ -102,9 +109,8 @@ class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
         return MaterialApp(
           title: 'Flrone',
           debugShowCheckedModeBanner: false,
-          scaffoldMessengerKey: _messenger,
-          theme: _theme(Brightness.light),
-          darkTheme: _theme(Brightness.dark),
+          theme: _theme(Brightness.light).material,
+          darkTheme: _theme(Brightness.dark).material,
           themeMode: ThemeMode.values.firstWhere((mode) => mode.name == prefs['theme'], orElse: () => ThemeMode.system),
           supportedLocales: const [Locale('en'), Locale('zh')],
           localizationsDelegates: const [
@@ -114,7 +120,15 @@ class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
             final media = MediaQuery.of(context);
             final scale = appTextScale(prefs, media.textScaler.scale(1));
             final glass = (prefs['liquidGlass'] ?? 'none') != 'none';
-            return MeasureScope(
+            final brightness = material.Theme.of(context).brightness;
+            return BannerHost(
+              key: _banner,
+              stacked: media.size.width >= 600,
+              // Banners hang below the page bar so they never cover its buttons.
+              topInset: media.padding.top + pageToolbarHeight,
+              child: Theme(
+              data: _theme(brightness).prism,
+              child: MeasureScope(
               measure: Measure.of(context, scale.clamp(.8, 1.4)),
               child: ViewScope(
               size: media.size,
@@ -124,8 +138,8 @@ class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
                 child: AnnotatedRegion<SystemUiOverlayStyle>(
                   value: SystemUiOverlayStyle(
                     statusBarColor: Colors.transparent, systemNavigationBarColor: Colors.transparent,
-                    statusBarIconBrightness: Theme.of(context).brightness == Brightness.dark ? Brightness.light : Brightness.dark,
-                    systemNavigationBarIconBrightness: Theme.of(context).brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+                    statusBarIconBrightness: brightness == Brightness.dark ? Brightness.light : Brightness.dark,
+                    systemNavigationBarIconBrightness: brightness == Brightness.dark ? Brightness.light : Brightness.dark,
                   ),
                   child: LiquidGlassScope(enabled: glass,
                     quality: prefs['liquidGlass'] == 'ultra' ? LiquidGlassQuality.ultra : LiquidGlassQuality.standard,
@@ -133,9 +147,9 @@ class _BoxAppState extends State<BoxApp> with WidgetsBindingObserver {
                 ),
               ),
             ),
-            );
+            )));
           },
-          home: widget.controller.ready ? const HomePage() : Scaffold(
+          home: widget.controller.ready ? const HomePage() : material.Scaffold(
             body: SafeArea(child: Center(child: widget.controller.startupError == null
                 ? const CircularProgressIndicator()
                 : ErrorState(widget.controller.startupError!, retry: widget.controller.initialize))),
@@ -227,7 +241,8 @@ class _HomePageState extends State<HomePage> {
         TickerMode(enabled: i == index, child: PageActivityScope(isActive: i == index, child: pages[i])),
       ],
     );
-    return Scaffold(
+    // The shell itself is plain Material: every page brings its own prism bar.
+    return material.Scaffold(
         body: Row(children: [
           if (!mobile) NavigationRail(
             selectedIndex: index,

@@ -1,19 +1,60 @@
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/common_button.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/icons/icons.dart';
 import 'package:b_box_ui/ui/l10n.dart';
-import 'package:b_box_ui/ui/models.dart';
 import 'package:b_box_ui/ui/motion.dart';
 import 'package:b_box_ui/ui/shape.dart';
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
 
 import 'focus.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
-/// The sort mode a [CommonScaffold] keeps for its body, or a section keeps
+const _directDragKinds = {PointerDeviceKind.mouse, PointerDeviceKind.trackpad};
+
+/// A mouse drags on the vertical axis alone, which leaves a sideways drag to a
+/// switch in the row and beats a mouse drag's scroll by being nearer the pointer.
+class ReorderDragStartListener extends StatelessWidget {
+  const ReorderDragStartListener({
+    super.key,
+    required this.index,
+    this.enabled = true,
+    required this.child,
+  });
+
+  final int index;
+  final bool enabled;
+  final Widget child;
+
+  void _handlePointerDown(BuildContext context, PointerDownEvent event) {
+    final recognizer = _directDragKinds.contains(event.kind)
+        ? VerticalMultiDragGestureRecognizer(debugOwner: this)
+        : DelayedMultiDragGestureRecognizer(debugOwner: this);
+    SliverReorderableList.maybeOf(context)?.startItemDragReorder(
+      index: index,
+      event: event,
+      recognizer: recognizer
+        ..gestureSettings = MediaQuery.maybeGestureSettingsOf(context),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: enabled
+          ? (event) => _handlePointerDown(context, event)
+          : null,
+      child: child,
+    );
+  }
+}
+
+/// The sort mode a page's scaffold keeps for its body, or a section keeps
 /// for its own rows.
 class SortModeScope extends InheritedWidget {
   const SortModeScope({super.key, required this.sorting, required super.child});
@@ -50,7 +91,7 @@ class SortableItem extends StatelessWidget {
     final sorting = SortModeScope.maybeOf(context)?.sorting ?? false;
     return _SortableItemScope(
       data: (index: index, sorting: sorting),
-      child: ReorderableDelayedDragStartListener(
+      child: ReorderDragStartListener(
         index: index,
         enabled: sorting,
         child: child,
@@ -78,7 +119,7 @@ class DisclosureIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return const SizedBox.square(
       dimension: kMinInteractiveDimension,
-      child: Center(child: GlyphIcon(AppGlyphs.chevronForward)),
+      child: Center(child: GlyphIcon(Glyphs.chevronForward)),
     );
   }
 }
@@ -224,7 +265,7 @@ class _SortHandleState extends State<SortHandle> {
                   ),
                   child: Center(
                     child: GlyphIcon(
-                      AppGlyphs.dragHandle,
+                      Glyphs.dragHandle,
                       color: _lifted ? colorScheme.primary : null,
                     ),
                   ),
@@ -360,10 +401,12 @@ class _RenderSortableSlot extends RenderBox
         ContainerRenderObjectMixin<RenderBox, _SlotParentData>,
         RenderBoxContainerDefaultsMixin<RenderBox, _SlotParentData> {
   _RenderSortableSlot({
-    required this._animation,
-    required this._sorting,
-    required this._textDirection,
-  });
+    required Animation<double> animation,
+    required bool sorting,
+    required TextDirection textDirection,
+  }) : _animation = animation,
+       _sorting = sorting,
+       _textDirection = textDirection;
 
   Animation<double> _animation;
   bool _sorting;
@@ -603,18 +646,4 @@ class _RenderSortableSlot extends RenderBox
   void applyPaintTransform(RenderBox child, Matrix4 transform) {
     transform.multiply(_transformOf(child));
   }
-}
-
-IconButtonData sortModeAction(
-  BuildContext context, {
-  required bool sorting,
-  required VoidCallback? onPressed,
-}) {
-  final localizations = UiLocalizations.of(context);
-  return IconButtonData(
-    glyph: AppGlyphs.sort,
-    onPressed: onPressed,
-    tooltip: localizations.sort,
-    isSelected: sorting,
-  );
 }

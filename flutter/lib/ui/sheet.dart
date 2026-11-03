@@ -1,11 +1,16 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/l10n.dart';
 import 'package:b_box_ui/ui/color.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/inherited.dart';
 import 'package:b_box_ui/ui/navigator.dart';
+import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/view_scope.dart';
-import 'package:material_ui/material_ui.dart';
 
 import 'form_sheet.dart';
 import 'sheet_navigator.dart';
@@ -37,10 +42,48 @@ enum SheetType {
   bool get isCompact => this == bottomSheet || this == formSheet;
 }
 
-const stackedSheetPeek = 14.0;
+/// A sheet shrinks back about its top behind a sheet that rises over it, and
+/// shows this much of itself above that one, as iOS 27's do.
+const stackedSheetPeek = 10.0;
+const stackedSheetScale = 0.9204;
 
-/// Flutter's Cupertino sheet measured this on iOS 18.
-const stackedSheetScale = 1 - 0.0835;
+const _sheetCorner = 38.0;
+
+const sheetFloatInset = 8.0;
+
+/// A foot rounder than a square display's corners would show beside it.
+BorderRadius floatingSheetRadius(BorderRadius? display, double float) {
+  final corners = display ?? BorderRadius.zero;
+  Radius top(Radius corner) => Radius.circular(
+    corner.x > 0 ? math.min(corner.x, _sheetCorner) : AppCorner.xxl,
+  );
+  Radius foot(Radius corner) => Radius.circular(
+    lerpDouble(math.min(corner.x, _sheetCorner), _sheetCorner, float)!,
+  );
+  return BorderRadius.only(
+    topLeft: top(corners.topLeft),
+    topRight: top(corners.topRight),
+    bottomLeft: foot(corners.bottomLeft),
+    bottomRight: foot(corners.bottomRight),
+  );
+}
+
+BorderRadius bottomSheetRadiusOf(BuildContext context) =>
+    floatingSheetRadius(MediaQuery.displayCornerRadiiOf(context), 0);
+
+class SheetCornersScope
+    extends InheritedNotifier<ValueListenable<BorderRadius>> {
+  const SheetCornersScope({
+    super.key,
+    required ValueListenable<BorderRadius> corners,
+    required super.child,
+  }) : super(notifier: corners);
+
+  static BorderRadius? maybeOf(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<SheetCornersScope>()
+      ?.notifier
+      ?.value;
+}
 
 Future<T?> showSheet<T>({
   required BuildContext context,
@@ -73,7 +116,7 @@ Future<T?> showFormSheet<T>({
       builder: builder,
       backgroundColor: props.backgroundColor,
       barrierColor: context.colorScheme.modalScrim,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierLabel: UiLocalizations.of(context).close,
     ),
   );
 }
@@ -90,7 +133,7 @@ Future<T?> _showBottomSheet<T>(
       detents: props.detents,
       fitsContent: true,
       sheetBarrierColor: context.colorScheme.modalScrim,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierLabel: UiLocalizations.of(context).close,
     ),
   );
 }
@@ -189,9 +232,7 @@ Future<T?> showSnapSheet<T>(
           builder: home,
           initialScrollOffset: initialScrollOffset,
           sheetBarrierColor: barrierColor,
-          barrierLabel: MaterialLocalizations.of(
-            context,
-          ).modalBarrierDismissLabel,
+          barrierLabel: UiLocalizations.of(context).close,
         ),
       );
     } else {

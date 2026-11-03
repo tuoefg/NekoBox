@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import 'package:flutter/services.dart';
 import '../widgets.dart';
 
@@ -13,7 +14,7 @@ class FormPage extends StatelessWidget {
   final List<Widget> children;
   final List<IconButtonData> actions;
 
-  @override Widget build(BuildContext context) => CommonScaffold(
+  @override Widget build(BuildContext context) => Scaffold(
     title: context.tr(title), iconActions: actions,
     confirmationAction: onSave == null ? null : IconButtonData(glyph: AppGlyphs.check, tooltip: context.tr('Save'),
       isLoading: saving, onPressed: saving ? null : onSave),
@@ -183,7 +184,7 @@ class FormRowTextField extends StatelessWidget {
       textAlign: TextAlign.end,
       cursorWidth: _cursorWidth,
       decoration: InputDecoration.collapsed(
-        border: const NoInputBorder(),
+        border: material.InputBorder.none,
         hintText: null,
         hint: hintText == null
             ? null
@@ -252,7 +253,7 @@ class _FormRowSecretTextFieldState extends State<FormRowSecretTextField> {
             onFieldSubmitted: widget.onFieldSubmitted,
           ),
         ),
-        CommonMinIconButtonTheme(
+        MinIconButtonTheme(
           child: IconButton(
             tooltip: _obscure
                 ? appLocalizations.showPassword

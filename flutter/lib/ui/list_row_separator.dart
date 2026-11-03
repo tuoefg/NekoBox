@@ -18,8 +18,7 @@ class _ListRowSeparator extends SingleChildRenderObjectWidget {
     required super.child,
   });
 
-  Color _color(BuildContext context) =>
-      DividerTheme.of(context).color ?? context.colorScheme.outlineVariant;
+  Color _color(BuildContext context) => Divider.colorOf(context);
 
   @override
   _RenderListRowSeparator createRenderObject(BuildContext context) =>
@@ -90,15 +89,22 @@ class _RenderListRowSeparatorStart extends RenderProxyBox {
 
 class _RenderListRowSeparator extends RenderProxyBox {
   _RenderListRowSeparator({
-    required this._separated,
-    required this._emphasized,
-    required this._states,
-    required this._remote,
-    required this._endIndent,
-    required this._color,
-    required this._textDirection,
-    required this._devicePixelRatio,
-  }) {
+    required bool separated,
+    required bool emphasized,
+    required WidgetStatesController states,
+    required bool remote,
+    required double endIndent,
+    required Color color,
+    required TextDirection textDirection,
+    required double devicePixelRatio,
+  }) : _separated = separated,
+       _emphasized = emphasized,
+       _states = states,
+       _remote = remote,
+       _endIndent = endIndent,
+       _color = color,
+       _textDirection = textDirection,
+       _devicePixelRatio = devicePixelRatio {
     _highlighted = _resolveHighlighted();
   }
 

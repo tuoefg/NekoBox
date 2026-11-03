@@ -1,9 +1,10 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:b_box_ui/ui/scroll.dart';
 import 'package:flutter/foundation.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/scroll.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
 bool isTouchPlatform(TargetPlatform platform) => switch (platform) {
   TargetPlatform.android ||
@@ -14,10 +15,14 @@ bool isTouchPlatform(TargetPlatform platform) => switch (platform) {
   TargetPlatform.windows => false,
 };
 
-class BaseScrollBehavior extends MaterialScrollBehavior {
+class BaseScrollBehavior extends ScrollBehavior {
   const BaseScrollBehavior({this.scrollbarPadding = EdgeInsets.zero});
 
   final EdgeInsets scrollbarPadding;
+
+  @override
+  TargetPlatform getPlatform(BuildContext context) =>
+      Theme.of(context).platform;
 
   @override
   Set<PointerDeviceKind> get dragDevices => {
@@ -42,11 +47,35 @@ class BaseScrollBehavior extends MaterialScrollBehavior {
         !showScrollbar(context)) {
       return child;
     }
-    return CommonScrollBar.ambient(
+    return Scrollbar.ambient(
       controller: details.controller,
       padding: scrollbarPadding,
       child: child,
     );
+  }
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return switch (getPlatform(context)) {
+      TargetPlatform.android => StretchingOverscrollIndicator(
+        axisDirection: details.direction,
+        clipBehavior: details.decorationClipBehavior ?? Clip.hardEdge,
+        child: child,
+      ),
+      TargetPlatform.fuchsia => GlowingOverscrollIndicator(
+        axisDirection: details.direction,
+        color: Theme.of(context).colorScheme.secondary,
+        child: child,
+      ),
+      TargetPlatform.iOS ||
+      TargetPlatform.linux ||
+      TargetPlatform.macOS ||
+      TargetPlatform.windows => child,
+    };
   }
 
   @override
@@ -158,6 +187,24 @@ class FollowEndScrollPhysics extends NextClampingScrollPhysics {
 
 mixin ScrubbableScrollPosition on ScrollPosition {
   bool isScrubbing = false;
+}
+
+/// Lays a list out in its first frame at an offset given past its end, as
+/// one opening at its newest item asks with double.maxFinite. Flutter keeps
+/// that offset through the first layout, which builds no item, and springs
+/// back to the end a frame later, the first frame a pushed page moves in.
+mixin InitialPixelsInRange on ScrollPosition {
+  @override
+  bool applyContentDimensions(double minScrollExtent, double maxScrollExtent) {
+    if (!hasContentDimensions && hasPixels) {
+      final inRange = clampDouble(pixels, minScrollExtent, maxScrollExtent);
+      if (inRange != pixels) {
+        correctPixels(inRange);
+        return false;
+      }
+    }
+    return super.applyContentDimensions(minScrollExtent, maxScrollExtent);
+  }
 }
 
 /// Drags move the sheet until it opens fully, so a scrollbar hides till then.

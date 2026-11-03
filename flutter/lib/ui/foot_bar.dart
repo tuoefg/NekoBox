@@ -1,10 +1,11 @@
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/bar_item_presence.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/inherited.dart';
 import 'package:b_box_ui/ui/liquid_glass.dart';
 import 'package:b_box_ui/ui/navigation_dock.dart';
 import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/surface.dart';
-import 'package:material_ui/material_ui.dart';
 
 /// Floats [bar] over the foot of [body] as a sheet's docked search floats,
 /// in the dock's fill and shadow or its glass, and lets [body] scroll clear
@@ -40,26 +41,28 @@ class FloatingFootBar extends StatelessWidget {
         ),
         Align(
           alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              _margin,
-              0,
-              _margin,
-              _margin + context.bottomInset,
-            ),
-            child: LiquidGlassScope.of(context)
-                ? LiquidGlass(
-                    style: LiquidGlassStyle.pill(colorScheme),
-                    child: content,
-                  )
-                : DecoratedBox(
-                    decoration: ShapeDecoration(
-                      color: level.colorOf(colorScheme),
-                      shape: AppShape.full,
-                      shadows: dockShadows(colorScheme),
+          child: BarItemPresence.foot(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                _margin,
+                0,
+                _margin,
+                _margin + context.bottomInset,
+              ),
+              child: LiquidGlassScope.of(context)
+                  ? LiquidGlass(
+                      style: LiquidGlassStyle.pill(colorScheme),
+                      child: content,
+                    )
+                  : DecoratedBox(
+                      decoration: ShapeDecoration(
+                        color: level.colorOf(colorScheme),
+                        shape: AppShape.full,
+                        shadows: dockShadows(colorScheme),
+                      ),
+                      child: content,
                     ),
-                    child: content,
-                  ),
+            ),
           ),
         ),
       ],

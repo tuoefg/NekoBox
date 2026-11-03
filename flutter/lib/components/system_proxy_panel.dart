@@ -35,12 +35,12 @@ class SystemProxyPanel extends StatelessWidget {
               style: AppTextStyle.footnote.of(context).copyWith(color: colors.onSurfaceVariant)),
           ])),
           SizedBox(
-            width: CommonSwitch.trackWidth,
-            height: CommonSwitch.trackHeight,
+            width: Switch.trackWidth,
+            height: Switch.trackHeight,
             child: OverflowBox(
               maxWidth: double.infinity,
               maxHeight: double.infinity,
-              child: CommonSwitch(value: enabled, semanticLabel: title, onChanged: change),
+              child: Switch(value: enabled, semanticLabel: title, onChanged: change),
             ),
           ),
         ]),

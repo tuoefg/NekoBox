@@ -1,7 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/icons/icons.dart';
 import 'package:b_box_ui/ui/shape.dart';
-import 'package:material_ui/material_ui.dart';
 
 class SelectionCheck extends StatelessWidget {
   const SelectionCheck({super.key});
@@ -11,7 +11,7 @@ class SelectionCheck extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlyphIcon(
-      AppGlyphs.check,
+      Glyphs.check,
       size: size,
       fill: 1,
       color: context.colorScheme.primary,
@@ -20,17 +20,12 @@ class SelectionCheck extends StatelessWidget {
 }
 
 class SelectionBadge extends StatelessWidget {
-  const SelectionBadge({super.key, this.size = 22})
-    : glyph = AppGlyphs.check,
-      tonal = false;
-
-  /// The proxy a URLTest or Fallback group prefers, mihomo's `fixed`.
-  const SelectionBadge.preferred({
+  const SelectionBadge({
     super.key,
     this.size = 22,
-    bool inUse = false,
-  }) : glyph = AppGlyphs.pin,
-       tonal = !inUse;
+    this.glyph = Glyphs.check,
+    this.tonal = false,
+  });
 
   final double size;
   final Glyph glyph;

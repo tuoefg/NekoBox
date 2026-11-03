@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import 'inherited.dart';
 
-class CommonPopScope extends StatelessWidget {
+class PopGuard extends StatelessWidget {
   final Widget child;
 
   /// Any handler vetoes the pop up front, which also turns off the drag back,
@@ -12,7 +12,7 @@ class CommonPopScope extends StatelessWidget {
   final FutureOr<bool> Function(BuildContext context)? onPop;
   final FutureOr<void> Function()? onPopSuccess;
 
-  const CommonPopScope({
+  const PopGuard({
     super.key,
     required this.child,
     this.onPop,

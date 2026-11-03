@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -35,21 +36,24 @@ Widget _frame(_Scenario scenario, GlobalKey boundary, Widget child, BoxControlle
   BoxScope(controller: box, child: MaterialApp(
     locale: Locale(scenario.locale), supportedLocales: const [Locale('en'), Locale('zh')],
     localizationsDelegates: const [BoxUiDelegate(), ...GlobalMaterialLocalizations.delegates],
-    theme: ThemeData(useMaterial3: true, fontFamily: 'Roboto', fontFamilyFallback: const ['BboxStatusCJK'],
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff007aff),
-        brightness: scenario.dark ? Brightness.dark : Brightness.light))
-      .withAppShapes.withAppSurfaces.withAppTypography,
-    home: Builder(builder: (context) => MeasureScope(measure: Measure.of(context, scenario.scale),
+    theme: material.ThemeData(useMaterial3: true, fontFamily: 'Roboto', fontFamilyFallback: const ['BboxStatusCJK'],
+      colorScheme: material.ColorScheme.fromSeed(seedColor: const Color(0xff007aff),
+        brightness: scenario.dark ? Brightness.dark : Brightness.light)),
+    home: Theme(
+      data: ThemeData(fontFamily: 'Roboto', fontFamilyFallback: const ['BboxStatusCJK'],
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff007aff),
+          brightness: scenario.dark ? Brightness.dark : Brightness.light)),
+      child: Builder(builder: (context) => MeasureScope(measure: Measure.of(context, scenario.scale),
       child: ViewScope(size: Size(scenario.width, 800), isMobile: true,
         child: MediaQuery(data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scenario.scale), disableAnimations: true),
           child: reference.DashboardDensityScope(density: reference.DashboardDensity.mobile, scale: math.max(1, scenario.scale),
             child: reference.ReferenceRuntimeScope(text: runtime,
-              child: Scaffold(body: Align(alignment: Alignment.topCenter,
+              child: material.Scaffold(body: Align(alignment: Alignment.topCenter,
                 child: UnconstrainedBox(constrainedAxis: Axis.horizontal, alignment: Alignment.topCenter,
                   child: RepaintBoundary(key: boundary,
                   child: ColoredBox(color: SurfaceLevel.page.colorOf(context.colorScheme),
                     child: Padding(padding: const EdgeInsets.all(16),
-                      child: SizedBox(width: scenario.width - 32, child: child))))))))))))),
+                      child: SizedBox(width: scenario.width - 32, child: child)))))))))))))),
   ));
 
 Future<ui.Image> _capture(WidgetTester tester, GlobalKey key, String filename) async =>

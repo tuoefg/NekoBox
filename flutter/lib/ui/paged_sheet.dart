@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/form_sheet.dart';
 import 'package:b_box_ui/ui/deferred_push.dart';
 import 'package:b_box_ui/ui/drag_back.dart';
 import 'package:b_box_ui/ui/inherited.dart';
@@ -7,10 +9,11 @@ import 'package:b_box_ui/ui/navigator_resizable.dart';
 import 'package:b_box_ui/ui/page_transition.dart';
 import 'package:b_box_ui/ui/pop_scope.dart';
 import 'package:b_box_ui/ui/shape.dart';
+import 'package:b_box_ui/ui/sheet_header.dart';
 import 'package:b_box_ui/ui/sheet.dart';
 import 'package:b_box_ui/ui/sheet_navigator.dart';
 import 'package:b_box_ui/ui/surface.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
 Color _sheetColorOf(BuildContext context) =>
     SurfaceLevel.page.colorOf(ColorScheme.of(context));
@@ -20,7 +23,7 @@ class PagedSheetRoute<T> extends PageRoute<T>
         DragBackRouteMixin<T>,
         ResizableNavigatorRouteMixin<T>,
         DeferredPushRouteMixin<T>,
-        SharedXPageRouteMixin<T> {
+        CardRouteMixin<T> {
   PagedSheetRoute({required this.builder});
 
   final WidgetBuilder builder;
@@ -33,22 +36,30 @@ class PagedSheetRoute<T> extends PageRoute<T>
     super.dispose();
   }
 
+  /// The corners of the sheet the page moves in, never the display's.
   @override
-  bool sharesMotionWith(Route<dynamic>? route) => route is PagedSheetRoute;
-
-  @override
-  Color backdropOf(Color surface, {required bool dragging}) =>
-      dragging ? surface : Colors.transparent;
-
-  @override
-  bool canTransitionFrom(TransitionRoute<dynamic> previousRoute) {
-    return previousRoute is PagedSheetRoute;
+  BorderRadius cardRadiusOf(BuildContext context) {
+    return switch (SheetProvider.of(context)?.type) {
+      SheetType.bottomSheet =>
+        SheetCornersScope.maybeOf(context) ?? bottomSheetRadiusOf(context),
+      SheetType.formSheet => switch (formSheetShape) {
+        RoundedSuperellipseBorder(:final borderRadius) => borderRadius.resolve(
+          Directionality.of(context),
+        ),
+        _ => BorderRadius.zero,
+      },
+      _ => BorderRadius.zero,
+    };
   }
 
   @override
-  bool canTransitionTo(TransitionRoute<dynamic> nextRoute) {
-    return nextRoute is PagedSheetRoute;
-  }
+  Color settledFillOf(Color surface) => Colors.transparent;
+
+  // The sheet resizes with a push, so an item lifted to hold still would drift
+  // off its slot; the items ride the page with no motion of their own.
+  @override
+  BarItemsMotion computeBarItems() =>
+      (lifted: false, moving: false, shown: true, tracking: null);
 
   @override
   Widget buildPage(
@@ -86,14 +97,33 @@ class PagedSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = SheetProvider.of(context)?.type;
-    return Material(
-      animationDuration: Duration.zero,
+    final pages = NavigatorResizable(child: child);
+    return Surface(
       color: _sheetColorOf(context),
       shape: type == SheetType.bottomSheet
-          ? AppShape.top(AppCorner.xxl)
+          ? RoundedSuperellipseBorder(
+              borderRadius: bottomSheetRadiusOf(context),
+            )
           : AppShape.none,
       clipBehavior: Clip.antiAlias,
-      child: NavigatorResizable(child: child),
+      child: type == SheetType.bottomSheet
+          ? Stack(
+              children: [
+                pages,
+                const Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: IgnorePointer(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: SheetDragHandle(),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : pages,
     );
   }
 }
@@ -194,7 +224,7 @@ class _NestedPagedSheetState extends State<NestedPagedSheet> {
         ],
       ),
     );
-    return CommonPopScope(
+    return PopGuard(
       onPop: (_) async {
         _handlePop();
         return false;

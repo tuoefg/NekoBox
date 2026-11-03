@@ -134,6 +134,7 @@ const _zh = <String, String>{
   'Name': '名称', 'Save': '保存', 'Cancel': '取消', 'Back': '返回', 'Close': '关闭',
   'Delete': '删除', 'Edit': '编辑', 'Update': '更新', 'Update all': '全部更新',
   'Share': '分享', 'Copy': '复制', 'Copied': '已复制', 'Copy link': '复制链接', 'Export': '导出',
+  'Cut': '剪切', 'Dialog': '对话框',
   'Exported': '已导出', 'Export failed': '导出失败',
   'Local': '本地', 'Remote': '远程', 'Last updated': '上次更新', 'Unknown': '未知',
   'Auto update': '自动更新', 'Update interval (minutes)': '更新间隔（分钟）',
@@ -754,11 +755,17 @@ class BoxUiLocalizations extends UiLocalizations {
   @override String get cancel => _t('Cancel');
   @override String get clearSearch => _t('Clear search');
   @override String get close => _t('Close');
+  @override String get copy => _t('Copy');
+  @override String get cut => _t('Cut');
+  @override String get dialog => _t('Dialog');
   @override String get hidePassword => _t('Hide password');
   @override String get more => _t('More');
   @override String get noSearchResults => _t('No search results');
+  @override String get paste => _t('Paste');
   @override String get reset => _t('Reset');
   @override String get search => _t('Search');
+  @override String get select => _t('Select');
+  @override String get selectAll => _t('Select all');
   @override String get showLess => _t('Show less');
   @override String get showMore => _t('Show more');
   @override String get showPassword => _t('Show password');

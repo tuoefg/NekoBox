@@ -1,8 +1,9 @@
 import 'dart:ui' as ui show Image;
 
-import 'package:b_box_ui/ui/context.dart';
 import 'package:flutter/rendering.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/context.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
 /// Switches the theme in one frame and fades the frame before it out on top,
 /// instead of lerping [ThemeData] and rebuilding every dependent each frame.
@@ -133,10 +134,12 @@ class _ThemeCrossFadeLayer extends SingleChildRenderObjectWidget {
 
 class _RenderThemeCrossFade extends RenderProxyBox {
   _RenderThemeCrossFade({
-    this._snapshot,
-    this._snapshotSize,
-    required this._progress,
-  });
+    ui.Image? snapshot,
+    Size? snapshotSize,
+    required Animation<double> progress,
+  }) : _snapshot = snapshot,
+       _snapshotSize = snapshotSize,
+       _progress = progress;
 
   @override
   bool get isRepaintBoundary => true;

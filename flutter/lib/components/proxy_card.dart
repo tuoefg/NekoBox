@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import 'package:flutter/services.dart';
 import '../widgets.dart';
 import '../pages/protocol_form.dart';
@@ -47,8 +48,7 @@ class ProxyNodeCard extends StatelessWidget {
       });
       if (!context.mounted) return;
       if (started == false) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.tr('A test is already running'))));
+        showAppBanner(context, context.tr('A test is already running'));
         return;
       }
       await openPage(context, const TestPanelPage());
@@ -67,29 +67,29 @@ class ProxyNodeCard extends StatelessWidget {
       key: ValueKey((group['tag'], node['tag'])),
       menuItems: [
         if (group['selectable'] == true)
-          CommonPopupMenuItem(glyph: AppGlyphs.checkCircle, label: context.tr('Select'), checked: selected,
+          PopupMenuItem(glyph: AppGlyphs.checkCircle, label: context.tr('Select'), checked: selected,
             onPressed: onSelect),
-        CommonPopupMenuItem(glyph: AppGlyphs.bolt, label: context.tr('Test latency'),
+        PopupMenuItem(glyph: AppGlyphs.bolt, label: context.tr('Test latency'),
           onPressed: testing ? null : onTest),
         // The download/upload speed test lives here, as a submenu of its modes; a session tests
         // one node at a time and the panel reports the result.
-        CommonPopupMenuItem(glyph: AppGlyphs.speed, label: context.tr('Speed test'), subItems: [
-          CommonPopupMenuItem(glyph: AppGlyphs.dataUsage, label: context.tr('Download and upload'),
+        PopupMenuItem(glyph: AppGlyphs.speed, label: context.tr('Speed test'), subItems: [
+          PopupMenuItem(glyph: AppGlyphs.dataUsage, label: context.tr('Download and upload'),
             onPressed: () => _speedTest(context, 0)),
-          CommonPopupMenuItem(glyph: AppGlyphs.arrowDown, label: context.tr('Download'),
+          PopupMenuItem(glyph: AppGlyphs.arrowDown, label: context.tr('Download'),
             onPressed: () => _speedTest(context, 1)),
-          CommonPopupMenuItem(glyph: AppGlyphs.arrowUp, label: context.tr('Upload'),
+          PopupMenuItem(glyph: AppGlyphs.arrowUp, label: context.tr('Upload'),
             onPressed: () => _speedTest(context, 2)),
         ]),
-        CommonPopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Copy link'), onPressed: () async {
+        PopupMenuItem(glyph: AppGlyphs.copy, label: context.tr('Copy link'), onPressed: () async {
           final box = context.box;
           try {
             final link = await _link(context);
             await Clipboard.setData(ClipboardData(text: link));
-            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Copied'))));
+            if (context.mounted) showAppBanner(context, context.tr('Copied'));
           } catch (error) { box.report(error); }
         }),
-        CommonPopupMenuItem(glyph: AppGlyphs.qrCode, label: context.tr('QR code'), onPressed: () async {
+        PopupMenuItem(glyph: AppGlyphs.qrCode, label: context.tr('QR code'), onPressed: () async {
           final box = context.box;
           try {
             final link = await _link(context);
@@ -100,12 +100,12 @@ class ProxyNodeCard extends StatelessWidget {
             }
           } catch (error) { box.report(error); }
         }),
-        CommonPopupMenuItem(glyph: AppGlyphs.upload, label: context.tr('Share'), onPressed: () async {
+        PopupMenuItem(glyph: AppGlyphs.upload, label: context.tr('Share'), onPressed: () async {
           final box = context.box;
           try { await box.call('share.text', {'content': await _link(context)}); }
           catch (error) { box.report(error); }
         }),
-        CommonPopupMenuItem(glyph: AppGlyphs.edit, label: context.tr('Edit'), onPressed: () async {
+        PopupMenuItem(glyph: AppGlyphs.edit, label: context.tr('Edit'), onPressed: () async {
           if (node['isSelector'] == true) {
             await openPage(context, AutoSelectorPage(id: (node['id'] as num?)?.toInt() ?? 0));
             return;
@@ -113,15 +113,15 @@ class ProxyNodeCard extends StatelessWidget {
           // Throne's node Edit opens the typed editor; the JSON document is the secondary entry.
           await openForm(context, ProtocolFormPage(id: (node['id'] as num?)?.toInt() ?? 0));
         }),
-        CommonPopupMenuItem(glyph: AppGlyphs.sliders, label: context.tr('Node tuning'), onPressed: () async {
+        PopupMenuItem(glyph: AppGlyphs.sliders, label: context.tr('Node tuning'), onPressed: () async {
           await openPage(context, NodeTuningPage(id: (node['id'] as num?)?.toInt() ?? 0));
         }),
-        CommonPopupMenuItem(glyph: AppGlyphs.code, label: context.tr('Edit as JSON'),
+        PopupMenuItem(glyph: AppGlyphs.code, label: context.tr('Edit as JSON'),
           onPressed: () => openForm(context, NodeJsonPage(id: (node['id'] as num?)?.toInt() ?? 0))),
-        CommonPopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Delete'), danger: true, onPressed: () async {
+        PopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Delete'), danger: true, onPressed: () async {
           final box = context.box;
           try {
-            final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+            final confirmed = await showDialog<bool>(context: context, builder: (context) => material.AlertDialog(
               title: Text(context.tr('Delete node?')),
               content: Text(node['tag'].toString()),
               actions: [
@@ -132,11 +132,11 @@ class ProxyNodeCard extends StatelessWidget {
             if (confirmed == true) await box.call('profiles.nodeDelete', {'id': node['id']});
           } catch (error) { box.report(error); }
         }),
-        CommonPopupMenuItem(glyph: AppGlyphs.info, label: context.tr('Details'), onPressed: () => openForm(context, BoxPage(title: 'Details', children: [
+        PopupMenuItem(glyph: AppGlyphs.info, label: context.tr('Details'), onPressed: () => openForm(context, BoxPage(title: 'Details', children: [
           DetailRows({'Name': node['tag'], 'Protocol': node['type'], 'Latency': delayText, 'Proxy groups': group['tag']}),
         ]))),
       ],
-      child: CommonCard(
+      child: Card(
         radius: AppCorner.lg, enterActionsOnRight: true, isSelected: selected,
         // Both actions outlive the service: a selection is stored for the next start and a test runs
         // over its own instance of the profile, so a stopped VPN must not turn the card inert.
@@ -159,7 +159,7 @@ class ProxyNodeCard extends StatelessWidget {
               Flexible(child: Semantics(button: true, label: context.tr('Test latency'), child: GestureDetector(
                 behavior: HitTestBehavior.opaque, onTap: testing ? null : onTest,
                 child: FadeBox(alignment: metrics.loose ? Alignment.centerLeft : Alignment.centerRight, child: testing
-                  ? CommonCircleLoading(size: metrics.delayHeight)
+                  ? ActivityIndicator(size: metrics.delayHeight)
                   : !tested ? GlyphIcon(AppGlyphs.bolt, size: metrics.delayHeight)
                   : Text(delayText, maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: AppTextStyle.caption2.of(context, emphasized: true).copyWith(color: delayColor))),

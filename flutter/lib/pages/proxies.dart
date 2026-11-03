@@ -27,9 +27,9 @@ class _ProxiesPageState extends State<ProxiesPage> {
       duration: context.motionDuration(const Duration(milliseconds: 300)), curve: Curves.easeOutCubic);
   }
 
-  CommonPopupMenuItem _options(String label, Glyph glyph, String key, List<String> values, String fallback) => CommonPopupMenuItem(
+  PopupMenuItem _options(String label, Glyph glyph, String key, List<String> values, String fallback) => PopupMenuItem(
     glyph: glyph, label: context.tr(label), subItems: [for (final value in values)
-      CommonPopupMenuItem(label: context.tr(value), checked: (context.box.preferences[key] ?? fallback) == value,
+      PopupMenuItem(label: context.tr(value), checked: (context.box.preferences[key] ?? fallback) == value,
         onPressed: () => context.box.setPreference(key, value)),
     ],
   );
@@ -123,7 +123,7 @@ class _ProxiesPageState extends State<ProxiesPage> {
       final withNodes = groups.where((group) => rows(group['items']).isNotEmpty);
       _currentGroup = (withNodes.isNotEmpty ? withNodes.first : groups.firstOrNull)?['tag'] as String?;
     }
-    return CommonScaffold(
+    return Scaffold(
       title: context.tr('Proxies'),
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
       primaryAction: list ? null : IconButtonData(glyph: AppGlyphs.bolt, tooltip: context.tr('Test latency'),
@@ -138,13 +138,13 @@ class _ProxiesPageState extends State<ProxiesPage> {
         _options('Layout', AppGlyphs.dashboard, 'proxyDensity', const ['Tight', 'Standard', 'Loose'], 'Standard'),
         _options('Size', AppGlyphs.textSize, 'proxyCardSize', const ['Compact', 'Standard', 'Loose'], 'Standard'),
         if (list) _options('Icon style', AppGlyphs.iconTile, 'proxyIconStyle', const ['Filled', 'Plain', 'Hidden'], 'Filled'),
-        CommonPopupMenuItem(glyph: AppGlyphs.eyeOff, label: context.tr('Hide timeout proxies'), checked: box.preferences['hideTimeoutProxies'] == true,
-          section: const CommonPopupMenuSection(), onPressed: () => box.setPreference('hideTimeoutProxies', box.preferences['hideTimeoutProxies'] != true)),
-        CommonPopupMenuItem(glyph: AppGlyphs.bolt, label: context.tr('Test all'), onPressed: () async {
+        PopupMenuItem(glyph: AppGlyphs.eyeOff, label: context.tr('Hide timeout proxies'), checked: box.preferences['hideTimeoutProxies'] == true,
+          section: const PopupMenuSection(), onPressed: () => box.setPreference('hideTimeoutProxies', box.preferences['hideTimeoutProxies'] != true)),
+        PopupMenuItem(glyph: AppGlyphs.bolt, label: context.tr('Test all'), onPressed: () async {
           for (final group in groups) { await _test(group['tag'] as String); }
         }),
-        CommonPopupMenuItem(glyph: AppGlyphs.dashboard, label: context.tr('Test panel'), onPressed: () => openForm(context, const TestPanelPage())),
-        CommonPopupMenuItem(glyph: AppGlyphs.connections, label: context.tr('Close connections after switching'), checked: box.preferences['closeConnectionsOnSelect'] == true,
+        PopupMenuItem(glyph: AppGlyphs.dashboard, label: context.tr('Test panel'), onPressed: () => openForm(context, const TestPanelPage())),
+        PopupMenuItem(glyph: AppGlyphs.connections, label: context.tr('Close connections after switching'), checked: box.preferences['closeConnectionsOnSelect'] == true,
           onPressed: () => box.setPreference('closeConnectionsOnSelect', box.preferences['closeConnectionsOnSelect'] != true)),
       ],
       body: groups.isEmpty ? NullStatus(

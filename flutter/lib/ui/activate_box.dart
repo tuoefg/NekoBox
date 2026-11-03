@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 class ActivateBox extends StatelessWidget {
   final Widget child;

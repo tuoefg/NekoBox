@@ -1,5 +1,17 @@
 part of 'list.dart';
 
+bool _isEnd(ItemPosition? position) =>
+    position == ItemPosition.end || position == ItemPosition.startAndEnd;
+
+BorderRadius listItemRadiusOf(ItemPosition? position) {
+  final isStart =
+      position == ItemPosition.start || position == ItemPosition.startAndEnd;
+  return AppRadius.vertical(
+    top: isStart ? AppCorner.xl : AppCorner.none,
+    bottom: _isEnd(position) ? AppCorner.xl : AppCorner.none,
+  );
+}
+
 class DecorationListItem extends StatefulWidget {
   final Widget title;
   final Widget? subtitle;
@@ -46,25 +58,14 @@ class _DecorationListItemState extends State<DecorationListItem> {
     final sortable = SortableItem.maybeOf(context);
     final sorting = sortable?.sorting ?? false;
     final position = ItemPositionProvider.of(context)?.position;
-    final isStart = [
-      ItemPosition.start,
-      ItemPosition.startAndEnd,
-    ].contains(position);
-    final isEnd = [
-      ItemPosition.end,
-      ItemPosition.startAndEnd,
-    ].contains(position);
-    final borderRadius = AppRadius.vertical(
-      top: isStart ? AppCorner.xl : AppCorner.none,
-      bottom: isEnd ? AppCorner.xl : AppCorner.none,
-    );
+    final isEnd = _isEnd(position);
     final row = _ListRowSeparator(
       separated: !proxyDecorator && !isEnd,
       emphasized: widget.invalid,
       states: _states,
       endIndent: 14,
-      child: CommonCard(
-        shape: AppShape.of(borderRadius),
+      child: Card(
+        shape: AppShape.of(listItemRadiusOf(position)),
         isError: widget.invalid,
         isSelected: widget.isSelected,
         padding: EdgeInsets.zero,
@@ -73,20 +74,17 @@ class _DecorationListItemState extends State<DecorationListItem> {
         onPressed: proxyDecorator ? null : widget.onPressed,
         child: LayoutBuilder(
           builder: (_, constraints) {
-            final tile = ListTile(
+            final tile = ListRow(
               leading: widget.leading == null
                   ? null
                   : IgnorePointer(ignoring: sorting, child: widget.leading),
-              contentPadding:
+              padding:
                   widget.contentPadding ??
                   const EdgeInsets.only(right: 16, left: 16),
               title: _ListRowSeparatorStart(child: widget.title),
               subtitle: widget.subtitle,
-              titleTextStyle: context.listTitleStyle,
-              subtitleTextStyle: context.listSubtitleStyle,
               minVerticalPadding:
                   widget.minVerticalPadding ?? listRowVerticalPadding,
-              minTileHeight: listRowMinHeight,
               horizontalTitleGap: widget.horizontalTitleGap,
               trailing: sortable == null
                   ? widget.trailing
@@ -156,7 +154,7 @@ class SelectedDecorationListItem extends StatelessWidget {
         onPressed();
       },
       subtitle: subtitle,
-      trailing: CommonCheckBox(
+      trailing: Checkbox(
         value: isSelected,
         isCircle: true,
         onChanged: (_) {

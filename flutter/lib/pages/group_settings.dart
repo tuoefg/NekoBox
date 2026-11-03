@@ -1,3 +1,4 @@
+import 'package:material_ui/material_ui.dart' as material;
 import 'package:flutter/services.dart';
 import '../widgets.dart';
 import '../components/form.dart';
@@ -192,7 +193,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
       if (!mounted) return;
       // A changed routing profile of the running group reloaded the service already.
       if (answer['restartNeeded'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Done'))));
+        showAppBanner(context, context.tr('Done'));
       }
       context.safeNestedPop();
     } catch (error) {
@@ -252,9 +253,9 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
   }
 
   @override Widget build(BuildContext context) {
-    if (_loading) return CommonScaffold(title: context.tr('Group settings'), isLoading: true, body: const SizedBox.shrink());
+    if (_loading) return Scaffold(title: context.tr('Group settings'), isLoading: true, body: const SizedBox.shrink());
     if (_data == null) {
-      return CommonScaffold(title: context.tr('Group settings'),
+      return Scaffold(title: context.tr('Group settings'),
       body: ErrorState(_error ?? context.tr('No such group'), retry: _load));
     }
     final issue = _attempted ? _issue : null;
@@ -276,7 +277,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
               keyboardType: TextInputType.text, textInputAction: TextInputAction.next,
               autocorrect: false, onChanged: _changed)),
           FormRow(title: context.tr('Auto clear unavailable'), onPressed: () => setState(() => _autoClearUnavailable = !_autoClearUnavailable),
-            trailing: CommonSwitch(value: _autoClearUnavailable, onChanged: (value) => setState(() => _autoClearUnavailable = value))),
+            trailing: Switch(value: _autoClearUnavailable, onChanged: (value) => setState(() => _autoClearUnavailable = value))),
         ]),
         generateSection(title: context.tr('Chain'), items: [
           _menuRow(context.tr('Front proxy'), _proxyLabel(_frontProxyId), () => _pick(
@@ -298,11 +299,11 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
             (value) => setState(() => _routeId = value),
           )),
           if (_subscription) FormRow(title: context.tr('Import routing profile from subscription'), onPressed: () => setState(() => _importSubRoute = !_importSubRoute),
-            trailing: CommonSwitch(value: _importSubRoute, onChanged: (value) => setState(() => _importSubRoute = value))),
+            trailing: Switch(value: _importSubRoute, onChanged: (value) => setState(() => _importSubRoute = value))),
         ], footer: context.tr('The routing profile this group connects with; default follows the global one.')),
         if (_subscription) generateSection(title: context.tr('Subscription'), items: [
           FormRow(title: context.tr('Skip auto update'), onPressed: () => setState(() => _skipAutoUpdate = !_skipAutoUpdate),
-            trailing: CommonSwitch(value: _skipAutoUpdate, onChanged: (value) => setState(() => _skipAutoUpdate = value))),
+            trailing: Switch(value: _skipAutoUpdate, onChanged: (value) => setState(() => _skipAutoUpdate = value))),
           FormRow(title: context.tr('User agent'), invalid: issue?.field == 'userAgent',
             trailing: FormRowTextField(controller: _userAgent, hintText: _defaults['userAgent']?.toString(),
               autocorrect: false, onChanged: _changed)),
@@ -320,7 +321,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
           ], _options['httpVersion']?.toString() ?? '', (value) => _setOption('httpVersion', value.isEmpty ? null : int.tryParse(value)))),
           _menuRow(context.tr('Update interval'), _intervalLabel(), () async {
             final controller = TextEditingController(text: _updateInterval.text);
-            final picked = await showDialog<String>(context: context, builder: (context) => AlertDialog(
+            final picked = await showDialog<String>(context: context, builder: (context) => material.AlertDialog(
               title: Text(context.tr('Update interval')),
               content: TextField(controller: controller, autofocus: true, keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -373,9 +374,9 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
             ('sortByLatency', 'Sort by latency'),
           ])
             FormRow(title: context.tr(title), onPressed: () => _setOption(key, !_optionBool(key)),
-              trailing: CommonSwitch(value: _optionBool(key), onChanged: (value) => _setOption(key, value))),
+              trailing: Switch(value: _optionBool(key), onChanged: (value) => _setOption(key, value))),
           FormRow(title: context.tr('Show info card'), onPressed: () => _setOption('showInfoCard', !_optionBool('showInfoCard')),
-            trailing: CommonSwitch(value: _optionBool('showInfoCard'), onChanged: (value) => _setOption('showInfoCard', value))),
+            trailing: Switch(value: _optionBool('showInfoCard'), onChanged: (value) => _setOption('showInfoCard', value))),
         ], footer: context.tr('The unavailable-removal and latency-sort options only take effect while the URL test is on.')),
         if (_subscription) generateSection(title: context.tr('Name filters'), items: [
           FormRow(title: context.tr('Only names matching'), invalid: issue?.field == 'nameInclude',
@@ -397,7 +398,7 @@ class _GroupSettingsPageState extends State<GroupSettingsPage> {
             ('6', context.tr('By traffic')), ('7', context.tr('By security')), ('8', context.tr('By latency')),
           ], '$_sortMethod', (value) => setState(() => _sortMethod = int.tryParse(value) ?? 0))),
           FormRow(title: context.tr('Descending'), onPressed: () => setState(() => _sortDescending = !_sortDescending),
-            trailing: CommonSwitch(value: _sortDescending, onChanged: (value) => setState(() => _sortDescending = value))),
+            trailing: Switch(value: _sortDescending, onChanged: (value) => setState(() => _sortDescending = value))),
           _menuRow(context.tr('Test sort by'), switch (_testSortBy) {
             1 => context.tr('Download speed'), 2 => context.tr('Upload speed'), 3 => context.tr('IP out'),
             _ => context.tr('Latency'),

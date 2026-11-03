@@ -1,3 +1,13 @@
+#### 3.2.0
+
+* The interface moves onto prism, the UI layer FlClash's dev branch rebuilt on (`bb47f2cc`, v0.9.3): the vendored v0.9.2 widget set is replaced by prism_ui 0.1.2 — iOS-style press feedback, text selection with its own edit menu and loupe, sheets that snap, banners, tabs, sliders, checkboxes and text fields, all drawn from one seed colour
+* Pages are built on prism's scaffold: the bar, its search and its overflow menus come from `PrismScaffold`/`ScaffoldBar`, and a page that filters by a record's labels now owns the keyword strip itself
+* Transient messages are prism banners instead of Material snackbars; a notice carries no action and lets presses through, so a "Copied" banner no longer sits between a tap and the page
+* Theme: prism's `ThemeData` carries the app's colour scheme (including pure black and the elevated dark surfaces); `MaterialApp` keeps a Material theme derived from the same accent and every page body sits on a transparent Material, so the Material-based forms, dialogs and animations still work while prism widgets read prism's theme
+* Kept from the fork: page transitions through prism's `showExtend`, the JSON editor and its schema engine, the QR view, the settings rows and the app glyph set; `ListItem.input` still shows the stored value on its row and the example as the dialog's hint
+* Dropped packages nothing referenced any more: `qr` (prism's QR matrix replaces it), `emoji_regex` and `animations`
+* Tests and the pixel oracle were updated to the new theme and widget tree: `flutter analyze --fatal-infos` is clean and all 241 tests pass
+
 #### 3.1.4
 
 * The remote link field and the rule editor's inputs no longer pull up the system's password keyboard: Flutter maps `enableSuggestions: false` to Android's `TYPE_TEXT_VARIATION_VISIBLE_PASSWORD` (several IMEs ignore the plain no-suggestions flag), so the system classified them as password boxes, switched to its secure keyboard and took the clipboard away. Ordinary fields now keep suggestions on and only disable autocorrect; genuinely secret inputs (the obscured ones) still opt out

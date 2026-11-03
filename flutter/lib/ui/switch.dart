@@ -1,18 +1,19 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/widgets.dart';
 import 'package:b_box_ui/ui/context.dart';
 import 'package:b_box_ui/ui/liquid_glass.dart';
 import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/surface.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 
 /// The M3 switch's track and thumb, drawn here so no ripple or overlay rings
 /// it, and filled solid while off rather than outlined. A press lifts the
 /// thumb out past the track, white as iOS's solid thumb is; on Liquid Glass
 /// the lifted thumb turns into a clear lens over the track, as iOS's does.
-class CommonSwitch extends StatefulWidget {
-  const CommonSwitch({
+class Switch extends StatefulWidget {
+  const Switch({
     super.key,
     required this.value,
     required this.onChanged,
@@ -27,11 +28,10 @@ class CommonSwitch extends StatefulWidget {
   static const trackHeight = 32.0;
 
   @override
-  State<CommonSwitch> createState() => _CommonSwitchState();
+  State<Switch> createState() => _SwitchState();
 }
 
-class _CommonSwitchState extends State<CommonSwitch>
-    with TickerProviderStateMixin {
+class _SwitchState extends State<Switch> with TickerProviderStateMixin {
   // M3's layout: 4 dp either side of the track, as tall as a tap target.
   static const _inset = 4.0;
   static const _thumb = 24.0;
@@ -74,7 +74,7 @@ class _CommonSwitchState extends State<CommonSwitch>
   }
 
   @override
-  void didUpdateWidget(CommonSwitch oldWidget) {
+  void didUpdateWidget(Switch oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
       if (_toggle.isDismissed || _toggle.isCompleted) {
@@ -129,7 +129,7 @@ class _CommonSwitchState extends State<CommonSwitch>
   void _handleDrag(double dx) {
     final rtl = Directionality.of(context) == TextDirection.rtl;
     _toggle.value +=
-        (rtl ? -dx : dx) / (CommonSwitch.trackWidth - CommonSwitch.trackHeight);
+        (rtl ? -dx : dx) / (Switch.trackWidth - Switch.trackHeight);
   }
 
   void _handleRelease() {
@@ -189,8 +189,8 @@ class _CommonSwitchState extends State<CommonSwitch>
     final lift = _press.value;
     final track = Rect.fromCenter(
       center: size.center(Offset.zero),
-      width: CommonSwitch.trackWidth,
-      height: CommonSwitch.trackHeight,
+      width: Switch.trackWidth,
+      height: Switch.trackHeight,
     );
     final trackColor = enabled
         ? Color.lerp(
@@ -269,11 +269,11 @@ class _CommonSwitchState extends State<CommonSwitch>
   @override
   Widget build(BuildContext context) {
     final enabled = widget.onChanged != null;
-    final size = Size(CommonSwitch.trackWidth + _inset * 2, switch (Theme.of(
+    final size = Size(Switch.trackWidth + _inset * 2, switch (Theme.of(
       context,
-    ).materialTapTargetSize) {
-      MaterialTapTargetSize.padded => kMinInteractiveDimension,
-      MaterialTapTargetSize.shrinkWrap => kMinInteractiveDimension - 8,
+    ).tapTargetSize) {
+      TapTargetSize.padded => kMinInteractiveDimension,
+      TapTargetSize.shrinkWrap => kMinInteractiveDimension - 8,
     });
     return Semantics(
       label: widget.semanticLabel,
@@ -313,30 +313,15 @@ class _CommonSwitchState extends State<CommonSwitch>
     );
   }
 
-  /// Taps go through an invisible [InkResponse] because an InkWell around the
-  /// switch skips its own press ink while one inside it is pressed.
   Widget _buildTapTarget({required bool enabled, required Widget child}) {
     if (!enabled) {
       return child;
     }
-    if (Material.maybeOf(context) == null) {
-      return GestureDetector(
-        excludeFromSemantics: true,
-        onTapDown: (_) => _handlePress(),
-        onTap: _handleRelease,
-        onTapCancel: _handleCancel,
-        child: child,
-      );
-    }
-    return InkResponse(
+    return GestureDetector(
+      excludeFromSemantics: true,
       onTapDown: (_) => _handlePress(),
       onTap: _handleRelease,
       onTapCancel: _handleCancel,
-      excludeFromSemantics: true,
-      canRequestFocus: false,
-      enableFeedback: false,
-      splashFactory: NoSplash.splashFactory,
-      overlayColor: const WidgetStatePropertyAll(Colors.transparent),
       child: child,
     );
   }

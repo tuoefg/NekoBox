@@ -1,16 +1,17 @@
 import 'dart:async';
 import 'dart:math';
 
-import 'package:b_box_ui/ui/context.dart';
-import 'package:b_box_ui/ui/scroll_behavior.dart';
-import 'package:b_box_ui/ui/shape.dart';
-import 'package:b_box_ui/ui/surface.dart';
-import 'package:b_box_ui/ui/typography.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/context.dart';
+import 'package:b_box_ui/ui/scroll_behavior.dart';
+import 'package:b_box_ui/ui/shape.dart';
+import 'package:b_box_ui/ui/surface.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
+import 'package:b_box_ui/ui/typography.dart';
 
 import 'inherited.dart';
 
@@ -25,7 +26,7 @@ const _bottomInsetGap = 8.0;
 const _scrubBandWidth = 48.0;
 const _scrubRates = [1.0, 0.5, 0.25, 0.125];
 
-class CommonScrollBar extends StatelessWidget {
+class Scrollbar extends StatelessWidget {
   final ScrollController? controller;
   final Widget child;
   final bool thumbVisibility;
@@ -36,7 +37,7 @@ class CommonScrollBar extends StatelessWidget {
 
   final bool _hidesAmbientBar;
 
-  const CommonScrollBar({
+  const Scrollbar({
     super.key,
     required this.child,
     required this.controller,
@@ -46,7 +47,7 @@ class CommonScrollBar extends StatelessWidget {
   }) : _hidesAmbientBar = true;
 
   /// The bar a scroll behavior adds, which has no other bar to hide.
-  const CommonScrollBar.ambient({
+  const Scrollbar.ambient({
     super.key,
     required this.child,
     required this.controller,
@@ -583,7 +584,7 @@ class _FloatingScrollbarState extends State<FloatingScrollbar> {
         }
         return Stack(
           children: [
-            CommonScrollBar(
+            Scrollbar(
               controller: widget.controller,
               thumbVisibility: widget.thumbVisibility,
               padding: barPadding,
@@ -639,30 +640,35 @@ class _ScrollbarHintPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = context.colorScheme;
-    final style = AppTextStyle.caption1.of(context, emphasized: true);
+    final style = AppTextStyle.footnote
+        .of(context, emphasized: true)
+        .copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
     final rate = scrubRate;
     return DecoratedBox(
       key: const ValueKey('scrollbarHintPill'),
       decoration: ShapeDecoration(
         color: SurfaceLevel.floatingOf(colorScheme).colorOf(colorScheme),
-        shape: AppShape.sm,
-        shadows: kElevationToShadow[2],
+        shape: AppShape.full,
+        shadows: [
+          BoxShadow(
+            color: colorScheme.shadow.withValues(alpha: 0.12),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              label,
-              style: style.copyWith(color: colorScheme.onSurfaceVariant),
-            ),
+            Text(label, style: style.copyWith(color: colorScheme.onSurface)),
             if (rate != null && rate < 1) ...[
               const SizedBox(width: 6),
               Text(
-                '×1/${(1 / rate).round()}',
+                '$rate×',
                 key: const ValueKey('scrollbarScrubRate'),
-                style: style.copyWith(color: colorScheme.primary),
+                style: style.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ],
           ],

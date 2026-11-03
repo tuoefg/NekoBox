@@ -1,8 +1,10 @@
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/card_surface.dart';
 import 'package:b_box_ui/ui/context.dart';
+import 'package:b_box_ui/ui/press_surface.dart';
 import 'package:b_box_ui/ui/shape.dart';
 import 'package:b_box_ui/ui/surface.dart';
 import 'package:b_box_ui/ui/typography.dart';
-import 'package:material_ui/material_ui.dart';
 
 class SegmentedControl<T> extends StatelessWidget {
   const SegmentedControl({
@@ -56,45 +58,31 @@ class SegmentedControl<T> extends StatelessWidget {
             children: [
               for (final (option, label) in segments)
                 Expanded(
-                  child: Semantics(
+                  child: PressSurface(
+                    fill: const Color(0x00000000),
+                    shape: AppShape.full,
+                    look: option == value ? PressLook.none : PressLook.ink,
+                    ringStandsOff: option == value,
                     selected: option == value,
-                    button: true,
-                    child: FocusRing(
-                      shape: AppShape.full,
-                      standsOff: option == value,
-                      child: Material(
-                        type: MaterialType.transparency,
-                        shape: AppShape.full,
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          customBorder: AppShape.full,
-                          mouseCursor: option == value
-                              ? SystemMouseCursors.basic
-                              : null,
-                          splashFactory: option == value
-                              ? NoSplash.splashFactory
-                              : null,
-                          // A null onTap would unfocus the selected segment.
-                          onTap: option == value
-                              ? () {}
-                              : () => onChanged(option),
-                          child: Center(
-                            child: AnimatedDefaultTextStyle(
-                              duration: const Duration(milliseconds: 200),
-                              style: AppTextStyle.subheadline
-                                  .of(context, emphasized: option == value)
-                                  .copyWith(
-                                    color: option == value
-                                        ? colorScheme.onPrimary
-                                        : colorScheme.onSurfaceVariant,
-                                  ),
-                              child: Text(
-                                label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                    childFills: true,
+                    // A null onPressed would unfocus the selected segment.
+                    onPressed: option == value
+                        ? () {}
+                        : () => onChanged(option),
+                    child: Center(
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 200),
+                        style: AppTextStyle.subheadline
+                            .of(context, emphasized: option == value)
+                            .copyWith(
+                              color: option == value
+                                  ? colorScheme.onPrimary
+                                  : colorScheme.onSurfaceVariant,
                             ),
-                          ),
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ),

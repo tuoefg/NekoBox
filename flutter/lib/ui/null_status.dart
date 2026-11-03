@@ -2,40 +2,43 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/shapes/shapes.dart' as shapes;
 import 'package:b_box_ui/ui/context.dart';
+import 'package:b_box_ui/ui/deferred_push.dart';
 import 'package:b_box_ui/ui/fade_box.dart';
 import 'package:b_box_ui/ui/icons/icons.dart';
 import 'package:b_box_ui/ui/inherited.dart';
 import 'package:b_box_ui/ui/l10n.dart';
+import 'package:b_box_ui/ui/loading.dart';
 import 'package:b_box_ui/ui/metrics.dart';
 import 'package:b_box_ui/ui/navigator.dart';
+import 'package:b_box_ui/ui/theme_data.dart';
 import 'package:b_box_ui/ui/typography.dart';
-import 'package:material_new_shapes/material_new_shapes.dart';
-import 'package:material_ui/material_ui.dart';
 
-enum NullStatusIllustration {
-  data,
-  logs,
-  proxies,
-  profile,
-  scripts,
-  rules,
-  connections,
-  requests,
-  dns,
-  ntp,
-  sniffer,
-  tun,
-  wifi,
-  apps,
-  icons,
-  fonts,
-  permission,
-  camera,
-  error,
-  search,
+/// What an [EmptyIllustration] draws, on a shape and among accent marks it picks
+/// at random.
+abstract interface class Illustration {
+  static const Illustration search = _SearchIllustration();
+
+  Glyph get glyph;
+
+  /// Whether it is drawn in the error colors.
+  bool get isError;
 }
 
+class _SearchIllustration implements Illustration {
+  const _SearchIllustration();
+
+  @override
+  Glyph get glyph => Glyphs.search;
+
+  @override
+  bool get isError => false;
+}
+
+/// Holds the transition of the route it arrives in while its first load runs,
+/// as [ArrivalHold] does.
 class NullStatusSwitcher extends StatefulWidget {
   /// Only the first load is held back; later loads keep what is on screen.
   final bool isLoading;
@@ -43,15 +46,20 @@ class NullStatusSwitcher extends StatefulWidget {
   final bool isSearching;
 
   /// Shown in place of a first load still running after a route transition.
-  final NullStatus? loadingStatus;
+  final Widget? loadingStatus;
   final NullStatus? nullStatus;
   final Widget child;
+
+  /// Without it, the first load leaves the push alone and shows
+  /// [loadingStatus] at once.
+  final bool holdsArrival;
 
   const NullStatusSwitcher({
     super.key,
     this.isLoading = false,
     this.isEmpty = false,
     this.isSearching = false,
+    this.holdsArrival = true,
     this.loadingStatus,
     this.nullStatus,
     required this.child,
@@ -67,12 +75,12 @@ class _NullStatusSwitcherState extends State<NullStatusSwitcher> {
 
   late bool _loaded = !widget.isLoading;
   Timer? _loadingStatusTimer;
-  var _showsLoadingStatus = false;
+  late var _showsLoadingStatus = !widget.holdsArrival;
 
   @override
   void initState() {
     super.initState();
-    if (!_loaded && widget.loadingStatus != null) {
+    if (!_loaded && !_showsLoadingStatus && widget.loadingStatus != null) {
       _loadingStatusTimer = Timer(
         _loadingStatusDelay,
         () => setState(() => _showsLoadingStatus = true),
@@ -97,6 +105,13 @@ class _NullStatusSwitcherState extends State<NullStatusSwitcher> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.holdsArrival) {
+      return _buildSlot(context);
+    }
+    return ArrivalHold(ready: _loaded, child: _buildSlot(context));
+  }
+
+  Widget _buildSlot(BuildContext context) {
     if (!_loaded && !_showsLoadingStatus) {
       return const SizedBox.expand();
     }
@@ -119,11 +134,14 @@ class _NullStatusSwitcherState extends State<NullStatusSwitcher> {
           children: <Widget>[...previousChildren, ?currentChild],
         ),
       ),
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: animation,
-        child: ScaleTransition(
-          scale: animation.drive(Tween(begin: 0.92, end: 1.0)),
-          child: child,
+      transitionBuilder: (child, animation) => ActivityPresence(
+        animation: animation,
+        child: FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: animation.drive(Tween(begin: 0.92, end: 1.0)),
+            child: child,
+          ),
         ),
       ),
       child: KeyedSubtree(
@@ -132,7 +150,7 @@ class _NullStatusSwitcherState extends State<NullStatusSwitcher> {
           _NullStatusSlot.loading => widget.loadingStatus!,
           _NullStatusSlot.noResults => NullStatus(
             label: UiLocalizations.of(context).noSearchResults,
-            illustration: NullStatusIllustration.search,
+            illustration: Illustration.search,
           ),
           _NullStatusSlot.empty => widget.nullStatus!,
           _NullStatusSlot.content => widget.child,
@@ -148,14 +166,14 @@ class NullStatus extends StatefulWidget {
   final String? label;
   final String? description;
   final Widget? action;
-  final NullStatusIllustration illustration;
+  final Illustration illustration;
 
   const NullStatus({
     super.key,
     this.label,
     this.description,
     this.action,
-    this.illustration = NullStatusIllustration.data,
+    required this.illustration,
   });
 
   @override
@@ -195,7 +213,7 @@ class _NullStatusState extends State<NullStatus> {
               _EnterItem(
                 child: EmptyIllustration(
                   type: illustration,
-                  dimension: compact ? 120 : 160,
+                  dimension: EmptyIllustration.dimensionOf(context),
                 ),
               ),
               if (label != null) ...[
@@ -314,7 +332,7 @@ class _EnterItemState extends State<_EnterItem>
 }
 
 class EmptyIllustration extends StatefulWidget {
-  final NullStatusIllustration type;
+  final Illustration type;
   final double dimension;
 
   const EmptyIllustration({
@@ -322,6 +340,9 @@ class EmptyIllustration extends StatefulWidget {
     required this.type,
     required this.dimension,
   });
+
+  static double dimensionOf(BuildContext context) =>
+      MediaQuery.sizeOf(context).height < _compactHeight ? 120 : 160;
 
   @override
   State<EmptyIllustration> createState() => _EmptyIllustrationState();
@@ -337,6 +358,8 @@ class _EmptyIllustrationState extends State<EmptyIllustration>
     value: 1,
   );
   final _entrance = _Entrance.values[_random.nextInt(_Entrance.values.length)];
+  final _shape = _shapes[_random.nextInt(_shapes.length)];
+  final _layout = _layouts[_random.nextInt(_layouts.length)];
   var _started = false;
 
   @override
@@ -361,16 +384,14 @@ class _EmptyIllustrationState extends State<EmptyIllustration>
   Widget build(BuildContext context) {
     final type = widget.type;
     final colorScheme = context.colorScheme;
-    final (shape, glyph) = _artOf(type);
     return RepaintBoundary(
       child: CustomPaint(
         key: ValueKey(type),
         painter: _IllustrationPainter(
-          shape: shape,
-          glyph: glyph,
-          palette: type == NullStatusIllustration.error
-              ? _IllustrationPalette.error(colorScheme)
-              : _IllustrationPalette(colorScheme),
+          shape: _shape,
+          glyph: type.glyph,
+          color: type.isError ? colorScheme.error : colorScheme.primary,
+          layout: _layout,
           entrance: _entrance,
           progress: _controller,
         ),
@@ -378,136 +399,106 @@ class _EmptyIllustrationState extends State<EmptyIllustration>
       ),
     );
   }
-
-  static (RoundedPolygon, Glyph) _artOf(
-    NullStatusIllustration type,
-  ) => switch (type) {
-    NullStatusIllustration.data => (
-      MaterialShapes.cookie12Sided,
-      AppGlyphs.resources,
-    ),
-    NullStatusIllustration.logs => (
-      MaterialShapes.cookie9Sided,
-      AppGlyphs.logs,
-    ),
-    NullStatusIllustration.proxies => (MaterialShapes.sunny, AppGlyphs.proxies),
-    NullStatusIllustration.profile => (
-      MaterialShapes.cookie7Sided,
-      AppGlyphs.profiles,
-    ),
-    NullStatusIllustration.scripts => (
-      MaterialShapes.cookie6Sided,
-      AppGlyphs.code,
-    ),
-    NullStatusIllustration.rules => (
-      MaterialShapes.clover8Leaf,
-      AppGlyphs.rules,
-    ),
-    NullStatusIllustration.connections => (
-      MaterialShapes.cookie4Sided,
-      AppGlyphs.connections,
-    ),
-    NullStatusIllustration.requests => (
-      MaterialShapes.softBurst,
-      AppGlyphs.requests,
-    ),
-    NullStatusIllustration.dns => (MaterialShapes.puffy, AppGlyphs.dns),
-    NullStatusIllustration.ntp => (MaterialShapes.pentagon, AppGlyphs.clock),
-    NullStatusIllustration.sniffer => (MaterialShapes.gem, AppGlyphs.eye),
-    NullStatusIllustration.tun => (MaterialShapes.clamShell, AppGlyphs.vpn),
-    NullStatusIllustration.wifi => (
-      MaterialShapes.cookie7Sided,
-      AppGlyphs.wifi,
-    ),
-    NullStatusIllustration.apps => (
-      MaterialShapes.clover4Leaf,
-      AppGlyphs.appsList,
-    ),
-    NullStatusIllustration.icons => (
-      MaterialShapes.verySunny,
-      AppGlyphs.iconTile,
-    ),
-    NullStatusIllustration.fonts => (
-      MaterialShapes.puffyDiamond,
-      AppGlyphs.font,
-    ),
-    NullStatusIllustration.permission => (MaterialShapes.sunny, AppGlyphs.lock),
-    NullStatusIllustration.camera => (
-      MaterialShapes.cookie6Sided,
-      AppGlyphs.camera,
-    ),
-    NullStatusIllustration.error => (MaterialShapes.softBurst, AppGlyphs.error),
-    NullStatusIllustration.search => (MaterialShapes.flower, AppGlyphs.search),
-  };
-}
-
-class _IllustrationPalette {
-  final Color shape;
-  final Color ink;
-  final Color highlight;
-  final Color accent;
-  final Color accentContainer;
-
-  _IllustrationPalette(ColorScheme colorScheme)
-    : shape = colorScheme.primaryContainer,
-      ink = colorScheme.onPrimaryContainer,
-      highlight = colorScheme.primary,
-      accent = colorScheme.tertiary,
-      accentContainer = colorScheme.tertiaryContainer;
-
-  _IllustrationPalette.error(ColorScheme colorScheme)
-    : shape = colorScheme.errorContainer,
-      ink = colorScheme.onErrorContainer,
-      highlight = colorScheme.error,
-      accent = colorScheme.error,
-      accentContainer = colorScheme.errorContainer;
-
-  @override
-  bool operator ==(Object other) =>
-      other is _IllustrationPalette &&
-      other.shape == shape &&
-      other.ink == ink &&
-      other.highlight == highlight &&
-      other.accent == accent &&
-      other.accentContainer == accentContainer;
-
-  @override
-  int get hashCode =>
-      Object.hash(shape, ink, highlight, accent, accentContainer);
 }
 
 /// Every choreography must land on the same final frame, since a skipped
 /// entrance paints that frame directly.
 enum _Entrance { spin, morph, orbit }
 
-enum _Accent { blob, dot, ring }
+enum _Accent { dot, ring, tile, plus, dash, wave }
 
-typedef _ShapePose = ({double scale, double turn, double morph, double alpha});
+typedef _ShapePose = ({double scale, double turn, double morph});
 typedef _GlyphPose = ({double scale, double rise, double fill, double alpha});
 typedef _AccentPose = ({double scale, double drift, double orbit, double turn});
 
+/// Shapes that leave the glyph a margin all round; a freer one cuts in too close.
+final _shapes = [
+  shapes.MaterialShapes.circle,
+  shapes.MaterialShapes.cookie9Sided,
+  shapes.MaterialShapes.cookie12Sided,
+  // Inset so its corners do not make it read larger than the others.
+  shapes.RoundedPolygon.rectangle(
+    width: 0.9,
+    height: 0.9,
+    rounding: const shapes.CornerRounding(radius: 0.28, smoothing: 1),
+    centerX: 0.5,
+    centerY: 0.5,
+  ),
+];
+
+const _layouts = <List<(_Accent, Offset, double, double)>>[
+  [
+    (_Accent.dot, Offset(-0.42, -0.2), 0.05, 0),
+    (_Accent.ring, Offset(0.43, 0.12), 0.075, 0),
+    (_Accent.tile, Offset(-0.33, 0.35), 0.12, 0.26),
+  ],
+  [
+    (_Accent.plus, Offset(0.38, -0.36), 0.09, 0),
+    (_Accent.dot, Offset(0.46, -0.1), 0.04, 0),
+    (_Accent.dash, Offset(-0.4, 0.3), 0.12, -0.8),
+    (_Accent.ring, Offset(-0.38, -0.36), 0.06, 0),
+  ],
+  [
+    (_Accent.wave, Offset(-0.38, -0.38), 0.15, 0),
+    (_Accent.dot, Offset(0.4, 0.34), 0.06, 0),
+    (_Accent.dot, Offset(0.46, 0.18), 0.035, 0),
+    (_Accent.plus, Offset(-0.43, 0.2), 0.09, 0.4),
+  ],
+  [
+    (_Accent.ring, Offset(0.37, -0.37), 0.1, 0),
+    (_Accent.dash, Offset(0.42, 0.28), 0.1, 1.1),
+    (_Accent.dot, Offset(-0.44, -0.05), 0.045, 0),
+    (_Accent.tile, Offset(-0.38, 0.36), 0.08, -0.4),
+  ],
+  [
+    (_Accent.tile, Offset(0.38, -0.36), 0.11, 0.4),
+    (_Accent.wave, Offset(-0.36, 0.4), 0.16, -0.2),
+    (_Accent.dot, Offset(-0.42, -0.28), 0.05, 0),
+  ],
+  [
+    (_Accent.dot, Offset(-0.33, -0.4), 0.07, 0),
+    (_Accent.dot, Offset(-0.46, -0.22), 0.035, 0),
+    (_Accent.plus, Offset(0.42, 0.3), 0.09, 0.3),
+    (_Accent.dash, Offset(0.38, -0.38), 0.11, 0.8),
+  ],
+  [
+    (_Accent.plus, Offset(-0.4, -0.33), 0.1, 0),
+    (_Accent.ring, Offset(0.42, 0.33), 0.085, 0),
+    (_Accent.wave, Offset(0.36, -0.4), 0.14, 0.2),
+    (_Accent.dot, Offset(-0.44, 0.26), 0.04, 0),
+  ],
+  [
+    (_Accent.ring, Offset(-0.36, 0.38), 0.11, 0),
+    (_Accent.dot, Offset(0.4, -0.34), 0.06, 0),
+    (_Accent.tile, Offset(0.46, -0.12), 0.06, 0.3),
+    (_Accent.dash, Offset(-0.44, -0.2), 0.1, 1.4),
+  ],
+];
+
 class _IllustrationPainter extends CustomPainter {
   static const _shapeExtent = 0.72;
-  static const _haloExtent = 0.84;
   static const _glyphExtent = 0.4;
-  static const _accents = [
-    (_Accent.blob, Offset(-0.32, 0.3), 0.14),
-    (_Accent.dot, Offset(-0.4, -0.18), 0.05),
-    (_Accent.ring, Offset(0.42, 0.15), 0.075),
-  ];
+  static const _shapeAlpha = 0.15;
+  static const _softAccentAlpha = 0.4;
+  static final _wave = Path()
+    ..moveTo(-0.5, 0)
+    ..quadraticBezierTo(-0.25, -0.5, 0, 0)
+    ..quadraticBezierTo(0.25, 0.5, 0.5, 0);
   static final _paths = Expando<Path>();
-  static final _morphs = Expando<Morph>();
+  static final _morphs = Expando<shapes.Morph>();
 
-  final RoundedPolygon shape;
+  final shapes.RoundedPolygon shape;
   final Glyph glyph;
-  final _IllustrationPalette palette;
+  final Color color;
+  final List<(_Accent, Offset, double, double)> layout;
   final _Entrance entrance;
   final Animation<double> progress;
 
   _IllustrationPainter({
     required this.shape,
     required this.glyph,
-    required this.palette,
+    required this.color,
+    required this.layout,
     required this.entrance,
     required this.progress,
   }) : super(repaint: progress);
@@ -517,18 +508,15 @@ class _IllustrationPainter extends CustomPainter {
     final t = progress.value;
     final side = size.shortestSide;
     final center = size.center(Offset.zero);
-    final (halo, body, mark) = _poseAt(t);
+    final (body, mark) = _poseAt(t);
 
     _paintShape(
       canvas,
-      halo,
+      body,
       center,
-      side * _haloExtent,
-      palette.highlight.withValues(
-        alpha: palette.highlight.a * 0.14 * halo.alpha,
-      ),
+      side * _shapeExtent,
+      color.withValues(alpha: color.a * _shapeAlpha),
     );
-    _paintShape(canvas, body, center, side * _shapeExtent, palette.shape);
     if (mark.scale > 0) {
       _paintGlyph(
         canvas,
@@ -536,12 +524,12 @@ class _IllustrationPainter extends CustomPainter {
         center + Offset(0, side * mark.rise),
         side * _glyphExtent * mark.scale,
         mark.fill,
-        palette.ink.withValues(alpha: palette.ink.a * mark.alpha),
+        color.withValues(alpha: color.a * mark.alpha),
       );
     }
 
-    for (final (index, (accent, offset, extent)) in _accents.indexed) {
-      final pose = _accentAt(t, index);
+    for (final (index, (accent, offset, extent, rest)) in layout.indexed) {
+      final pose = _accentAt(t, index, layout.length);
       if (pose.scale <= 0) {
         continue;
       }
@@ -550,45 +538,59 @@ class _IllustrationPainter extends CustomPainter {
           Offset.fromDirection(offset.direction + pose.orbit, offset.distance) *
               side *
               pose.drift;
-      final diameter = side * extent * pose.scale;
-      switch (accent) {
-        case _Accent.blob:
-          _paintPath(
-            canvas,
-            _paths[MaterialShapes.cookie4Sided] ??= MaterialShapes.cookie4Sided
-                .toPath(),
-            at,
-            diameter,
-            math.pi / 12 + pose.turn,
-            palette.accentContainer,
-          );
-        case _Accent.dot:
-          canvas.drawCircle(at, diameter / 2, Paint()..color = palette.accent);
-        case _Accent.ring:
-          final width = diameter * 0.28;
-          canvas.drawCircle(
-            at,
-            (diameter - width) / 2,
-            Paint()
-              ..color = palette.highlight
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = width,
-          );
-      }
+      canvas.save();
+      canvas.translate(at.dx, at.dy);
+      canvas.rotate(rest + pose.turn);
+      canvas.scale(side * extent * pose.scale);
+      _paintAccent(canvas, accent);
+      canvas.restore();
     }
   }
 
-  (_ShapePose, _ShapePose, _GlyphPose) _poseAt(double t) {
+  void _paintAccent(Canvas canvas, _Accent accent) {
+    final soft = color.withValues(alpha: color.a * _softAccentAlpha);
+    Paint stroke(Color color, double width) => Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width
+      ..strokeCap = StrokeCap.round;
+    switch (accent) {
+      case _Accent.dot:
+        canvas.drawCircle(Offset.zero, 0.5, Paint()..color = color);
+      case _Accent.ring:
+        canvas.drawCircle(Offset.zero, 0.36, stroke(color, 0.28));
+      case _Accent.tile:
+        canvas.drawRSuperellipse(
+          RSuperellipse.fromRectAndRadius(
+            const Rect.fromLTRB(-0.5, -0.5, 0.5, 0.5),
+            const Radius.circular(0.3),
+          ),
+          Paint()..color = soft,
+        );
+      case _Accent.plus:
+        final paint = stroke(color, 0.26);
+        canvas.drawLine(const Offset(-0.37, 0), const Offset(0.37, 0), paint);
+        canvas.drawLine(const Offset(0, -0.37), const Offset(0, 0.37), paint);
+      case _Accent.dash:
+        canvas.drawLine(
+          const Offset(-0.38, 0),
+          const Offset(0.38, 0),
+          stroke(soft, 0.24),
+        );
+      case _Accent.wave:
+        canvas.drawPath(_wave, stroke(soft, 0.2));
+    }
+  }
+
+  (_ShapePose, _GlyphPose) _poseAt(double t) {
     switch (entrance) {
       case _Entrance.spin:
         _ShapePose spun(double settle) => (
           scale: lerpDouble(0.6, 1, settle)!,
           turn: -math.pi / 3 * (1 - settle),
           morph: 1,
-          alpha: 1,
         );
         return (
-          spun(_phase(t, 0.08, 0.75, Curves.easeOutBack)),
           spun(_phase(t, 0, 0.65, Curves.easeOutBack)),
           (
             scale:
@@ -610,12 +612,10 @@ class _IllustrationPainter extends CustomPainter {
             )!,
             turn: math.pi / 2 * (1 - morph),
             morph: morph,
-            alpha: 1,
           );
         }
         final rise = _phase(t, 0.2, 0.6, Curves.easeOutBack);
         return (
-          morphed(0.15, 0.8),
           morphed(0.05, 0.65),
           (
             scale: lerpDouble(0.8, 1, rise)!,
@@ -625,14 +625,7 @@ class _IllustrationPainter extends CustomPainter {
           ),
         );
       case _Entrance.orbit:
-        final ripple = _phase(t, 0.2, 0.75, Curves.easeOutCubic);
         return (
-          (
-            scale: lerpDouble(_shapeExtent / _haloExtent, 1, ripple)!,
-            turn: 0,
-            morph: 1,
-            alpha: ripple,
-          ),
           (
             scale: lerpDouble(
               0.3,
@@ -641,7 +634,6 @@ class _IllustrationPainter extends CustomPainter {
             )!,
             turn: 0,
             morph: 1,
-            alpha: 1,
           ),
           (
             scale: _phase(t, 0.15, 0.7, const ElasticOutCurve(0.5)),
@@ -653,7 +645,7 @@ class _IllustrationPainter extends CustomPainter {
     }
   }
 
-  _AccentPose _accentAt(double t, int index) {
+  _AccentPose _accentAt(double t, int index, int count) {
     switch (entrance) {
       case _Entrance.spin:
         final begin = 0.4 + index * 0.08;
@@ -665,7 +657,7 @@ class _IllustrationPainter extends CustomPainter {
           turn: -math.pi / 4 * (1 - enter),
         );
       case _Entrance.morph:
-        final begin = 0.45 + (_accents.length - 1 - index) * 0.07;
+        final begin = 0.45 + (count - 1 - index) * 0.07;
         final enter = _phase(t, begin, begin + 0.3, Curves.easeOutBack);
         return (
           scale: enter,
@@ -701,8 +693,8 @@ class _IllustrationPainter extends CustomPainter {
   ) {
     final path = pose.morph >= 1
         ? _paths[shape] ??= shape.toPath()
-        : (_morphs[shape] ??= Morph(
-            MaterialShapes.circle,
+        : (_morphs[shape] ??= shapes.Morph(
+            shapes.MaterialShapes.circle,
             shape,
           )).toPath(progress: pose.morph);
     _paintPath(canvas, path, center, extent * pose.scale, pose.turn, color);
@@ -747,7 +739,8 @@ class _IllustrationPainter extends CustomPainter {
   bool shouldRepaint(covariant _IllustrationPainter oldDelegate) =>
       oldDelegate.shape != shape ||
       oldDelegate.glyph != glyph ||
-      oldDelegate.palette != palette ||
+      oldDelegate.color != color ||
+      oldDelegate.layout != layout ||
       oldDelegate.entrance != entrance ||
       oldDelegate.progress != progress;
 }

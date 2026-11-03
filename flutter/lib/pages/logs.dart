@@ -11,6 +11,20 @@ class LogsPage extends StatefulWidget {
 
 class _LogsPageState extends State<LogsPage> {
   String _query = '', _level = 'Default';
+  // Labels tapped on a record filter by them; the search field keeps its own text.
+  final _keywords = ValueNotifier<List<ScaffoldKeyword>>(const []);
+  String get _search => [
+    _query,
+    ..._keywords.value.map((keyword) => '${keyword.key}'),
+  ].where((word) => word.trim().isNotEmpty).join(' ');
+  void _keywordsChanged() => setState(() {});
+  void _addFilter(String word) {
+    if (_keywords.value.any((keyword) => keyword.key == word)) return;
+    _keywords.value = [..._keywords.value, ScaffoldKeyword(key: word, label: word, onDeleted: () => _removeFilter(word))];
+  }
+  void _removeFilter(String word) =>
+    _keywords.value = [for (final keyword in _keywords.value) if (keyword.key != word) keyword];
+
   bool _logcat = false, _exporting = false, _showNoise = false;
   static const _priorities = {
     'panic': 0, 'fatal': 1, 'error': 2, 'warn': 3, 'warning': 3,
@@ -19,7 +33,9 @@ class _LogsPageState extends State<LogsPage> {
   List<Json>? _paused;
   late final _scroll = ScrollController(initialScrollOffset: double.maxFinite);
   late final _physics = FollowEndScrollPhysics(isFollowing: () => _paused == null);
-  @override void dispose() { _scroll.dispose(); super.dispose(); }
+  @override void dispose() {
+    _keywords.removeListener(_keywordsChanged);
+    _keywords.dispose(); _scroll.dispose(); super.dispose(); }
 
   void _pause() {
     if (_paused == null) setState(() => _paused = List.of(_logcat ? context.box.logcat : context.box.logs));
@@ -108,10 +124,15 @@ class _LogsPageState extends State<LogsPage> {
     }
   }
 
+  @override void initState() {
+    super.initState();
+    _keywords.addListener(_keywordsChanged);
+  }
+
   @override Widget build(BuildContext context) {
     final box = context.watchBox(BoxAspect.logs);
     if (_logcat) context.watchBox(BoxAspect.logcat);
-    final words = _query.toLowerCase().trim().split(RegExp(r'\s+'));
+    final words = _search.toLowerCase().trim().split(RegExp(r'\s+'));
     final matches = (_paused ?? (_logcat ? box.logcat : box.logs)).where((item) =>
       _matchesLevel(item, box.defaultLogLevel) &&
       words.every(([item['level'], item['message']].join(' ').toLowerCase()).contains),
@@ -121,9 +142,9 @@ class _LogsPageState extends State<LogsPage> {
     // export button stays alive while only folded noise is on screen.
     final exportable = matches.toList();
     final logs = (_showNoise ? matches : matches.where((item) => !_isNoise(item))).toList();
-    return BoxDataSubscription(data: _logcat ? BoxData.logcat : BoxData.logs, child: CommonScaffold(
+    return BoxDataSubscription(data: _logcat ? BoxData.logcat : BoxData.logs, child: Scaffold(
       title: context.tr('Logs'),
-      onKeywordsUpdate: (words) => setState(() => _query = words.join(' ')),
+      keywords: _keywords,
       searchState: AppBarSearchState(onSearch: (query) => setState(() => _query = query)),
       iconActions: [
         IconButtonData(glyph: AppGlyphs.export, tooltip: context.tr('Export'),
@@ -132,16 +153,16 @@ class _LogsPageState extends State<LogsPage> {
           onPressed: _exporting ? null : _exportCrashes),
       ],
       menuItems: [
-        CommonPopupMenuItem(glyph: _paused == null ? AppGlyphs.playPause(1) : AppGlyphs.playPause(0),
+        PopupMenuItem(glyph: _paused == null ? AppGlyphs.playPause(1) : AppGlyphs.playPause(0),
           label: context.tr(_paused == null ? 'Pause' : 'Resume'), onPressed: _paused == null ? _pause : _resume),
-        CommonPopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Clear'), onPressed: () async {
+        PopupMenuItem(glyph: AppGlyphs.delete, label: context.tr('Clear'), onPressed: () async {
           if (await box.act(_logcat ? 'logs.logcat.clear' : 'logs.clear') && mounted) setState(() => _paused = null);
         }),
         for (final level in ['Default', 'All', 'Trace', 'Debug', 'Info', 'Warn', 'Error', 'Fatal', 'Panic'])
-          CommonPopupMenuItem(label: level == 'Default'
+          PopupMenuItem(label: level == 'Default'
               ? '${context.tr('Follow configuration')}${_logcat || box.defaultLogLevel == null ? '' : ' (${context.tr(box.defaultLogLevel!)})'}'
               : context.tr(level), checked: _level == level,
-            section: level == 'Default' ? CommonPopupMenuSection(title: context.tr('Log level')) : null,
+            section: level == 'Default' ? PopupMenuSection(title: context.tr('Log level')) : null,
             onPressed: () => setState(() => _level = level)),
       ],
       // The body starts at the top of the window with the app bar floating over it, so the switch needs the
@@ -166,7 +187,7 @@ class _LogsPageState extends State<LogsPage> {
           )),
         ),
         Expanded(child: NullStatusSwitcher(
-        isEmpty: logs.isEmpty, isSearching: _query.trim().isNotEmpty || !['Default', 'All'].contains(_level),
+        isEmpty: logs.isEmpty, isSearching: _search.trim().isNotEmpty || !['Default', 'All'].contains(_level),
         nullStatus: NullStatus(label: context.tr('No logs'), illustration: NullStatusIllustration.logs),
         child: logs.isEmpty ? const SizedBox.shrink() : Align(
           alignment: Alignment.topCenter,
@@ -198,7 +219,7 @@ class _LogsPageState extends State<LogsPage> {
                     },
                     header: RecordHeader(children: [
                       if ((log['receivedAt'] as num? ?? 0) > 0) RecordTimestamp(recordTime(log['receivedAt'])),
-                      RecordLabel(label: level, tone: tone, onPressed: () => context.commonScaffoldState?.addKeyword(level)),
+                      RecordLabel(label: level, tone: tone, onPressed: () => _addFilter(level)),
                     ]),
                     body: Text(log['message'].toString(), style: RecordTextStyles.of(context).primary),
                   );

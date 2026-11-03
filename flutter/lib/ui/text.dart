@@ -1,31 +1,115 @@
-import 'package:emoji_regex/emoji_regex.dart';
-import 'package:b_box_ui/ui/measure.dart';
-import 'package:b_box_ui/ui/text_style.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
+import 'package:b_box_ui/ui/tooltip.dart';
 
-class TooltipText extends StatelessWidget {
+/// [text], with a tooltip of its whole string once it is cut short.
+class TooltipText extends StatefulWidget {
   final Text text;
 
   const TooltipText({super.key, required this.text});
 
   @override
+  State<TooltipText> createState() => _TooltipTextState();
+}
+
+class _TooltipTextState extends State<TooltipText> {
+  bool _cut = false;
+  bool? _reported;
+
+  // Paint finds the text cut short, so the tooltip joins it a frame later.
+  void _handleCut(bool cut) {
+    final scheduled = _reported != null;
+    _reported = cut;
+    if (scheduled) {
+      return;
+    }
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      final cut = _reported!;
+      _reported = null;
+      if (mounted && cut != _cut) {
+        setState(() => _cut = cut);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxWidth = constraints.maxWidth;
-        final isOverflow = MeasureScope.of(
-          context,
-        ).computeTextIsOverflow(text, maxWidth: maxWidth);
-        if (isOverflow) {
-          return Tooltip(
-            triggerMode: TooltipTriggerMode.longPress,
-            preferBelow: false,
-            message: text.data,
-            child: text,
-          );
-        }
-        return text;
-      },
+    final text = _CutReporter(onCut: _handleCut, child: widget.text);
+    if (!_cut) {
+      return text;
+    }
+    return Tooltip(
+      triggerMode: TooltipTriggerMode.longPress,
+      preferBelow: false,
+      message: widget.text.data ?? '',
+      child: text,
+    );
+  }
+}
+
+class _CutReporter extends SingleChildRenderObjectWidget {
+  const _CutReporter({required this.onCut, required super.child});
+
+  final ValueChanged<bool> onCut;
+
+  @override
+  _RenderCutReporter createRenderObject(BuildContext context) =>
+      _RenderCutReporter(onCut);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderCutReporter renderObject,
+  ) {
+    renderObject.onCut = onCut;
+  }
+}
+
+class _RenderCutReporter extends RenderProxyBox {
+  _RenderCutReporter(this.onCut);
+
+  ValueChanged<bool> onCut;
+  bool _cut = false;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    super.paint(context, offset);
+    RenderObject? node = child;
+    while (node is RenderProxyBox) {
+      node = node.child;
+    }
+    final cut = node is RenderParagraph && node.didExceedMaxLines;
+    if (cut != _cut) {
+      _cut = cut;
+      onCut(cut);
+    }
+  }
+}
+
+/// A tooltip only a hovering pointer raises, built on its first hover: touch
+/// has no hover, and a long press belongs to the row's context menu.
+class HoverTooltip extends StatefulWidget {
+  const HoverTooltip({super.key, required this.message, required this.child});
+
+  final String message;
+  final Widget child;
+
+  @override
+  State<HoverTooltip> createState() => _HoverTooltipState();
+}
+
+class _HoverTooltipState extends State<HoverTooltip> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hovered) {
+      return Tooltip(message: widget.message, child: widget.child);
+    }
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      child: Semantics(tooltip: widget.message, child: widget.child),
     );
   }
 }
@@ -50,6 +134,27 @@ class TooltipLabel extends StatelessWidget {
   }
 }
 
+/// What [EmojiText] draws in which font, below it; without one, emoji keep the
+/// font of the text around them.
+class EmojiFont extends InheritedWidget {
+  const EmojiFont({
+    super.key,
+    required this.family,
+    required this.pattern,
+    required super.child,
+  });
+
+  final String family;
+  final Pattern pattern;
+
+  static EmojiFont? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<EmojiFont>();
+
+  @override
+  bool updateShouldNotify(EmojiFont oldWidget) =>
+      family != oldWidget.family || pattern != oldWidget.pattern;
+}
+
 class EmojiText extends StatelessWidget {
   final String text;
   final TextStyle? style;
@@ -64,10 +169,12 @@ class EmojiText extends StatelessWidget {
     this.style,
   });
 
-  /// The spans [EmojiText] lays [text] out in, emoji in their own font.
-  static TextSpan spanOf(String text, TextStyle? style) {
+  static TextSpan _spanOf(String text, TextStyle? style, EmojiFont? emojiFont) {
+    if (emojiFont == null) {
+      return TextSpan(text: text, style: style);
+    }
     final List<TextSpan> spans = [];
-    final matches = emojiRegex().allMatches(text);
+    final matches = emojiFont.pattern.allMatches(text);
 
     int lastMatchEnd = 0;
     for (final match in matches) {
@@ -83,7 +190,7 @@ class EmojiText extends StatelessWidget {
         TextSpan(
           text: match.group(0),
           style: (style ?? const TextStyle()).copyWith(
-            fontFamily: FontFamily.twEmoji.value,
+            fontFamily: emojiFont.family,
           ),
         ),
       );
@@ -103,7 +210,7 @@ class EmojiText extends StatelessWidget {
         style: MediaQuery.boldTextOf(context)
             ? style.merge(const TextStyle(fontWeight: FontWeight.bold))
             : style,
-        children: [spanOf(text, null)],
+        children: [_spanOf(text, null, EmojiFont.of(context))],
       ),
       textDirection: Directionality.of(context),
       textScaler: MediaQuery.textScalerOf(context),
@@ -120,7 +227,7 @@ class EmojiText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text.rich(
-      spanOf(text, style),
+      _spanOf(text, style, EmojiFont.of(context)),
       style: style,
       maxLines: maxLines,
       overflow: overflow ?? TextOverflow.clip,

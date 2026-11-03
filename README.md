@@ -1,7 +1,7 @@
 # Flrone (Throne for Android)
 
 An Android GUI proxy utility on the [sing-box](https://github.com/SagerNet/sing-box) core: Throne's engine with a
-fully rebuilt Flutter interface in the B-box / FlClash style. Supports Android 7.0 (API 24) and newer, including
+fully rebuilt Flutter interface on the prism UI layer FlClash's dev branch uses. Supports Android 7.0 (API 24) and newer, including
 Android TV.
 
 ## What this repository is
@@ -34,7 +34,7 @@ line — is owned here.
 - Cloudflare WARP: registration (WireGuard or MASQUE identity) and a built-in WARP mode for routing
 - URL, IP / country and speed tests, with a bulk-test panel (live progress, latency histogram, fastest servers, sort / remove unavailable / connect to fastest)
 - The sing-box dashboard built in (live traffic, connections, logs)
-- The home status card shows a vector country flag cropped to its animated badge; tap to show the country code, or long-press to refresh the exit IP
+- The home status card shows the exit's region as a vector flag cropped to its animated clover; tapping the badge re-checks the exit IP, and with the service stopped it reports the address the phone itself uses
 - Core logs and Logcat support level filters, search, pause, clear and redacted export; cancelling the save dialog leaves the logs untouched; known-benign connection-reset errors fold behind a counter, and uncaught app-layer exceptions keep their own seven-day record exportable as one file
 - JSON editor with sing-box schema checking, completion and formatting
 - Home-screen widgets, a quick settings tile, and server switching from the notification

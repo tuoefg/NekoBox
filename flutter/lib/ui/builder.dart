@@ -1,4 +1,5 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/widgets.dart';
 
 typedef WidthWidgetBuilder =
     Widget Function(BuildContext context, double width);
@@ -42,4 +43,43 @@ class _WidthBuilt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => builder(context, width);
+}
+
+/// Keeps the subtree [builder] made while [inputs] stay equal, so whatever the
+/// builder reads from outside its own context belongs in [inputs].
+class MemoBuilder extends StatefulWidget {
+  final List<Object?> inputs;
+  final WidgetBuilder builder;
+
+  const MemoBuilder({super.key, required this.inputs, required this.builder});
+
+  @override
+  State<MemoBuilder> createState() => _MemoBuilderState();
+}
+
+class _MemoBuilderState extends State<MemoBuilder> {
+  Widget? _built;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _built = null;
+  }
+
+  @override
+  void didUpdateWidget(MemoBuilder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!listEquals(oldWidget.inputs, widget.inputs)) {
+      _built = null;
+    }
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    _built = null;
+  }
+
+  @override
+  Widget build(BuildContext context) => _built ??= widget.builder(context);
 }

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 const _maxWidth = 400.0;
 const _maxHeight = 400.0;

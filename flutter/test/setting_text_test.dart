@@ -40,10 +40,13 @@ void main() {
     // An unconfigured one shows the example in its place.
     expect(find.text(example), findsOneWidget);
     // Configuring goes through the dialog, where the example is the field's hint.
+    await tester.ensureVisible(find.text('Simple download URL'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Simple download URL'));
     await tester.pumpAndSettle();
-    expect(find.descendant(of: find.byType(TextFormField), matching: find.text(example)), findsOneWidget);
-    await tester.enterText(find.byType(TextFormField), 'http://example.test/file');
+    expect(find.descendant(of: find.byType(InputDialog), matching: find.text(example)), findsOneWidget);
+    await tester.enterText(find.descendant(of: find.byType(InputDialog),
+      matching: find.byType(EditableText)).first, 'http://example.test/file');
     await tester.tap(find.text('Submit'));
     await tester.pumpAndSettle();
     expect(edits.last, {'key': 'simpleDlUrl', 'value': 'http://example.test/file'});

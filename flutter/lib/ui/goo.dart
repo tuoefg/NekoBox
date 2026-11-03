@@ -3,7 +3,7 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'liquid_glass.dart';
 import 'navigation_dock.dart';
@@ -38,12 +38,8 @@ class GooSurface extends StatelessWidget {
   static bool of(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<_GooScope>() != null;
 
-  static const buttonStyle = ButtonStyle(
-    backgroundColor: WidgetStatePropertyAll(Colors.transparent),
-    backgroundBuilder: _paneBehind,
-  );
-
-  static Widget _paneBehind(
+  /// Stands a button's content on a pane of the surface.
+  static Widget buttonBackground(
     BuildContext context,
     Set<WidgetState> states,
     Widget? child,
@@ -144,10 +140,12 @@ typedef _Placed = ({Rect rect, double lift});
 
 class _RenderGooSurface extends RenderProxyBox {
   _RenderGooSurface({
-    required this._glass,
-    required this._color,
-    required this._shadows,
-  });
+    required LiquidGlassStyle? glass,
+    required Color color,
+    required List<BoxShadow> shadows,
+  }) : _glass = glass,
+       _color = color,
+       _shadows = shadows;
 
   final _panes = <_RenderGooPane>{};
   late final _pane = LiquidGlassPane(markNeedsPaint);

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 import 'package:path_parsing/path_parsing.dart';
 
 enum GlyphRole { body, detail, line }
