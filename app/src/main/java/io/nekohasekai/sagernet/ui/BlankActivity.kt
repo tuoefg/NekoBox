@@ -31,7 +31,10 @@ class BlankActivity : AppCompatActivity() {
                     LogExport.build(this@BlankActivity, redact = true, hideDestinations = false)
                 }
                 SendLog.share(this@BlankActivity, file, getString(R.string.log_crash_title))
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // Throwable, not Exception: a class initializer that this Android build rejects
+                // raises ExceptionInInitializerError, which is an Error — it used to escape here
+                // and crash the screen that exists to report the crash.
                 Logs.w(e)
             }
             finish()
