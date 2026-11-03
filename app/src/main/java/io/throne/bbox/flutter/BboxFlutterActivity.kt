@@ -1,12 +1,18 @@
 package io.throne.bbox.flutter
 
+import android.app.ActivityManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
+import androidx.preference.PreferenceDataStore
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.nekohasekai.sagernet.Key
 import io.nekohasekai.sagernet.SagerNet
+import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.database.preference.OnPreferenceDataStoreChangeListener
+import io.nekohasekai.sagernet.ktx.Logs
 import io.nekohasekai.sagernet.ui.FirstStartPrompts
 import io.nekohasekai.sagernet.ui.WifiPermissionFlow
 import io.nekohasekai.sagernet.utils.CrashHandler
@@ -30,9 +36,15 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  * is written. Those are the only gestures that cannot be answered inside the app, and both are awaited as
  * continuations so the bridge can hand the answer straight back to Dart.
  */
-class BboxFlutterActivity : FlutterFragmentActivity() {
+class BboxFlutterActivity : FlutterFragmentActivity(), OnPreferenceDataStoreChangeListener {
 
     private var bridge: ThroneBoxBridge? = null
+
+    /**
+     * The task this activity lives in, kept because an excluded task drops out of [ActivityManager.getAppTasks]:
+     * once the switch has hidden us, only this reference can put us back.
+     */
+    private var recentsTask: ActivityManager.AppTask? = null
 
     private var openHandler: ((Uri?) -> Unit)? = null
     private var saveHandler: ((Uri?) -> Unit)? = null
@@ -47,10 +59,44 @@ class BboxFlutterActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The switch is written through the bridge, so the change arrives here rather than at the next
+        // resume: the task leaves the recents list the moment the user turns it on.
+        DataStore.configurationStore.registerChangeListener(this)
         if (savedInstanceState == null) {
             firstStart.start()
             if (intent?.getBooleanExtra(PlatformNotifications.EXTRA_WIFI_PERMISSION, false) == true) startWifiFlow()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyHideFromRecentApps(DataStore.hideFromRecentApps)
+    }
+
+    override fun onDestroy() {
+        DataStore.configurationStore.unregisterChangeListener(this)
+        super.onDestroy()
+    }
+
+    override fun onPreferenceDataStoreChanged(store: PreferenceDataStore, key: String) {
+        if (key == Key.HIDE_FROM_RECENT_APPS) applyHideFromRecentApps(DataStore.hideFromRecentApps)
+    }
+
+    /**
+     * Turns the "hide from recent tasks" switch into the task flag Android reads. Applied on resume as well
+     * as on change, so a value stored by an earlier run still holds on the first frame.
+     */
+    private fun applyHideFromRecentApps(hide: Boolean) {
+        val task = runCatching {
+            // A task that is still listed refreshes the reference (a relaunch may have replaced it); an
+            // excluded one is not listed any more, and only the reference kept from before can undo it.
+            getSystemService(ActivityManager::class.java).appTasks
+                .firstOrNull { it.taskInfo.taskId == taskId }
+                ?.also { recentsTask = it }
+        }.getOrNull() ?: recentsTask
+        // A task that ended while the bridge was still writing (a restore that restarts the app) throws here.
+        runCatching { task?.setExcludeFromRecents(hide) }
+            .onFailure { Logs.w("Failed to set excludeFromRecents: ${it.message}") }
     }
 
     /**

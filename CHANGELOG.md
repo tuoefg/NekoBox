@@ -1,3 +1,8 @@
+#### 3.2.1
+
+* The About page wears the app's own icon: the throne's crown on the white plate the launcher draws, cut from the launcher's own artwork at its native resolution. The old B-box cube leaves the bundle with it
+* "Hide from recent tasks" works again: the switch had been left with nothing reading it when the fragment UI retired, so the task stayed in recents however it was set. The Flutter host applies the flag on resume and the moment the switch is flipped — the value arrives through the configuration store, so there is no wait for the next launch — and it keeps its own reference to the task, because an excluded task drops out of `getAppTasks` and that reference is the only way back once the switch is turned off
+
 #### 3.2.0
 
 * The interface moves onto prism, the UI layer FlClash's dev branch rebuilt on (`bb47f2cc`, v0.9.3): the vendored v0.9.2 widget set is replaced by prism_ui 0.1.2 — iOS-style press feedback, text selection with its own edit menu and loupe, sheets that snap, banners, tabs, sliders, checkboxes and text fields, all drawn from one seed colour

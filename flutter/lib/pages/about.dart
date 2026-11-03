@@ -50,8 +50,14 @@ class _AboutPageState extends State<AboutPage> {
     return Scaffold(title: context.tr('About'), isLoading: _checking,
       body: ListView(padding: EdgeInsets.fromLTRB(16, context.contentTopPadding, 16, 32 + context.bottomInset), children: [
         Padding(padding: const EdgeInsets.fromLTRB(24, 16, 24, 0), child: Column(children: [
-          DecoratedBox(decoration: ShapeDecoration(color: context.raisedSurfaceLevel.colorOf(colors), shape: AppShape.all(AppCorner.fit(96))),
-            child: Padding(padding: const EdgeInsets.all(14), child: Image.asset('assets/images/icon.png', width: 68, height: 68))),
+          // The launcher's own artwork: the throne's crown on its white plate, drawn at the proportions
+          // the system shows it at, so the picture here is the picture on the home screen.
+          DecoratedBox(decoration: ShapeDecoration(
+            color: const Color(0xFFFFFFFF),
+            shape: AppShape.all(22).copyWith(side: const BorderSide(color: Color(0x14000000), width: 0.5)),
+            shadows: const [BoxShadow(color: Color(0x14000000), blurRadius: 18, offset: Offset(0, 6))],
+          ), child: SizedBox.square(dimension: 96, child: Center(child:
+            Image.asset('assets/images/throne_mark.png', width: 67, filterQuality: FilterQuality.medium)))),
           const SizedBox(height: 20),
           Text('Flrone', style: AppTextStyle.title2.of(context, emphasized: true)),
           const SizedBox(height: 10),
