@@ -1,0 +1,29 @@
+name: Import FlClash UI branch
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: Source repository to mirror
+        default: yuedaochangmendian/throne-flclash-ui
+      target_branch:
+        description: Branch to create in this repository
+        default: flclash-ui
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror source into the target branch
+        env:
+          SRC: ${{ inputs.source }}
+          TARGET: ${{ inputs.target_branch }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git clone --mirror "https://github.com/${SRC}.git" src.git
+          cd src.git
+          echo "source HEAD: $(git log --oneline -1)"
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git"
+          git push --force origin "refs/heads/main:refs/heads/${TARGET}"
+          echo "IMPORTED ${SRC} -> ${TARGET}"
