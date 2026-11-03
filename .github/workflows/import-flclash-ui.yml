@@ -14,15 +14,30 @@ jobs:
   import:
     runs-on: ubuntu-latest
     steps:
-      - name: Mirror source into the target branch
+      - name: Import source into the target branch (workflow files excluded)
         env:
           SRC: ${{ inputs.source }}
           TARGET: ${{ inputs.target_branch }}
           TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git clone --bare "https://github.com/${SRC}.git" src.git
-          cd src.git
-          echo "source HEAD: $(git log --oneline -1)"
-          git push --force "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git" "refs/heads/main:refs/heads/${TARGET}"
-          echo "IMPORTED ${SRC} -> ${TARGET}"
+          git clone "https://github.com/${SRC}.git" src
+          cd src
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          # GITHUB_TOKEN may not create or update workflow files, so they are added
+          # afterwards through the API with a token that carries the workflow scope.
+          git rm -r --quiet .github/workflows
+          git commit --quiet -m "import: drop workflow files (added through the API, they need the workflow scope)"
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${{ github.repository }}.git"
+          if git push --force origin "HEAD:refs/heads/${TARGET}"; then
+            echo "IMPORT_MODE=history"
+          else
+            echo "history push rejected; falling back to a squashed import"
+            git checkout --orphan squashed
+            git add -A
+            git commit --quiet -m "import: ${SRC} (squashed, workflow files added through the API)"
+            git push --force origin "squashed:refs/heads/${TARGET}"
+            echo "IMPORT_MODE=squashed"
+          fi
+          git log --oneline -1
