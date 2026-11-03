@@ -6,6 +6,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.os.Process
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -24,6 +25,10 @@ object CrashStore {
     @Volatile
     internal var clock: () -> Long = { System.currentTimeMillis() }
 
+    // The mockable android.os.Process stub throws on the JVM; tests inject 0.
+    @Volatile
+    internal var pid: () -> Int = { runCatching { Process.myPid() }.getOrDefault(0) }
+
     private val serial = AtomicInteger()
 
     private fun storage(): File = dir ?: File(app.filesDir, "crashes").apply { mkdirs() }
@@ -35,7 +40,7 @@ object CrashStore {
     /** Writes one crash record; returns the file, or null when the disk said no. */
     fun record(thread: Thread, throwable: Throwable): File? {
         val at = clock()
-        val name = "crash-${stamp(at)}-%04d.log".format(serial.incrementAndGet())
+        val name = "crash-%s-%05d-%04d.log".format(Locale.US, stamp(at), pid(), serial.incrementAndGet())
         val file = File(storage(), name)
         val written = runCatching {
             file.writeText(

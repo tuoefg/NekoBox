@@ -1,7 +1,14 @@
+#### 3.1.1
+
+* Log export works again: the redaction patterns used nested possessive quantifiers that the desktop JVM accepts but Android's ICU regex engine rejects while the class initializes, so "Export" crashed the app on every device (and the crash screen crashed again, restarting in a loop). Every pattern is now plain, compiled defensively one by one, and each redaction pass is contained: a rule that cannot compile or apply leaves the line alone instead of taking the export down
+* Crash restarts are rate-limited: a crash raised by the startup path itself no longer restarts into the same crash forever — after two restarts inside a minute the app stays down and the record on disk is what gets reported
+* The crash-report screen catches Throwable, not Exception, so an `ExceptionInInitializerError` (the type this bug raised) can no longer escape the screen that exists to report crashes
+* A unit test now runs every pattern over realistic log lines and guards the redactor against possessive quantifiers
+
 #### 3.1.0
 
 * The hardening round ships here (its code rode the 3.0.13 build): the core log folds the sing-box lazy handshake's known-benign connection-reset errors behind a counting chip, a long single-line log line wraps inside its tile instead of overflowing it, tapping a record copies it
-* Crashes keep a durable seven-day record beside the rotating core.log, exported as one redacted file from the logs page
+* Uncaught app-layer exceptions keep a durable seven-day record beside the rotating core.log, exported as one redacted file from the logs page
 * CI gates: the Dart/Kotlin channel contract is audited on every push, the freshly built Flutter AAR is scanned for APIs the pinned kotlin-stdlib/coroutines do not provide, and `flutter analyze --fatal-infos` keeps the module at zero lint debt (167 stale infos cleared)
 * The update integrity gate is a plain JVM surface with rejection tests; `docs/device-checklist.md` documents the pre-release device gate
 * The README and design docs describe this distribution on its own terms; `docs/roadmap.md` carries the development plan

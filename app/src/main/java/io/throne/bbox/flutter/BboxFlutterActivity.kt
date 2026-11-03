@@ -9,6 +9,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.ui.FirstStartPrompts
 import io.nekohasekai.sagernet.ui.WifiPermissionFlow
+import io.nekohasekai.sagernet.utils.CrashHandler
 import io.nekohasekai.sagernet.utils.PlatformNotifications
 import io.throne.bbox.bridge.BboxCommands
 import kotlin.coroutines.resume
@@ -67,6 +68,9 @@ class BboxFlutterActivity : FlutterFragmentActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         bridge = ThroneBoxBridge(this, flutterEngine.dartExecutor.binaryMessenger).also { it.attach() }
+        // The UI really came up: give the next crash its full restart budget back, so a
+        // startup crash that always recurs cannot restart the app forever.
+        CrashHandler.noteStarted()
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {

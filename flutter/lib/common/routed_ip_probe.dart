@@ -41,9 +41,10 @@ class RoutedIpProbe implements IpProbeTransport {
       final result = json(await box.call('dashboard.probe.get', {'id': id, 'url': url, 'timeoutMillis': timeout.inMilliseconds}));
       if (cancelled || _closed) throw const IpProbeCancelled();
       return IpProbeResponse(status: (result['status'] as num?)?.toInt() ?? 503, body: result['body'] as String? ?? '');
-    } on PlatformException catch (error) {
+    } on PlatformException {
+      // Timeouts surface through the Dart-side .timeout() in ip_quality.dart; the
+      // bridge reports failures as code "failed" and cancellations as "cancelled".
       if (cancelled || _closed) throw const IpProbeCancelled();
-      if (error.message?.contains('deadline exceeded') == true) throw TimeoutException('IP source timed out');
       rethrow;
     }
   }

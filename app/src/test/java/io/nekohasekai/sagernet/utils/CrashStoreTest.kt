@@ -20,6 +20,7 @@ class CrashStoreTest {
     fun reset() {
         CrashStore.dir = null
         CrashStore.clock = { System.currentTimeMillis() }
+        CrashStore.pid = { 0 }
     }
 
     private fun install() {
