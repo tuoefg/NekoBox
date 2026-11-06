@@ -129,12 +129,11 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
     val compactRows by lazy { DataStore.compactProfileRows }
 
     /**
-     * Double column (groupLayoutMode 1): the compact card, two columns at least (the width may give more). Landscape
-     * only, switched from the toolbar; portrait always lists single column cards.
+     * Double column (groupLayoutMode 1): the compact card, two columns at least (the width may give more). Switched
+     * from the toolbar in either orientation (NekoBox keeps the portrait switch upstream dropped in 2.0.6).
      */
     var doubleColumn = false
         private set
-    private var landscape = false
 
     val groupMenu = GroupMenu(this)
     val selection = SelectionMode(this)
@@ -216,8 +215,7 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val config = resources.configuration
-        landscape = config.screenWidthDp > config.screenHeightDp
-        doubleColumn = landscape && DataStore.groupLayoutMode == 1
+        doubleColumn = DataStore.groupLayoutMode == 1
         readProfileState()
 
         setUpToolbar()
@@ -687,17 +685,17 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
     }
 
     fun setDoubleColumn(value: Boolean) {
-        if (value == doubleColumn || !landscape) return
+        if (value == doubleColumn) return
         doubleColumn = value
         runOnDefaultDispatcher { DataStore.groupLayoutMode = if (value) 1 else 0 }
         lists.forEach { it.switchLayout() }
         updateLayoutAction()
     }
 
-    /** The toolbar's layout switch shows the layout it switches to; setGroupVisible brings it back in portrait too. */
+    /** The toolbar's layout switch shows the layout it switches to; visible in both orientations. */
     private fun updateLayoutAction() {
         val item = toolbar?.menu?.findItem(R.id.action_layout) ?: return
-        item.isVisible = landscape && !select && !selection.active
+        item.isVisible = !select && !selection.active
         item.setIcon(if (doubleColumn) R.drawable.ic_baseline_view_list_24 else R.drawable.ic_baseline_grid_view_24)
         item.setTitle(if (doubleColumn) R.string.layout_single_column else R.string.layout_double_column)
     }
