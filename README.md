@@ -51,7 +51,7 @@ NekoBox（猫盒）是一只住在 Android 设备里的 GUI 代理猫，帮你�
 
 **协议（挑食？不存在的）：**
 
-SOCKS · HTTP(S) · Shadowsocks · Trojan · VMess · VLESS · TUIC · Hysteria / Hysteria2 · AnyTLS · Mieru · Snell · NaïveProxy · Juicity · TrustTunnel · ShadowTLS · WireGuard · AmneziaWG · MASQUE · SSH · Xray VLESS · OpenVPN / OpenConnect · 自定义出站（sing-box & Xray）· 链式出站
+SOCKS · HTTP(S) · Shadowsocks · Trojan · VMess · VLESS · TUIC · Hysteria / Hysteria2 · AnyTLS · Mieru · Snell · NaïveProxy · Juicity · TrustTunnel · ShadowTLS · WireGuard · AmneziaWG · MASQUE · SSH · **DNSTT / VayDNS** · **MasterDNS** · **Xray VLESS（XHTTP / XDrive）** · OpenVPN / OpenConnect · 自定义出站（sing-box & Xray）· 链式出站
 
 **订阅格式：**
 
@@ -60,13 +60,13 @@ SOCKS · HTTP(S) · Shadowsocks · Trojan · VMess · VLESS · TUIC · Hysteria 
 
 ## 📦 去哪领养？
 
-按你的设备挑一只（当前推荐 **v2.0.4**）：
+按你的设备挑一只（当前推荐 **v2.0.6**）：
 
 | 你的设备 | 领养链接 |
 | --- | --- |
-| 📱 现代手机（ARMv8） | [![APK ARMv8](https://img.shields.io/badge/APK-ARMv8-168039.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.4/NekoBox-2.0.4-arm64-v8a.apk) |
-| 📱 老手机（ARMv7） | [![APK ARMv7](https://img.shields.io/badge/APK-ARMv7-45bf55.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.4/NekoBox-2.0.4-armeabi-v7a.apk) |
-| 💻 模拟器 / x64 设备 | [![APK x64](https://img.shields.io/badge/APK-x64-96ed89.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.4/NekoBox-2.0.4-x86_64.apk) |
+| 📱 现代手机（ARMv8） | [![APK ARMv8](https://img.shields.io/badge/APK-ARMv8-168039.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.6/NekoBox-2.0.6-arm64-v8a.apk) |
+| 📱 老手机（ARMv7） | [![APK ARMv7](https://img.shields.io/badge/APK-ARMv7-45bf55.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.6/NekoBox-2.0.6-armeabi-v7a.apk) |
+| 💻 模拟器 / x64 设备 | [![APK x64](https://img.shields.io/badge/APK-x64-96ed89.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.6/NekoBox-2.0.6-x86_64.apk) |
 
 - 🗂️ 全部版本看这里：[Releases](https://github.com/tuoefg/NekoBox/releases) · 每天吃了啥见 [CHANGELOG](CHANGELOG.md)
 - 🩺 下载后可以对一下 `SHA256SUMS`——这是猫的体检报告，确认没被调包
@@ -83,6 +83,8 @@ cd NekoBox
 ```
 
 或者用 Android Studio 打开项目，插上手机，点 ▶️ Run。就这么多，猫会自己长大。
+
+> 🤖 懒得自己孵？上游每天自动同步 + 自动构建发版，你也可以只负责撸猫。
 
 ## 🙏 家谱与隔壁的好猫们
 

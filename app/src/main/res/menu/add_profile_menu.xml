@@ -5,7 +5,7 @@
         <item
             android:id="@+id/action_search"
             android:title="@android:string/search_go"
-            app:actionViewClass="androidx.appcompat.widget.SearchView"
+            app:actionViewClass="io.nekohasekai.sagernet.widget.ToolbarSearchView"
             app:showAsAction="always" />
 
         <item
@@ -91,6 +91,12 @@
                         <item
                             android:id="@+id/action_new_openconnect"
                             android:title="@string/action_openconnect" />
+                        <item
+                            android:id="@+id/action_new_dnstt"
+                            android:title="@string/action_dnstt" />
+                        <item
+                            android:id="@+id/action_new_masterdns"
+                            android:title="@string/action_masterdns" />
                         <item
                             android:id="@+id/action_new_direct"
                             android:title="@string/action_direct" />
