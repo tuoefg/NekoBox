@@ -62,9 +62,6 @@
                             android:id="@+id/action_new_tuic"
                             android:title="@string/action_tuic" />
                         <item
-                            android:id="@+id/action_new_juicity"
-                            android:title="@string/action_juicity" />
-                        <item
                             android:id="@+id/action_new_shadowtls"
                             android:title="@string/action_shadowtls" />
                         <item
@@ -268,6 +265,10 @@
                                 android:id="@+id/action_show_out_ip"
                                 android:checkable="true"
                                 android:title="@string/profiles_show_out_ip" />
+                            <item
+                                android:id="@+id/action_show_services"
+                                android:checkable="true"
+                                android:title="@string/service_check_services" />
                             <item
                                 android:id="@+id/action_show_speed"
                                 android:checkable="true"

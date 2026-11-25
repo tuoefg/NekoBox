@@ -51,22 +51,20 @@ NekoBox（猫盒）是一只住在 Android 设备里的 GUI 代理猫，帮你�
 
 **协议（挑食？不存在的）：**
 
-SOCKS · HTTP(S) · Shadowsocks · Trojan · VMess · VLESS · TUIC · Hysteria / Hysteria2 · AnyTLS · Mieru · Snell · NaïveProxy · Juicity · TrustTunnel · ShadowTLS · WireGuard · AmneziaWG · MASQUE · SSH · **DNSTT / VayDNS** · **MasterDNS** · **Xray VLESS（XHTTP / XDrive）** · OpenVPN / OpenConnect · 自定义出站（sing-box & Xray）· 链式出站
+SOCKS · HTTP(S) · Shadowsocks · Trojan · VMess · VLESS · TUIC · Hysteria / Hysteria2 · AnyTLS · Mieru · Snell · NaïveProxy · TrustTunnel · ShadowTLS · WireGuard · AmneziaWG · MASQUE · SSH · **DNSTT / VayDNS** · **MasterDNS** · **Xray VLESS（XHTTP / XDrive）** · OpenVPN / OpenConnect · 自定义出站（sing-box & Xray）· 链式出站
 
-**订阅格式：**
-
-分享链接、各类 sing-box JSON、v2rayN 链接格式，以及有限的 Shadowsocks / Clash 格式支持。
-（只导入出站节点，订阅里的分流规则会被礼貌地无视掉。）
+**订阅：** 分享链接、各类 sing-box JSON、v2rayN 链接格式，以及有限的 Shadowsocks / Clash 格式支持；
+还支持按国家 / 地区筛选节点（只导入出站节点，订阅里的分流规则会被礼貌地无视掉）。
 
 ## 📦 去哪领养？
 
-按你的设备挑一只（当前推荐 **v2.0.9**）：
+按你的设备挑一只（当前推荐 **v2.0.10**）：
 
 | 你的设备 | 领养链接 |
 | --- | --- |
-| 📱 现代手机（ARMv8） | [![APK ARMv8](https://img.shields.io/badge/APK-ARMv8-168039.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.9/NekoBox-2.0.9-arm64-v8a.apk) |
-| 📱 老手机（ARMv7） | [![APK ARMv7](https://img.shields.io/badge/APK-ARMv7-45bf55.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.9/NekoBox-2.0.9-armeabi-v7a.apk) |
-| 💻 模拟器 / x64 设备 | [![APK x64](https://img.shields.io/badge/APK-x64-96ed89.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.9/NekoBox-2.0.9-x86_64.apk) |
+| 📱 现代手机（ARMv8） | [![APK ARMv8](https://img.shields.io/badge/APK-ARMv8-168039.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.10/NekoBox-2.0.10-arm64-v8a.apk) |
+| 📱 老手机（ARMv7） | [![APK ARMv7](https://img.shields.io/badge/APK-ARMv7-45bf55.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.10/NekoBox-2.0.10-armeabi-v7a.apk) |
+| 💻 模拟器 / x64 设备 | [![APK x64](https://img.shields.io/badge/APK-x64-96ed89.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.0.10/NekoBox-2.0.10-x86_64.apk) |
 
 - 🗂️ 全部版本看这里：[Releases](https://github.com/tuoefg/NekoBox/releases) · 每天吃了啥见 [CHANGELOG](CHANGELOG.md)
 - 🩺 下载后可以对一下 `SHA256SUMS`——这是猫的体检报告，确认没被调包

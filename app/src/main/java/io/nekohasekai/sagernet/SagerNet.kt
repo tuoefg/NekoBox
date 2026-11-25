@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.res.Configuration
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
@@ -20,12 +21,14 @@ import androidx.core.content.getSystemService
 import io.nekohasekai.sagernet.appwidget.Widgets
 import io.nekohasekai.sagernet.bg.CoreRuntime
 import io.nekohasekai.sagernet.bg.SagerConnection
+import io.nekohasekai.sagernet.bg.VpnAuthRuntime
 import io.nekohasekai.sagernet.bg.autoselector.AutoSelectorRuntime
 import io.nekohasekai.sagernet.database.DataStore
 import io.nekohasekai.sagernet.database.SettingsMapper
 import io.nekohasekai.sagernet.group.RemoteRouteUpdater
 import io.nekohasekai.sagernet.group.SubscriptionScheduler
 import io.nekohasekai.sagernet.ktx.Logs
+import io.nekohasekai.sagernet.ktx.broadcastReceiver
 import io.nekohasekai.sagernet.ktx.isOss
 import io.nekohasekai.sagernet.ktx.runOnDefaultDispatcher
 import io.nekohasekai.sagernet.ui.MainActivity
@@ -86,6 +89,15 @@ class SagerNet : Application(),
         if (isMainProcess) {
             Theme.apply(this)
             Theme.applyNightTheme()
+            // Theme resolves "follow battery saver" itself, so the saver's changes are followed here.
+            ContextCompat.registerReceiver(
+                this,
+                broadcastReceiver { _, _ ->
+                    if (DataStore.nightTheme == Theme.NIGHT_AUTO_BATTERY) Theme.applyNightTheme()
+                },
+                IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED),
+                ContextCompat.RECEIVER_NOT_EXPORTED,
+            )
             AppLocale.apply()
             UpdateManager.onAppStart(this)
             runOnDefaultDispatcher {
@@ -122,11 +134,10 @@ class SagerNet : Application(),
 
     // Enqueueing (RemoteWorkManagerService) and SystemJobService live in the main process, so the reschedule after a
     // reboot, force-stop or update (ForceStopRunnable, default process only) must run there too; workers hop to :bg.
-    override fun getWorkManagerConfiguration(): WorkConfiguration {
-        return WorkConfiguration.Builder()
+    override val workManagerConfiguration: WorkConfiguration
+        get() = WorkConfiguration.Builder()
             .setDefaultProcessName(BuildConfig.APPLICATION_ID)
             .build()
-    }
 
     @SuppressLint("InlinedApi")
     companion object {
@@ -204,6 +215,10 @@ class SagerNet : Application(),
                             PlatformNotifications.CHANNEL_WARNINGS,
                             application.getText(R.string.channel_warnings),
                             NotificationManager.IMPORTANCE_DEFAULT
+                        ), NotificationChannel(
+                            VpnAuthRuntime.CHANNEL,
+                            application.getText(R.string.channel_vpn_sign_in),
+                            NotificationManager.IMPORTANCE_HIGH
                         )
                     )
                 )
