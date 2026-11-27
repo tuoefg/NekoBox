@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="liquid_canvas_start">#070C17</color>
+    <color name="liquid_canvas_center">#0E172A</color>
+    <color name="liquid_canvas_end">#060A13</color>
+
+    <color name="liquid_glass_fill">#CC162236</color>
+    <color name="liquid_glass_fill_strong">#E818253B</color>
+    <color name="liquid_glass_sheen_top">#42FFFFFF</color>
+    <color name="liquid_glass_sheen_mid">#12FFFFFF</color>
+    <color name="liquid_glass_stroke">#62FFFFFF</color>
+    <color name="liquid_glass_inner_rim">#28FFFFFF</color>
+
+    <color name="liquid_drawer_fill">#EE111B2E</color>
+    <color name="liquid_squircle_bg">#22FFFFFF</color>
+    <color name="liquid_squircle_stroke">#48FFFFFF</color>
+    <color name="liquid_divider">#24FFFFFF</color>
+    <color name="liquid_tab_pill">#3AFFFFFF</color>
+    <color name="liquid_tab_pill_stroke">#6AFFFFFF</color>
+    <color name="liquid_snackbar_fill">#EB1C2A42</color>
+    <color name="liquid_snackbar_stroke">#5EFFFFFF</color>
+    <color name="liquid_ink_primary">#F8FAFC</color>
+    <color name="liquid_ink_secondary">#9CA8BE</color>
+</resources>

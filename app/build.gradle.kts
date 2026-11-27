@@ -59,6 +59,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.recyclerview:recyclerview:1.3.0")
+    implementation("androidx.dynamicanimation:dynamicanimation:1.0.0")
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
     implementation("androidx.activity:activity-ktx:1.11.0")
     implementation("androidx.fragment:fragment-ktx:1.5.7")
     implementation("androidx.browser:browser:1.10.0")

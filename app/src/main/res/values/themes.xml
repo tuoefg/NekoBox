@@ -54,6 +54,8 @@
         <item name="tabStyle">@style/Widget.SagerNet.TabLayout</item>
         <item name="dialogButtonColor">?attr/primaryOrTextPrimary</item>
         <item name="preferenceTheme">@style/PreferenceThemeOverlay.SagerNet</item>
+        <item name="appTextPrimary">?android:textColorPrimary</item>
+        <item name="appTextSecondary">?android:textColorSecondary</item>
 
     </style>
 

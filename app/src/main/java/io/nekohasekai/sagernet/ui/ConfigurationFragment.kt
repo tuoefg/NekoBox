@@ -60,6 +60,9 @@ import io.nekohasekai.sagernet.ui.test.TestUiState
 import io.nekohasekai.sagernet.utils.Theme
 import io.nekohasekai.sagernet.widget.applyInsetMargin
 import io.nekohasekai.sagernet.widget.applyInsetPadding
+import io.nekohasekai.sagernet.ui.motion.LiquidMotion.attachLiquidPageTransformer
+import io.nekohasekai.sagernet.ui.motion.LiquidMotion.attachLiquidTabPop
+import io.nekohasekai.sagernet.ui.theme.LiquidGlass
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -258,6 +261,11 @@ class ConfigurationFragment : ToolbarFragment(R.layout.layout_group_list),
             }
         }.also { it.attach() }
         pager.registerOnPageChangeCallback(pageCallback)
+        // Liquid Glass: spring page transition between groups and a pop on the tabs
+        if (!LiquidGlass.isClassic()) {
+            pager.attachLiquidPageTransformer()
+            tabLayout.attachLiquidTabPop()
+        }
         onPageShown()
 
         GroupRepo.addListener(this)

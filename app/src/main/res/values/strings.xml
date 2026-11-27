@@ -3487,4 +3487,17 @@
     <string name="scan_resolver_editor_takes">The open editor of \"%1$s\" now takes resolvers from the IP list \"%2$s\"; save the profile there to keep it.</string>
     <string name="scan_resolver_profile_store_failed">Failed to store the profile.</string>
     <string name="scan_resolver_profile_takes">\"%1$s\" now takes resolvers from the IP list \"%2$s\".</string>
+    <string name="liquid_ui">Liquid Glass</string>
+    <string name="liquid_ui_sum">Spring motion, frosted glass cards and dialog blur</string>
+    <string name="liquid_settings_sum">Tune the glass look and the spring motion</string>
+    <string name="liquid_enabled">Liquid Glass UI</string>
+    <string name="liquid_enabled_sum">Turn off for the plain system look</string>
+    <string name="liquid_power_save">Respect battery saver</string>
+    <string name="liquid_power_save_sum">Drop the motion effects while the system is in battery saver</string>
+    <string name="liquid_jelly">Jelly touch</string>
+    <string name="liquid_blur">Dialog blur</string>
+    <string name="liquid_glow">Ambient glow</string>
+    <string name="liquid_scroll">Elastic scroll</string>
+    <string name="liquid_haptics">Touch feedback</string>
+    <string name="liquid_haptics_sum">Short vibration on taps</string>
 </resources>

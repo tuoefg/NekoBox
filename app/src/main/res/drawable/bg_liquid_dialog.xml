@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/liquid_glass_fill_strong" />
+            <corners android:radius="28dp" />
+            <stroke
+                android:width="1.3dp"
+                android:color="@color/liquid_glass_stroke" />
+        </shape>
+    </item>
+    <item
+        android:bottom="1.3dp"
+        android:left="1.3dp"
+        android:right="1.3dp"
+        android:top="1.3dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="26.7dp" />
+            <stroke
+                android:width="1dp"
+                android:color="@color/liquid_glass_inner_rim" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="270"
+                android:centerColor="@color/liquid_glass_sheen_mid"
+                android:endColor="@android:color/transparent"
+                android:startColor="@color/liquid_glass_sheen_top"
+                android:type="linear" />
+            <corners android:radius="28dp" />
+        </shape>
+    </item>
+</layer-list>

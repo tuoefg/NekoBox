@@ -4,4 +4,20 @@
     <item name="inset_margin_base" type="id" />
     <item name="action_previous_server" type="id" />
     <item name="action_next_server" type="id" />
+
+    <!-- Liquid Glass motion tags (view tag ids reused as spring / state holders) -->
+    <item name="liquid_tag_spring_x" type="id" />
+    <item name="liquid_tag_spring_y" type="id" />
+    <item name="liquid_tag_spring_tx" type="id" />
+    <item name="liquid_tag_spring_ty" type="id" />
+    <item name="liquid_tag_spring_rx" type="id" />
+    <item name="liquid_tag_spring_ry" type="id" />
+    <item name="liquid_tag_spring_rot" type="id" />
+    <item name="liquid_tag_touch_glow" type="id" />
+    <item name="liquid_tag_jelly_attached" type="id" />
+    <item name="liquid_tag_scroll_attached" type="id" />
+    <item name="liquid_tag_dialog_polished" type="id" />
+    <item name="liquid_tag_header_inset" type="id" />
+    <item name="liquid_tag_pref_styled" type="id" />
+    <item name="liquid_tag_left_icon_target" type="id" />
 </resources>

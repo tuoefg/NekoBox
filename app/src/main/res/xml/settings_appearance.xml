@@ -36,6 +36,15 @@
             app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
 
+    <PreferenceCategory app:title="@string/liquid_ui">
+        <androidx.preference.Preference
+            android:persistent="false"
+            app:fragment="io.nekohasekai.sagernet.ui.LiquidSettingsFragment"
+            app:icon="@drawable/ic_baseline_color_lens_24"
+            app:summary="@string/liquid_settings_sum"
+            app:title="@string/liquid_ui" />
+    </PreferenceCategory>
+
     <PreferenceCategory app:title="@string/cag_profile_list">
         <SwitchPreference
             app:icon="@drawable/ic_baseline_center_focus_weak_24"

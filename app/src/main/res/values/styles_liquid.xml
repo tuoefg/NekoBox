@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="ShapeAppearance.SagerNet.LiquidSmall" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <style name="ShapeAppearance.SagerNet.LiquidMedium" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">22dp</item>
+    </style>
+
+    <style name="ShapeAppearance.SagerNet.LiquidLarge" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">28dp</item>
+    </style>
+
+    <style name="ShapeAppearance.SagerNet.LiquidDialog" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">28dp</item>
+    </style>
+
+    <style name="ShapeAppearance.SagerNet.LiquidFab" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">22dp</item>
+    </style>
+
+    <style name="ShapeAppearance.SagerNet.LiquidPill" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">50%</item>
+    </style>
+
+    <style name="Animation.SagerNet.LiquidDialog" parent="Animation.AppCompat.Dialog">
+        <item name="android:windowEnterAnimation">@anim/liquid_dialog_enter</item>
+        <item name="android:windowExitAnimation">@anim/liquid_dialog_exit</item>
+    </style>
+
+    <style name="Animation.SagerNet.LiquidPopup" parent="">
+        <item name="android:windowEnterAnimation">@anim/liquid_popup_enter</item>
+        <item name="android:windowExitAnimation">@anim/liquid_popup_exit</item>
+    </style>
+
+    <style name="Widget.SagerNet.LiquidPopupMenu" parent="Widget.MaterialComponents.PopupMenu">
+        <item name="android:popupBackground">@drawable/bg_liquid_popup</item>
+        <item name="android:popupElevation">10dp</item>
+        <item name="android:dropDownVerticalOffset">6dp</item>
+        <item name="android:popupAnimationStyle">@style/Animation.SagerNet.LiquidPopup</item>
+    </style>
+
+    <style name="Widget.SagerNet.LiquidOverflowMenu" parent="Widget.MaterialComponents.PopupMenu.Overflow">
+        <item name="android:popupBackground">@drawable/bg_liquid_popup</item>
+        <item name="android:popupElevation">10dp</item>
+        <item name="android:dropDownVerticalOffset">6dp</item>
+        <item name="android:popupAnimationStyle">@style/Animation.SagerNet.LiquidPopup</item>
+    </style>
+
+    <style name="ThemeOverlay.SagerNet.LiquidPopup" parent="ThemeOverlay.AppCompat.DayNight">
+        <item name="popupMenuStyle">@style/Widget.SagerNet.LiquidPopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/Widget.SagerNet.LiquidOverflowMenu</item>
+        <item name="android:popupMenuStyle">@style/Widget.SagerNet.LiquidPopupMenu</item>
+    </style>
+</resources>

@@ -16,6 +16,10 @@
          colorPrimary (white on white, dark grey on dark) -->
     <attr name="selectionChipStyle" format="reference" />
 
+    <!-- Liquid Glass text tints; fall back to the theme text colours when unset -->
+    <attr name="appTextPrimary" format="color" />
+    <attr name="appTextSecondary" format="color" />
+
     <!-- JSON editor preference -->
     <declare-styleable name="EditConfigPreference">
         <!-- Schema roots of the document, `|`-separated JSON pointers into assets/schema/sing-box.json ("#" = the whole config). -->

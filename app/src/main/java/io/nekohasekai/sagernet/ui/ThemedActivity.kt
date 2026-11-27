@@ -15,6 +15,9 @@ import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.snackbar.Snackbar
 import io.nekohasekai.sagernet.R
+import io.nekohasekai.sagernet.ui.theme.LiquidGlass
+import io.nekohasekai.sagernet.ui.theme.LiquidGlass.applyLiquidSnackbar
+import io.nekohasekai.sagernet.ui.theme.LiquidGlass.applyLiquidToolbarPolish
 import io.nekohasekai.sagernet.utils.Theme
 import io.nekohasekai.sagernet.widget.applyTopInset
 
@@ -72,6 +75,10 @@ abstract class ThemedActivity : AppCompatActivity {
     override fun onContentChanged() {
         super.onContentChanged()
         findViewById<AppBarLayout>(R.id.appbar)?.applyTopInset()
+        // Liquid Glass: frosted toolbar, matching the cards and dialogs
+        if (!LiquidGlass.isClassic()) {
+            findViewById<androidx.appcompat.widget.Toolbar>(R.id.toolbar)?.applyLiquidToolbarPolish()
+        }
     }
 
     override fun setTheme(resId: Int) {
@@ -97,6 +104,8 @@ abstract class ThemedActivity : AppCompatActivity {
     }
 
     internal open fun snackbarInternal(text: CharSequence): Snackbar =
-        Snackbar.make(findViewById(android.R.id.content), text, Snackbar.LENGTH_LONG)
+        Snackbar.make(findViewById(android.R.id.content), text, Snackbar.LENGTH_LONG).also { bar ->
+            if (!LiquidGlass.isClassic()) bar.applyLiquidSnackbar()
+        }
 
 }

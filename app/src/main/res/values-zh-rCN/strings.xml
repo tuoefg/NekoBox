@@ -3240,4 +3240,17 @@
     <string name="scan_resolver_editor_takes">已打开的 \"%1$s\" 编辑器现在从 IP 列表 \"%2$s\" 获取解析器；请在该编辑器中保存配置以保留此更改。</string>
     <string name="scan_resolver_profile_store_failed">保存配置失败。</string>
     <string name="scan_resolver_profile_takes">\"%1$s\" 现在从 IP 列表 \"%2$s\" 获取解析器。</string>
+    <string name="liquid_ui">液态玻璃</string>
+    <string name="liquid_ui_sum">弹簧动效、磨砂玻璃卡片与对话框模糊</string>
+    <string name="liquid_settings_sum">调整玻璃观感与弹簧动效</string>
+    <string name="liquid_enabled">液态玻璃 UI</string>
+    <string name="liquid_enabled_sum">关闭后回到朴素的系统外观</string>
+    <string name="liquid_power_save">跟随省电模式</string>
+    <string name="liquid_power_save_sum">系统进入省电模式时自动降级动效</string>
+    <string name="liquid_jelly">果冻触感</string>
+    <string name="liquid_blur">对话框模糊</string>
+    <string name="liquid_glow">环境光晕</string>
+    <string name="liquid_scroll">弹性滚动</string>
+    <string name="liquid_haptics">触感反馈</string>
+    <string name="liquid_haptics_sum">点击时的短促振动</string>
 </resources>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/liquid_ui">
+
+        <SwitchPreference
+            app:defaultValue="true"
+            app:key="enabled"
+            app:summary="@string/liquid_enabled_sum"
+            app:title="@string/liquid_enabled" />
+
+        <SwitchPreference
+            app:defaultValue="true"
+            app:key="respect_power_save"
+            app:summary="@string/liquid_power_save_sum"
+            app:title="@string/liquid_power_save" />
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="1"
+            app:entries="@array/liquid_level_entries"
+            app:entryValues="@array/liquid_level_values"
+            app:key="jelly_level"
+            app:title="@string/liquid_jelly"
+            app:useSimpleSummaryProvider="true" />
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="3"
+            app:entries="@array/liquid_level_entries"
+            app:entryValues="@array/liquid_level_values"
+            app:key="dialog_blur_level"
+            app:title="@string/liquid_blur"
+            app:useSimpleSummaryProvider="true" />
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="1"
+            app:entries="@array/liquid_level_entries"
+            app:entryValues="@array/liquid_level_values"
+            app:key="ambient_glow_level"
+            app:title="@string/liquid_glow"
+            app:useSimpleSummaryProvider="true" />
+
+        <moe.matsuri.nb4a.ui.SimpleMenuPreference
+            app:defaultValue="1"
+            app:entries="@array/liquid_level_entries"
+            app:entryValues="@array/liquid_level_values"
+            app:key="scroll_level"
+            app:title="@string/liquid_scroll"
+            app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreference
+            app:defaultValue="true"
+            app:key="haptics"
+            app:summary="@string/liquid_haptics_sum"
+            app:title="@string/liquid_haptics" />
+
+    </PreferenceCategory>
+</PreferenceScreen>

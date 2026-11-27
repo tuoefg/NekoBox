@@ -29,6 +29,8 @@ import io.nekohasekai.sagernet.ui.ThemedActivity
 import io.nekohasekai.sagernet.widget.UndoSnackbarManager
 import io.nekohasekai.sagernet.widget.applyListInsets
 import io.nekohasekai.sagernet.widget.updateBasePadding
+import io.nekohasekai.sagernet.ui.motion.LiquidMotion.attachLiquidJellyScroll
+import io.nekohasekai.sagernet.ui.theme.LiquidGlass
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -104,6 +106,8 @@ class ProfileListFragment : Fragment(R.layout.layout_profile_list) {
         list.adapter = adapter
         list.addItemDecoration(PinnedDivider(adapter))
         list.setItemViewCacheSize(20)
+        // Liquid Glass: elastic overscroll wave and the compact pill scrollbar
+        if (!LiquidGlass.isClassic()) list.attachLiquidJellyScroll()
         list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) adapter.flushPendingTraffic()

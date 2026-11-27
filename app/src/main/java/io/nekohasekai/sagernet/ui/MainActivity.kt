@@ -61,6 +61,10 @@ import io.nekohasekai.sagernet.database.RouteManager
 import io.nekohasekai.sagernet.utils.AppShortcuts
 import io.nekohasekai.sagernet.utils.PlatformNotifications
 import io.nekohasekai.sagernet.utils.Theme
+import io.nekohasekai.sagernet.ui.motion.LiquidMotion.attachJellyTouch
+import io.nekohasekai.sagernet.ui.motion.LiquidMotion.attachLiquidDrawerMotion
+import io.nekohasekai.sagernet.ui.motion.LiquidMotion.playJellyPop
+import io.nekohasekai.sagernet.ui.theme.LiquidGlass
 import io.nekohasekai.sagernet.utils.WifiStateAccess
 import io.nekohasekai.sagernet.widget.bars
 import androidx.lifecycle.Lifecycle
@@ -138,6 +142,17 @@ class MainActivity : ThemedActivity(),
             }
         })
 
+        // Liquid Glass: the drawer content drifts with a spring while the panel slides, and the FAB is jelly.
+        if (!LiquidGlass.isClassic()) {
+            binding.drawerLayout.attachLiquidDrawerMotion(binding.fragmentHolder, navigation)
+            binding.fab.attachJellyTouch(
+                cornerRadiusDp = 999f,
+                popVelocityX = 3.8f,
+                popVelocityY = 4.4f,
+                tiltDegrees = 1.2f,
+            )
+        }
+
         if (savedInstanceState == null) {
             displayFragmentWithId(R.id.nav_configuration)
         } else {
@@ -152,7 +167,10 @@ class MainActivity : ThemedActivity(),
             }
         }
 
-        binding.fab.setOnClickListener { toggleService() }
+        binding.fab.setOnClickListener {
+            binding.fab.playJellyPop()
+            toggleService()
+        }
         binding.stats.setOnClickListener { if (DataStore.serviceState.connected) binding.stats.testConnection() }
         binding.stats.setOnLongClickListener {
             showStatsMenu()
