@@ -36,7 +36,8 @@ NekoBox（猫盒）是一只住在 Android 设备里的 GUI 代理猫，帮你�
 
 | 猫的把戏 | 说明 |
 | --- | --- |
-| 🧶 **订阅 & 分组** | 像自动喂食器：定时更新订阅、过滤、清理，更新完自动测速，还会打小报告告诉你今天新来了哪些节点 |
+| 🧶 **订阅 & 分组** | 像自动喂食器：定时更新订阅、过滤、清理，更新完自动测速，还会打小报告告诉你今天新来了哪些节点；卡片只留组名，服务商信息和公告收进详情页，有新公告点个小圆点提醒 |
+| 🔍 **扫描器** | 猫自己在地上嗅：IP 列表（可当服务器地址来源）、WARP 端点查找、DNS 隧道解析器扫描，扫完的结果能直接喂给配置 |
 | ⚡ **Auto Selector** | 猫自己挑窝：盯着一组节点实时排名，谁快睡谁，掉线了自动搬家 |
 | 🧭 **路由配置** | 与桌面版共用一套分流规则，还能按 App、Wi-Fi（SSID / BSSID）、网络类型、计费网络来分——哪个 App 钻哪个猫洞，安排得明明白白 |
 | 🛰️ **Cloudflare WARP** | 内置 WARP 注册（WireGuard / MASQUE 身份）和 WARP 路由模式，出门自带小雨衣 |
@@ -58,13 +59,13 @@ SOCKS · HTTP(S) · Shadowsocks · Trojan · VMess · VLESS · TUIC · Hysteria 
 
 ## 📦 去哪领养？
 
-按你的设备挑一只（当前推荐 **v2.1.0**）：
+按你的设备挑一只（当前推荐 **v2.2.0**）：
 
 | 你的设备 | 领养链接 |
 | --- | --- |
-| 📱 现代手机（ARMv8） | [![APK ARMv8](https://img.shields.io/badge/APK-ARMv8-168039.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.1.0/NekoBox-2.1.0-arm64-v8a.apk) |
-| 📱 老手机（ARMv7） | [![APK ARMv7](https://img.shields.io/badge/APK-ARMv7-45bf55.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.1.0/NekoBox-2.1.0-armeabi-v7a.apk) |
-| 💻 模拟器 / x64 设备 | [![APK x64](https://img.shields.io/badge/APK-x64-96ed89.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.1.0/NekoBox-2.1.0-x86_64.apk) |
+| 📱 现代手机（ARMv8） | [![APK ARMv8](https://img.shields.io/badge/APK-ARMv8-168039.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.2.0/NekoBox-2.2.0-arm64-v8a.apk) |
+| 📱 老手机（ARMv7） | [![APK ARMv7](https://img.shields.io/badge/APK-ARMv7-45bf55.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.2.0/NekoBox-2.2.0-armeabi-v7a.apk) |
+| 💻 模拟器 / x64 设备 | [![APK x64](https://img.shields.io/badge/APK-x64-96ed89.svg?logo=android)](https://github.com/tuoefg/NekoBox/releases/download/v2.2.0/NekoBox-2.2.0-x86_64.apk) |
 
 - 🗂️ 全部版本看这里：[Releases](https://github.com/tuoefg/NekoBox/releases) · 每天吃了啥见 [CHANGELOG](CHANGELOG.md)
 - 🩺 下载后可以对一下 `SHA256SUMS`——这是猫的体检报告，确认没被调包
