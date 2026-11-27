@@ -62,9 +62,9 @@ import io.nekohasekai.sagernet.utils.AppShortcuts
 import io.nekohasekai.sagernet.utils.PlatformNotifications
 import io.nekohasekai.sagernet.utils.Theme
 import io.nekohasekai.sagernet.ui.motion.LiquidMotion.attachJellyTouch
-import io.nekohasekai.sagernet.ui.motion.LiquidMotion.attachLiquidDrawerMotion
 import io.nekohasekai.sagernet.ui.motion.LiquidMotion.playJellyPop
 import io.nekohasekai.sagernet.ui.theme.LiquidGlass
+import io.nekohasekai.sagernet.ui.theme.attachLiquidDrawerMotion
 import io.nekohasekai.sagernet.utils.WifiStateAccess
 import io.nekohasekai.sagernet.widget.bars
 import androidx.lifecycle.Lifecycle
