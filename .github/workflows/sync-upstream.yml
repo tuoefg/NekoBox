@@ -37,11 +37,51 @@ jobs:
         if: steps.check.outputs.ahead != '0'
         id: merge
         run: |
-          git merge upstream/main --no-edit --no-ff
+          set -euo pipefail
+          if git merge upstream/main --no-edit --no-ff; then
+            git push origin main
+            echo "✅ Synced cleanly"
+            exit 0
+          fi
+          # 本仓库维护自己的版本号，上游只动内核 ref：只有 nb4a.properties 冲突时自动按规则解决
+          CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ' | sed 's/ *$//')
+          echo "conflicts: [$CONFLICTS]"
+          if [ "$CONFLICTS" != "nb4a.properties" ]; then
+            echo "::error::unexpected merge conflicts: [$CONFLICTS]"
+            exit 1
+          fi
+          CORE_REF=$(git show upstream/main:nb4a.properties | sed -n 's/^THRONE_CORE_REF=//p' | tr -d '\r')
+          git checkout --ours nb4a.properties
+          if [ -n "$CORE_REF" ]; then
+            sed -i "s#^THRONE_CORE_REF=.*#THRONE_CORE_REF=${CORE_REF}#" nb4a.properties
+          fi
+          git add nb4a.properties
+          git commit --no-edit
           git push origin main
-          echo "✅ Synced successfully"
+          echo "✅ Synced, kept our VERSION_NAME/VERSION_CODE, adopted upstream core ref"
+
+      - name: Bump patch version
+        if: steps.check.outputs.ahead != '0'
+        id: bump
+        run: |
+          set -euo pipefail
+          OLD=$(sed -n 's/^VERSION_NAME=//p' nb4a.properties | tr -d '\r[:space:]')
+          CODE=$(sed -n 's/^VERSION_CODE=//p' nb4a.properties | tr -d '\r[:space:]')
+          MAJOR_MINOR=$(echo "$OLD" | cut -d. -f1,2)
+          PATCH=$(echo "$OLD" | cut -d. -f3)
+          NEW="${MAJOR_MINOR}.$((PATCH + 1))"
+          sed -i "s#^VERSION_NAME=.*#VERSION_NAME=${NEW}#" nb4a.properties
+          sed -i "s#^VERSION_CODE=.*#VERSION_CODE=$((CODE + 1))#" nb4a.properties
+          # 下载链接跟着新版本走
+          sed -i "s/${OLD}/${NEW}/g" README.md
+          git add nb4a.properties README.md
+          git commit -m "chore(release): bump to ${NEW} (auto sync)"
+          git push origin main
+          echo "version=$NEW" >> "$GITHUB_OUTPUT"
+          echo "✅ bumped ${OLD} -> ${NEW}"
 
       - name: Auto tag for release
+        if: steps.check.outputs.ahead != '0'
         id: tag
         run: |
           set -euo pipefail
@@ -60,12 +100,12 @@ jobs:
           fi
 
       - name: Open issue on conflict
-        if: failure() && steps.check.outputs.ahead != '0' && steps.merge.outcome == 'failure'
+        if: failure() && steps.check.outputs.ahead != '0'
         uses: actions/github-script@v7
         with:
           script: |
-            const title = `⚠️ 上游同步冲突 ${new Date().toISOString().slice(0,10)}`;
-            const body = `自动同步上游 [ThroneForAndroid](https://github.com/throneproj/ThroneForAndroid) 时发生合并冲突。
+            const title = `⚠️ 上游同步失败 ${new Date().toISOString().slice(0,10)}`;
+            const body = `自动同步上游 [ThroneForAndroid](https://github.com/throneproj/ThroneForAndroid) 时失败（合并冲突或构建前检查未通过）。
 
             **手动处理步骤：**
             \`\`\`bash
